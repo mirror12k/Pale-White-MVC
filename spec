@@ -4,7 +4,14 @@ templated and pre-compiled mvc
 	model templates which describe the sql database structure and a Model oject
 		model UserLink {
 			int id auto;
-			string[512] link;
+			link_type link;
+
+			cast link_type to string[512] {{
+				// transform a link to a string suitable for the database
+			}}
+			cast link_type from string[512] {{
+				// transform a link to a version suitable for use
+			}}
 
 			getter link {{
 				// does php to retrieve the link after it has been retrieved from the database as $_
@@ -20,13 +27,6 @@ templated and pre-compiled mvc
 			}}
 
 			static function my_static_method () {{
-			}}
-
-			cast link to string {{
-				// transform a link to a string suitable for the database
-			}}
-			cast link from string {{
-				// transform a link to a version suitable for use
 			}}
 		}
 
@@ -56,6 +56,7 @@ templated and pre-compiled mvc
 
 		further wishlist:
 			meta arrays and meta objects for models
+			an admin backend for viewing/editting models as listed items
 
 
 
@@ -64,10 +65,10 @@ templated and pre-compiled mvc
 		easy to use, just pass in an array of args, and html text is returned
 
 		examples:
-				#template Base
+				!template Base
 					html
 						body
-							#block body
+							!block body
 
 
 			compiles to
@@ -91,9 +92,9 @@ templated and pre-compiled mvc
 
 			also
 
-				#template Page extends Base
-					#block body
-						p hello world!
+				!template Page extends Base
+					!block body
+						p "hello world!"
 
 			complies to
 
@@ -110,6 +111,29 @@ templated and pre-compiled mvc
 				}
 
 		wishlist
+			tag classes and ids
+				div.container#main_container
+			tag properties
+				a href="https://asdf", alt="my link"
+			template args inlined into text
+				!template ArgyTemplate
+					p "hello there {{username}}!"
+					{{raw_html}}
+			loops
+				!foreach users as user
+					li "user: {{user->username}}"
+			calling sub templates with optional arguments
+				!template SuperTemplate
+					div.user_container
+						!template UserContainerTemplate user=user, color='red'
+			passing templates as arguments
+				!template SuperTemplate
+					div.super_container
+						!template RenderContainerTemplate template=UserContainerTemplate
+			simpler div containers
+				!template NestedDivsTemplate
+					#main_container
+						.container
 			extensible helper plugins
 			optional compilation to a big javascript package to allow client-side sites
 
@@ -126,7 +150,7 @@ templated and pre-compiled mvc
 					render ArgyTemplate path=path_argument
 				}
 				// this is a POST path which requires a 'link' argument
-				path '/create' [ 'link_string' ] {
+				path '/create' [ link_string, username ] {
 					validate link_string as link
 					link_id = action new_link link=link_string
 					if (link_id) {
@@ -215,13 +239,54 @@ templated and pre-compiled mvc
 
 
 		wishlist:
+			regex path arguments
+				path '/page/{{page=/\d+/}}' {}
+			argument list paths which match multiple words seperated by slashes
+				// this will match paths like '/search/asdf/qwer/zxcv' and produce an array of terms ['asdf', 'qwer', 'zxcv']
+				path '/search/{{{terms}}}' {}
+			global paths to act like middleware
+				path global {
+					// perform user authentication
+				}
 			ajax paths which return json responses
+				// arguments are taken from json data
+				ajax '/create/link' [ asdf, zxcv ] {
+					validate asdf as qwer with zxcv=zxcv
+					// stuff
+					// returns a json response
+					return status='success', data=link_id
+				}
 			user session and permission validation
+				// calls UserModel->login(array('id' => $current_user))
+				current_user = login UserModel id=session->current_user
+				session->current_user = current_user->id
 			sugar syntax for loading objects as models
+				// call UserLinkModel->get_by(array('id' => $link))
+				link = model UserLinkModel id=link
+				// call UserLinkModel->get_by(array('link' => $link_string))
+				link = model UserLinkModel link=link_string
+				// call UserLinkModel->list(array('page' => $page))
+				links = list UserLinkModel page=page
+
+			dispatch another controller
+				path '/special/.*' {
+					// launches AnotherController->route($path, $args)
+					route AnotherController
+				}
+
 			websockets/ajax client-heavy site
 				load all glass templates as client-side javascript files
 				and have all actions exposed via websockets or ajax
 				have controllers mostly loaded on client-side
+				hook location switches and have a client-side controller process to perform a simple server request
+					server picks the template and template args for it, as well as performing any controller actions required
+					server returns a json response which tells client-side which template with which arguments to load
+				templates should be optionally markable as client-side only using cached model data to avoid excessive server-side requests
+					this would require client-side controllers fully implementing the template and model picking logic for those paths
+					can mark these paths as static so that they are compiled into the client-side controller
 			library inclusion
 			transplant comments directly to compiled php code
 			a cli to perform server-side action easier?
+			automatic admin backend for viewing and editting modeled objects?
+			a description package which outlines all contained packages?
+			an automatically generated index.php file generated to include all pacakges and start the controller
