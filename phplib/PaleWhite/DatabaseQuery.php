@@ -15,8 +15,17 @@ class DatabaseQuery {
 		return $this;
 	}
 
-	public function from(string $table) {
-		$this->query_args['from'] = (string)$table;
+	public function table(string $table) {
+		$this->query_args['table'] = (string)$table;
+		return $this;
+	}
+
+	public function values(array $args) {
+		if (!isset($this->query_args['values']))
+			$this->query_args['values'] = array();
+		foreach ($args as $field => $value) {
+			$this->query_args['values'][$field] = $value;
+		}
 		return $this;
 	}
 
@@ -48,8 +57,8 @@ class DatabaseQuery {
 			}
 			$query .= ' ' . implode(', ', $fields);
 
-			if (isset($this->query_args['from'])) {
-				$query .= ' FROM `' . $this->db->escape_string($this->query_args['from']) . '`';
+			if (isset($this->query_args['table'])) {
+				$query .= ' FROM `' . $this->db->escape_string($this->query_args['table']) . '`';
 			}
 
 			if (isset($this->query_args['where'])) {
@@ -74,6 +83,83 @@ class DatabaseQuery {
 			}
 
 			return $query;
+
+		} elseif ($this->query_type === 'insert') {
+			$query = 'INSERT';
+
+			if (isset($this->query_args['table'])) {
+				$query .= ' INTO `' . $this->db->escape_string($this->query_args['table']) . '`';
+			}
+
+			if (isset($this->query_args['values'])) {
+				$fields = array();
+				foreach ($this->query_args['values'] as $field => $value) {
+					$fields[] = '`' . $this->db->escape_string($field) . '`';
+				}
+				$query .= ' (' . implode(', ', $fields) . ')';
+
+				$values = array();
+				foreach ($this->query_args['values'] as $field => $value) {
+					if (is_string($value)) {
+						$value = '\'' . $this->db->escape_string($value) . '\'';
+					} elseif (is_numeric($value)) {
+						$value = "$value";
+					} else {
+						die("invalid value type for where field $field: " . gettype($value));
+					}
+					$values[] = $value;
+				}
+				$query .= ' VALUES (' . implode(', ', $values) . ')';
+			}
+
+			return $query;
+
+		} elseif ($this->query_type === 'update') {
+			$query = 'UPDATE';
+
+			if (isset($this->query_args['table'])) {
+				$query .= ' `' . $this->db->escape_string($this->query_args['table']) . '`';
+			}
+
+			if (isset($this->query_args['values'])) {
+				$values = array();
+				foreach ($this->query_args['values'] as $field => $value) {
+					$field = '`' . $this->db->escape_string($field) . '`';
+					if (is_string($value)) {
+						$value = '\'' . $this->db->escape_string($value) . '\'';
+					} elseif (is_numeric($value)) {
+						$value = "$value";
+					} else {
+						die("invalid value type for where field $field: " . gettype($value));
+					}
+					$values[] = "$field = $value";
+				}
+				$query .= ' SET ' . implode(', ', $values);
+			}
+
+			if (isset($this->query_args['where'])) {
+				$fields = array();
+				foreach ($this->query_args['where'] as $field => $value) {
+					$field = '`' . $this->db->escape_string($field) . '`';
+					if (is_string($value)) {
+						$value = '\'' . $this->db->escape_string($value) . '\'';
+					} elseif (is_numeric($value)) {
+						$value = "$value";
+					} else {
+						die("invalid value type for where field $field: " . gettype($value));
+					}
+					$fields[] = "$field = $value";
+				}
+
+				$query .= ' WHERE ' . implode(' AND ', $fields);
+			}
+
+			if (isset($this->query_args['limit'])) {
+				$query .= ' LIMIT ' . $this->query_args['limit'];
+			}
+
+			return $query;
+
 		} else {
 			die("invalid query_type: " . $this->query_type);
 		}

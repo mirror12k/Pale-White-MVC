@@ -21,6 +21,14 @@ class DatabaseDriver {
 		$this->connected = false;
 	}
 
+	public function __get($name) {
+		if ($name === 'insert_id') {
+			return $this->mysql_connection->insert_id;
+		} elseif ($name === 'affected_rows') {
+			return $this->mysql_connection->affected_rows;
+		}
+	}
+
 	public function connect() {
 		$this->mysql_connection = new \mysqli($this->mysql_host, $this->mysql_username, $this->mysql_password, $this->mysql_database);
 		if ($this->mysql_connection->connect_error) {
@@ -31,6 +39,14 @@ class DatabaseDriver {
 
 	public function select() {
 		return new DatabaseQuery($this, 'select');
+	}
+
+	public function insert() {
+		return new DatabaseQuery($this, 'insert');
+	}
+
+	public function update() {
+		return new DatabaseQuery($this, 'update');
 	}
 
 	public function escape_string(string $string) {
