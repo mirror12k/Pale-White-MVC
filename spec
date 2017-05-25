@@ -3,7 +3,7 @@
 templated and pre-compiled mvc
 	model templates which describe the sql database structure and a Model oject
 		model UserLink {
-			int id auto;
+			auto_id id;
 			link_type link;
 
 			cast link_type to string[512] {{
@@ -290,3 +290,6 @@ templated and pre-compiled mvc
 			automatic admin backend for viewing and editting modeled objects?
 			a description package which outlines all contained packages?
 			an automatically generated index.php file generated to include all pacakges and start the controller
+			a testing suite which is done from server-side cli php execution
+				doesnt render templates fully, just returns the template names and arguments passed as the test status
+				this way controller logic can be checked without depending on templating output

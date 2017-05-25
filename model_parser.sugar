@@ -1,0 +1,111 @@
+package PaleWhite::ModelParser
+
+native_code_block_regex = /\{\{.*?\}\}/s
+
+symbol_regex = /\{|\}|\[|\]|\(|\)|;/
+keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
+identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
+integer_regex = /\d++/
+
+comment_regex = /\/\/[^\n]*+\n/s
+whitespace_regex = /\s++/s
+
+format_native_code_substitution = s/\A\{(\{.*?\})\}\Z/$1/s
+
+
+
+tokens {
+	native_code_block => $native_code_block_regex
+
+	symbol => $symbol_regex
+	keyword => $keyword_regex
+	identifier => $identifier_regex
+	integer => $integer_regex
+
+	comment => $comment_regex
+	whitespace => $whitespace_regex
+}
+
+ignored_tokens {
+	whitespace
+	comment
+}
+
+
+
+
+list context root {
+	switch {
+		'model' {
+			match $identifier_regex, '{'
+			push !model_block->{
+				type => 'model_definition'
+				identifier => $1
+			}
+			match '}'
+		}
+		default {
+			die 'block statement expected'
+		}
+	}
+}
+
+object context model_block {
+	switch {
+		'function' {
+			match $identifier_regex, '('
+			match ')', $native_code_block_regex
+			$_{functions}[] = {
+				type => 'model_function'
+				identifier => $1
+				code => $format_native_code_substitution->$4
+			}
+		}
+		'static', 'function' {
+			match $identifier_regex, '('
+			match ')', $native_code_block_regex
+			$_{functions}[] = {
+				type => 'model_static_function'
+				identifier => $2
+				code => $format_native_code_substitution->$5
+			}
+		}
+		$identifier_regex {
+			match $identifier_regex
+			$_{properties}[] = !model_property->{
+				type => 'model_property'
+				property_type => $0
+				identifier => $1
+			}
+			match ';'
+		}
+		default {
+			return
+		}
+	}
+}
+
+object context model_property {
+	switch {
+		'unique_key' {
+			$_{modifiers}{$0} = 'enabled'
+		}
+		default {
+			return
+		}
+	}
+}
+
+
+sub main {{
+	use Data::Dumper;
+	use Sugar::IO::File;
+
+	my $parser = __PACKAGE__->new;
+	foreach my $file (@_) {
+		$parser->{filepath} = Sugar::IO::File->new($file);
+		my $tree = $parser->parse;
+		say Dumper $tree;
+	}
+}}
+
