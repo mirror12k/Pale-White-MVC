@@ -27,7 +27,7 @@ sub compile_property {
 	my $type;
 	my $suffix = '';
 
-	say Dumper $property;
+	# say Dumper $property;
 	if ($property->{property_type} eq 'int') {
 		$type = 'INT'
 	} elsif ($property->{property_type} eq 'string') {

@@ -168,9 +168,13 @@ class DatabaseQuery {
 	public function fetch() {
 		$result = $this->db->query($this);
 
-		$data = array();
-		for ($i = 0; $i < $result->num_rows; $i++) {
-			$data[] = $result->fetch_assoc();
+		if ($this->query_type === 'select') {
+			$data = array();
+			for ($i = 0; $i < $result->num_rows; $i++) {
+				$data[] = $result->fetch_assoc();
+			}
+		} else {
+			$data = $result;
 		}
 		return $data;
 	}

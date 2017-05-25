@@ -16,7 +16,7 @@ abstract class Model {
 			throw new \Exception("attempted to get undefined model property: $name");
 	}
 
-	public function __set(string $name, mixed $value) {
+	public function __set(string $name, $value) {
 		if (isset($this->_data[$name])) {
 			$this->_data[$name] = $value;
 			$this->update_fields(array($name => static::cast_to_store($name, $value)));
@@ -77,11 +77,11 @@ abstract class Model {
 		return $loaded;
 	}
 
-	public static function cast_to_store(string $name, mixed $value) {
+	public static function cast_to_store(string $name, $value) {
 		return $value;
 	}
 
-	public static function cast_from_store(string $name, mixed $value) {
+	public static function cast_from_store(string $name, $value) {
 		return $value;
 	}
 
@@ -91,7 +91,7 @@ abstract class Model {
 				->table(static::$table_name)
 				->values($values)
 				->where(array('id' => $this->id));
-		
+
 		$query->fetch();
 	}
 }
