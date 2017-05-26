@@ -1,0 +1,100 @@
+package PaleWhite::GlassParser
+
+
+identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
+symbol_regex = /!/
+
+indent_regex = /\t++/
+whitespace_regex = /[\t \r]++/
+newline_regex = /\s*\n/s
+
+tokens {
+	identifier => $identifier_regex
+	symbol => $symbol_regex
+
+	indent => $indent_regex
+	whitespace => $whitespace_regex
+	newline => $newline_regex
+}
+
+
+
+object context root {
+	$_ = !root_glass_block->{
+		type => 'root'
+		block => []
+		indent => ''
+	}
+	return
+}
+
+
+object context root_glass_block {
+	while $newline_regex {
+		# skip newline
+	}
+	switch {
+		$identifier_regex {
+			$_{block}[] = !glass_block->{
+				type => 'item'
+				line_number => $0{line_number}
+				identifier => $0
+				block => []
+				indent => ''
+			}
+		}
+		&match_indent->$_, $identifier_regex {
+			$_{block}[] = !glass_block->{
+				type => 'item'
+				line_number => $1{line_number}
+				identifier => $1
+				block => []
+				indent => $0
+			}
+		}
+		default {
+			return
+		}
+	}
+}
+
+
+object context glass_block {
+	while $newline_regex {
+		# skip newline
+	}
+	switch {
+		&match_indent->$_, $identifier_regex {
+			$_{block}[] = !glass_block->{
+				type => 'item'
+				line_number => $1{line_number}
+				identifier => $1
+				block => []
+				indent => $0
+			}
+		}
+		default {
+			return
+		}
+	}
+}
+
+sub match_indent {{
+	my ($self, $offset, $item) = @_;
+	return ($self->{tokens}[$offset][1] =~ /\A\t++\Z/
+		and length $self->{tokens}[$offset][1] > length $item->{indent})
+}}
+
+sub main {{
+	use Data::Dumper;
+	use Sugar::IO::File;
+
+	my $parser = __PACKAGE__->new;
+	foreach my $file (@_) {
+		$parser->{filepath} = Sugar::IO::File->new($file);
+		my $tree = $parser->parse;
+		say Dumper $tree;
+	}
+}}
+
+

@@ -23,7 +23,8 @@ model UserLinkModel {
 		echo "hello world!";
 	}}
 
-	// static function my_static_method () {{
-	// }}
+	static function my_static_method () {{
+		echo 'hello static!';
+	}}
 }
 

@@ -90,6 +90,9 @@ object context model_property {
 		'unique_key' {
 			$_{modifiers}{$0} = 'enabled'
 		}
+		'auto_increment' {
+			$_{modifiers}{$0} = 'enabled'
+		}
 		default {
 			return
 		}

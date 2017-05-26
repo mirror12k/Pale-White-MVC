@@ -173,6 +173,7 @@ class DatabaseQuery {
 			for ($i = 0; $i < $result->num_rows; $i++) {
 				$data[] = $result->fetch_assoc();
 			}
+			$result->free();
 		} else {
 			$data = $result;
 		}

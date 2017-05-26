@@ -37,6 +37,11 @@ sub compile_model {
 	# }
 	# push @code, "\t);\n";
 
+	push @code, "\tpublic static \$model_properties = array(\n";
+	push @code, "\t\t'id' => 'int',\n";
+	push @code, "\t\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @{$model->{properties}};
+	push @code, "\t);\n";
+
 	push @code, "\n";
 	foreach my $function (@{$model->{functions}}) {
 		die "duplicate function $function->{identifier} defined in model $model->{identifier}"
