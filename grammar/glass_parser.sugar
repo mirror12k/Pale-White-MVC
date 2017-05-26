@@ -2,7 +2,7 @@ package PaleWhite::GlassParser
 
 
 identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
-symbol_regex = /!/
+symbol_regex = /!|\.|\#/
 
 indent_regex = /\t++/
 whitespace_regex = /[\t \r]++/
@@ -15,6 +15,10 @@ tokens {
 	indent => $indent_regex
 	whitespace => $whitespace_regex
 	newline => $newline_regex
+}
+
+ignored_tokens {
+	whitespace
 }
 
 
@@ -30,54 +34,51 @@ object context root {
 
 
 object context root_glass_block {
-	while $newline_regex {
+	while $newline_regex => {
 		# skip newline
 	}
-	switch {
-		$identifier_regex {
-			$_{block}[] = !glass_block->{
-				type => 'item'
-				line_number => $0{line_number}
-				identifier => $0
-				block => []
-				indent => ''
-			}
-		}
-		&match_indent->$_, $identifier_regex {
-			$_{block}[] = !glass_block->{
-				type => 'item'
-				line_number => $1{line_number}
-				identifier => $1
-				block => []
-				indent => $0
-			}
-		}
-		default {
-			return
-		}
+
+	if &match_indent->$_ => {
+		$_{block}[] = !glass_block->!glass_item->$0
+	} else {
+		$_{block}[] = !glass_block->!glass_item->''
 	}
 }
 
 
 object context glass_block {
-	while $newline_regex {
+	while $newline_regex => {
 		# skip newline
 	}
 	switch {
-		&match_indent->$_, $identifier_regex {
-			$_{block}[] = !glass_block->{
-				type => 'item'
-				line_number => $1{line_number}
-				identifier => $1
-				block => []
-				indent => $0
-			}
+		&match_indent->$_ => {
+			$_{block}[] = !glass_block->!glass_item->$0
 		}
 		default {
 			return
 		}
 	}
 }
+
+object context glass_item {
+	# we cheat by passing in the indent as the argument
+	switch {
+		$identifier_regex => {
+			$_ = {
+				type => 'html_tag'
+				line_number => $0{line_number}
+				identifier => $0
+				indent => $_
+			}
+			return
+		}
+		default {
+			die 'glass item expected'
+		}
+	}
+}
+
+
 
 sub match_indent {{
 	my ($self, $offset, $item) = @_;

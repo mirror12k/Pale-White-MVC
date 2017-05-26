@@ -15,7 +15,7 @@ use feature 'say';
 ##############################
 
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
-our $var_symbol_regex = qr/!/;
+our $var_symbol_regex = qr/!|\.|\#/;
 our $var_indent_regex = qr/\t++/;
 our $var_whitespace_regex = qr/[\t \r]++/;
 our $var_newline_regex = qr/\s*\n/s;
@@ -30,10 +30,12 @@ our $tokens = [
 ];
 
 our $ignored_tokens = [
+	'whitespace',
 ];
 
 our $contexts = {
 	glass_block => 'context_glass_block',
+	glass_item => 'context_glass_item',
 	root => 'context_root',
 	root_glass_block => 'context_root_glass_block',
 };
@@ -94,20 +96,14 @@ sub context_root_glass_block {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			}
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/) {
+			if ($self->more_tokens and $self->match_indent($self->{tokens_index} + 0, $context_object)) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{block}}, $self->context_glass_block({ type => 'item', line_number => $tokens[0][2], identifier => $tokens[0][1], block => [], indent => '', });
-			}
-			elsif ($self->more_tokens and $self->match_indent($self->{tokens_index} + 0, $context_object) and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A$var_identifier_regex\Z/) {
-			my @tokens_freeze = @tokens;
-			my @tokens = @tokens_freeze;
-			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{block}}, $self->context_glass_block({ type => 'item', line_number => $tokens[1][2], identifier => $tokens[1][1], block => [], indent => $tokens[0][1], });
+			push @{$context_object->{block}}, $self->context_glass_block($self->context_glass_item($tokens[0][1]));
 			}
 			else {
-			return $context_object;
+			push @{$context_object->{block}}, $self->context_glass_block($self->context_glass_item(''));
 			}
 	}
 	return $context_object;
@@ -124,14 +120,34 @@ sub context_glass_block {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			}
-			if ($self->more_tokens and $self->match_indent($self->{tokens_index} + 0, $context_object) and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A$var_identifier_regex\Z/) {
+			if ($self->more_tokens and $self->match_indent($self->{tokens_index} + 0, $context_object)) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
-			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{block}}, $self->context_glass_block({ identifier => $tokens[1][1], block => [], indent => $tokens[0][1], });
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{block}}, $self->context_glass_block($self->context_glass_item($tokens[0][1]));
 			}
 			else {
 			return $context_object;
+			}
+	}
+	return $context_object;
+}
+
+sub context_glass_item {
+	my ($self, $context_object) = @_;
+
+	while ($self->more_tokens) {
+		my @tokens;
+
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'html_tag', line_number => $tokens[0][2], identifier => $tokens[0][1], indent => $context_object, };
+			return $context_object;
+			}
+			else {
+			$self->confess_at_current_offset('glass item expected');
 			}
 	}
 	return $context_object;

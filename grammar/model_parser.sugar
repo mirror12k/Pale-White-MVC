@@ -36,7 +36,7 @@ ignored_tokens {
 
 list context root {
 	switch {
-		'model' {
+		'model' => {
 			match $identifier_regex, '{'
 			push !model_block->{
 				type => 'model_definition'
@@ -52,7 +52,7 @@ list context root {
 
 object context model_block {
 	switch {
-		'function' {
+		'function' => {
 			match $identifier_regex, '('
 			match ')', $native_code_block_regex
 			$_{functions}[] = {
@@ -61,7 +61,7 @@ object context model_block {
 				code => $format_native_code_substitution->$4
 			}
 		}
-		'static', 'function' {
+		'static', 'function' => {
 			match $identifier_regex, '('
 			match ')', $native_code_block_regex
 			$_{functions}[] = {
@@ -70,7 +70,7 @@ object context model_block {
 				code => $format_native_code_substitution->$5
 			}
 		}
-		$identifier_regex {
+		$identifier_regex => {
 			match $identifier_regex
 			$_{properties}[] = !model_property->{
 				type => 'model_property'
@@ -87,10 +87,10 @@ object context model_block {
 
 object context model_property {
 	switch {
-		'unique_key' {
+		'unique_key' => {
 			$_{modifiers}{$0} = 'enabled'
 		}
-		'auto_increment' {
+		'auto_increment' => {
 			$_{modifiers}{$0} = 'enabled'
 		}
 		default {

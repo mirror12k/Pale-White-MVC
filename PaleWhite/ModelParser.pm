@@ -88,7 +88,7 @@ sub context_root {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected $identifier_regex, \'{\'')
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, \'{\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '{';
 			@tokens = (@tokens, $self->step_tokens(2));
 			push @$context_list, $self->context_model_block({ type => 'model_definition', identifier => $tokens[1][1], });
@@ -113,10 +113,10 @@ sub context_model_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected $identifier_regex, \'(\'')
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, \'(\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '(';
 			@tokens = (@tokens, $self->step_tokens(2));
-			$self->confess_at_current_offset('expected \')\', $native_code_block_regex')
+			$self->confess_at_current_offset('expected \')\', qr/\\{\\{.*?\\}\\}/s')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A$var_native_code_block_regex\Z/;
 			@tokens = (@tokens, $self->step_tokens(2));
 			push @{$context_object->{functions}}, { type => 'model_function', identifier => $tokens[1][1], code => $var_format_native_code_substitution->($tokens[4][1]), };
@@ -125,10 +125,10 @@ sub context_model_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			$self->confess_at_current_offset('expected $identifier_regex, \'(\'')
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, \'(\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '(';
 			@tokens = (@tokens, $self->step_tokens(2));
-			$self->confess_at_current_offset('expected \')\', $native_code_block_regex')
+			$self->confess_at_current_offset('expected \')\', qr/\\{\\{.*?\\}\\}/s')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A$var_native_code_block_regex\Z/;
 			@tokens = (@tokens, $self->step_tokens(2));
 			push @{$context_object->{functions}}, { type => 'model_static_function', identifier => $tokens[2][1], code => $var_format_native_code_substitution->($tokens[5][1]), };
@@ -137,7 +137,7 @@ sub context_model_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected $identifier_regex')
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{properties}}, $self->context_model_property({ type => 'model_property', property_type => $tokens[0][1], identifier => $tokens[1][1], });
@@ -159,6 +159,12 @@ sub context_model_property {
 		my @tokens;
 
 			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'unique_key') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object->{modifiers}{$tokens[0][1]} = 'enabled';
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'auto_increment') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
