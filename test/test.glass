@@ -1,8 +1,11 @@
 
-template1
-template
+!template1 test1
+!template test
 	html
 		body
+			!block body asdf="qwert", a="b"
 		body
-	html2
-		body
+	div#container
+		div.text.asdf
+			a href="http://example.org", alt="a link"
+				p "hello world"
