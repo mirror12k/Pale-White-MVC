@@ -37,7 +37,7 @@ sub flush_accumulator {
 sub compile {
 	my ($self, $tree) = @_;
 
-	my $code = "\n";
+	my $code = "<?php\n\n";
 	$code .= join '', $self->compile_template($_) foreach @{$tree->{block}};
 
 	return $code
@@ -54,7 +54,7 @@ sub compile_template {
 	push @code, $self->compile_template_render_block($template);
 	
 	@code = map "\t$_", @code;
-	@code = ("class $identifier extends \\Glass\\Template {\n", @code, "}\n");
+	@code = ("class $identifier extends \\PaleWhite\\Glass\\Template {\n", @code, "}\n");
 
 	return @code
 }
@@ -63,7 +63,7 @@ sub compile_template_render {
 	my ($self, $template) = @_;
 	my @code;
 
-	push @code, "\$text = '';\n";
+	push @code, "\$text = parent::render(\$args);\n";
 
 	if (exists $template->{block}) {
 		push @code, "\n";
@@ -96,7 +96,7 @@ sub compile_template_render_block {
 
 	return @code unless keys %blocks;
 
-	push @code, "\$text = \$this->parent::render_block(\$block, \$args);\n";
+	push @code, "\$text = parent::render_block(\$block, \$args);\n";
 	push @code, "\n";
 
 	foreach my $block (sort keys %blocks) {
