@@ -2,6 +2,7 @@
 !template TestTemplate
 	html
 		head
+			!block head
 		body
 			div
 			div#container
@@ -9,3 +10,8 @@
 					a href="http://example.org", alt="a link"
 						p "hello world"
 			div.close#footer
+	!block tail
+		p "test"
+	!block mid
+		div.container
+			p "in a container"

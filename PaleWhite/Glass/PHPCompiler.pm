@@ -50,25 +50,94 @@ sub compile_template {
 	my $identifier = $template->{identifier_argument};
 	my @code;
 
-	push @code, "\$text = '';\n";
-
-	if (exists $template->{block}) {
-		foreach my $item (@{$template->{block}}) {
-			push @code, $self->compile_html_tag($item);
-		}
-		# say "debug: $self->{text_accumulator}";
-		push @code, $self->flush_accumulator;
-	}
-
-	push @code, "return \$text;\n";
-
-	@code = map "\t$_", @code;
-	@code = ("public function render (array \$args) {\n", @code, "}\n");
+	push @code, $self->compile_template_render($template);
+	push @code, $self->compile_template_render_block($template);
 	
 	@code = map "\t$_", @code;
 	@code = ("class $identifier extends \\Glass\\Template {\n", @code, "}\n");
 
 	return @code
+}
+
+sub compile_template_render {
+	my ($self, $template) = @_;
+	my @code;
+
+	push @code, "\$text = '';\n";
+
+	if (exists $template->{block}) {
+		push @code, "\n";
+		foreach my $item (grep $_->{type} eq 'html_tag', @{$template->{block}}) {
+			push @code, $self->compile_item($item);
+		}
+		# say "debug: $self->{text_accumulator}";
+		push @code, $self->flush_accumulator;
+		push @code, "\n";
+	}
+
+	push @code, "return \$text;\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function render (array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_template_render_block {
+	my ($self, $template) = @_;
+	my @code;
+
+	my %blocks;
+	if (exists $template->{block}) {
+		foreach my $item (grep { $_->{type} eq 'glass_helper' and $_->{identifier} eq 'block' } @{$template->{block}}) {
+			$blocks{$item->{identifier_argument}} = $item;
+		}
+	}
+
+	return @code unless keys %blocks;
+
+	push @code, "\$text = \$this->parent::render_block(\$block, \$args);\n";
+	push @code, "\n";
+
+	foreach my $block (sort keys %blocks) {
+		my @block_code = $self->compile_block($blocks{$block}{block});
+		push @block_code, $self->flush_accumulator;
+
+		push @code, "if (\$block === '$block') {\n";
+		push @code, map "\t$_", @block_code;
+		push @code, "}\n";
+	}
+
+	push @code, "\n";
+	push @code, "return \$text;\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function render_block (string \$block, array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_block {
+	my ($self, $block) = @_;
+
+	my @code;
+	foreach my $item (@$block) {
+		push @code, $self->compile_item($item);
+	}
+
+	return @code
+}
+
+sub compile_item {
+	my ($self, $item) = @_;
+
+	if ($item->{type} eq 'html_tag') {
+		return $self->compile_html_tag($item)
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
+		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{identifier_argument}', \$args);\n"
+	} else {
+		die "invalid item: $item->{type}";
+	}
 }
 
 sub compile_html_tag {
@@ -86,11 +155,9 @@ sub compile_html_tag {
 	my $start_tag = '<' . join (' ', @fields) . '>';
 	$self->{text_accumulator} .= $start_tag;
 
-	if (exists $tag->{block}) {
-		foreach my $item (@{$tag->{block}}) {
-			push @code, $self->compile_html_tag($item);
-		}
-	}
+	$self->{text_accumulator} .= $tag->{text} if exists $tag->{text};
+
+	push @code, $self->compile_block($tag->{block}) if exists $tag->{block};
 
 	my $end_tag = "</$identifier>";
 	$self->{text_accumulator} .= $end_tag;
