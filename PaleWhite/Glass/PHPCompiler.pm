@@ -209,7 +209,32 @@ sub compile_argument_expression {
 		
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return $self->flush_accumulator, "\$text .= \$args[\"$expression->{identifier}\"];\n";
+		# return $self->flush_accumulator, "\$text .= \$args[\"$expression->{identifier}\"];\n";
+		return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
+
+	} elsif ($expression->{type} eq 'access_expression') {
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
+
+	} else {
+		die "unknown expression: $expression->{type}";
+	}
+}
+
+sub compile_value_expression {
+	my ($self, $expression) = @_;
+
+	if ($expression->{type} eq 'string_expression') {
+		return "\"$expression->{string}\""
+		
+	} elsif ($expression->{type} eq 'variable_expression') {
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return "\$args[\"$expression->{identifier}\"]";
+
+	} elsif ($expression->{type} eq 'access_expression') {
+		my $sub_expression = $self->compile_value_expression($expression->{expression});
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return "$sub_expression->$expression->{identifier}";
 
 	} else {
 		die "unknown expression: $expression->{type}";

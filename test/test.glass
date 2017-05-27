@@ -24,4 +24,7 @@
 
 !template MoreTemplate extends TestTemplate
 	!block head
-		title {title}
+		title {page.title}
+
+!template LinkTemplate
+	a href={link.link}, id={link.id} "click me"

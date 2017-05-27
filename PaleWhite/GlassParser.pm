@@ -43,6 +43,7 @@ our $contexts = {
 	glass_block => 'context_glass_block',
 	glass_helper => 'context_glass_helper',
 	glass_item => 'context_glass_item',
+	glass_more_expression => 'context_glass_more_expression',
 	glass_tag => 'context_glass_tag',
 	glass_tag_attribute => 'context_glass_tag_attribute',
 	glass_tag_text => 'context_glass_tag_text',
@@ -332,11 +333,33 @@ sub context_glass_argument_expression {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'variable_expression', identifier => $tokens[0][1], };
+			$context_object = $self->context_glass_more_expression({ type => 'variable_expression', identifier => $tokens[0][1], });
 			return $context_object;
 			}
 			else {
 			$self->confess_at_current_offset('expression expected');
+			}
+	}
+	return $context_object;
+}
+
+sub context_glass_more_expression {
+	my ($self, $context_object) = @_;
+
+	while ($self->more_tokens) {
+		my @tokens;
+
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '.') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'access_expression', identifier => $tokens[1][1], expression => $context_object, };
+			}
+			else {
+			return $context_object;
 			}
 	}
 	return $context_object;

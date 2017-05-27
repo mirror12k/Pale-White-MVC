@@ -199,7 +199,7 @@ object context glass_argument_expression {
 			return
 		}
 		$identifier_regex => {
-			$_ = {
+			$_ = !glass_more_expression->{
 				type => 'variable_expression'
 				identifier => $0
 			}
@@ -210,6 +210,24 @@ object context glass_argument_expression {
 		}
 	}
 }
+
+object context glass_more_expression {
+	switch {
+		'.' => {
+			match $identifier_regex
+			$_ = {
+				type => 'access_expression'
+				identifier => $1
+				expression => $_
+			}
+		}
+		default {
+			return
+		}
+	}
+}
+
+
 
 
 object context glass_helper {
