@@ -7,14 +7,12 @@
 			div
 			div#container
 				div.text.asdf
-					a href="http://example.org", alt="a link"
-						p
-							"hello world "
-							{name}
-							"!"
+					a href="http://example.org", alt="a link to {{name}} from {{source}}"
+						p "hello world {{name}}!"
 			div.close#footer
 	!block tail
-		p "test"
+		p
+			"test {{tail}} lol"
 	!block mid
 		div.container
 			p "in a container"
@@ -24,7 +22,7 @@
 
 !template MoreTemplate extends TestTemplate
 	!block head
-		title {page.title}
+		title {title}
 
 !template LinkTemplate
 	a href={link.link}, id={link.id} "click me"

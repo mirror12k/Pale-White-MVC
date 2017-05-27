@@ -216,6 +216,11 @@ sub compile_argument_expression {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
 
+	} elsif ($expression->{type} eq 'interpolation_expression') {
+		return map $self->compile_argument_expression($_), @{$expression->{expressions}}
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		# return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
+
 	} else {
 		die "unknown expression: $expression->{type}";
 	}
