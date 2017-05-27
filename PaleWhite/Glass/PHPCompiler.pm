@@ -43,18 +43,27 @@ sub compile {
 	return $code
 }
 
+sub map_class_name {
+	my ($self, $classname) = @_;
+
+	return "/$classname" =~ s/\//\\/gr;
+}
+
 sub compile_template {
 	my ($self, $template) = @_;
 	die "invalid template: $template->{type}" unless $template->{type} eq 'glass_helper' and $template->{identifier} eq 'template';
 
-	my $identifier = $template->{identifier_argument};
+	my $identifier = $template->{arguments}[0];
 	my @code;
+
+	my $parent = $template->{arguments}[2] // 'PaleWhite/Glass/Template';
+	$parent = $self->map_class_name($parent);
 
 	push @code, $self->compile_template_render($template);
 	push @code, $self->compile_template_render_block($template);
 	
 	@code = map "\t$_", @code;
-	@code = ("class $identifier extends \\PaleWhite\\Glass\\Template {\n", @code, "}\n");
+	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -63,17 +72,20 @@ sub compile_template_render {
 	my ($self, $template) = @_;
 	my @code;
 
-	push @code, "\$text = parent::render(\$args);\n";
-
+	my @tags;
 	if (exists $template->{block}) {
-		push @code, "\n";
-		foreach my $item (grep $_->{type} eq 'html_tag', @{$template->{block}}) {
-			push @code, $self->compile_item($item);
-		}
-		# say "debug: $self->{text_accumulator}";
-		push @code, $self->flush_accumulator;
-		push @code, "\n";
+		@tags = grep $_->{type} eq 'html_tag', @{$template->{block}};
 	}
+	return @code unless @tags;
+
+	push @code, "\$text = parent::render(\$args);\n";
+	push @code, "\n";
+	foreach my $item (@tags) {
+		push @code, $self->compile_item($item);
+	}
+	# say "debug: $self->{text_accumulator}";
+	push @code, $self->flush_accumulator;
+	push @code, "\n";
 
 	push @code, "return \$text;\n";
 
@@ -90,7 +102,7 @@ sub compile_template_render_block {
 	my %blocks;
 	if (exists $template->{block}) {
 		foreach my $item (grep { $_->{type} eq 'glass_helper' and $_->{identifier} eq 'block' } @{$template->{block}}) {
-			$blocks{$item->{identifier_argument}} = $item;
+			$blocks{$item->{arguments}[0]} = $item;
 		}
 	}
 
@@ -134,7 +146,7 @@ sub compile_item {
 	if ($item->{type} eq 'html_tag') {
 		return $self->compile_html_tag($item)
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
-		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{identifier_argument}', \$args);\n"
+		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{arguments}[0]', \$args);\n"
 	} elsif ($item->{type} eq 'expression_node') {
 		return $self->compile_argument_expression($item->{expression}), map $self->compile_argument_expression($_), @{$item->{text}}
 	} else {

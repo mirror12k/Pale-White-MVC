@@ -141,14 +141,34 @@ object context glass_tag {
 object context parse_attribute_arguments {
 	if $identifier_regex => {
 		match '='
-		$_{attributes}{$0} = !glass_argument_expression
+		$_{attributes}{$0} = !glass_tag_attribute
 
 		while ',' => {
 			match $identifier_regex, '='
-			$_{attributes}{$3} = !glass_argument_expression
+			$_{attributes}{$3} = !glass_tag_attribute
 		}
 	}
 	return
+}
+
+object context glass_tag_attribute {
+	switch {
+		$string_regex => {
+			$_ = {
+				type => 'string_expression'
+				string => !format_string->$0
+			}
+			return
+		}
+		'{' => {
+			$_ = !glass_argument_expression
+			match '}'
+			return
+		}
+		default {
+			die 'attribute expression expected'
+		}
+	}
 }
 
 object context glass_tag_text {
@@ -193,9 +213,10 @@ object context glass_argument_expression {
 
 
 object context glass_helper {
-	match $identifier_regex
-	$_{identifier_argument} = $0
-	$_ = !parse_attribute_arguments->$_
+	while $identifier_regex => {
+		$_{arguments}[] = $0
+	}
+	# $_ = !parse_attribute_arguments->$_
 
 	return
 }

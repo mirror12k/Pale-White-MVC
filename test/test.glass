@@ -19,4 +19,9 @@
 		div.container
 			p "in a container"
 	!block midend
-		div class=dynamic {dynamic}
+		div class={dynamic} {dynamic}
+
+
+!template MoreTemplate extends TestTemplate
+	!block head
+		title {title}
