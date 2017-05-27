@@ -257,7 +257,7 @@ sub context_glass_expression {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = $self->context_format_string($tokens[0][1]);
+			$context_object = { type => 'string_expression', string => $self->context_format_string($tokens[0][1]), };
 			return $context_object;
 			}
 			else {

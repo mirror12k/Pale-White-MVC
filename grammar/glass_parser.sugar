@@ -134,7 +134,10 @@ object context glass_tag_text {
 object context glass_expression {
 	switch {
 		$string_regex => {
-			$_ = !format_string->$0
+			$_ = {
+				type => 'string_expression'
+				string => !format_string->$0
+			}
 			return
 		}
 		default {

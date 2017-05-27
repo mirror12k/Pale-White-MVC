@@ -1,11 +1,11 @@
 
-!template1 test1
-!template test
+!template TestTemplate
 	html
+		head
 		body
-			!block body asdf="qwert", a="b"
-		body
-	div#container
-		div.text.asdf
-			a href="http://example.org", alt="a link"
-				p "hello world"
+			div
+			div#container
+				div.text.asdf
+					a href="http://example.org", alt="a link"
+						p "hello world"
+			div.close#footer
