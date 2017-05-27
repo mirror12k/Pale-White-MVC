@@ -135,6 +135,8 @@ sub compile_item {
 		return $self->compile_html_tag($item)
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
 		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{identifier_argument}', \$args);\n"
+	} elsif ($item->{type} eq 'expression_node') {
+		return $self->compile_argument_expression($item->{expression}), map $self->compile_argument_expression($_), @{$item->{text}}
 	} else {
 		die "invalid item: $item->{type}";
 	}
@@ -146,32 +148,59 @@ sub compile_html_tag {
 
 	my $identifier = $tag->{identifier} // 'div';
 
-	my @fields;
-	push @fields, $identifier;
-	push @fields, "id=\"$tag->{id}\"" if exists $tag->{id};
-	push @fields, 'class="' . join (' ', @{$tag->{class}}) . '"' if exists $tag->{class};
-	push @fields, map "$_=" . $self->compile_html_attribute($tag->{attributes}{$_}), keys %{$tag->{attributes}} if exists $tag->{attributes};
+	$self->{text_accumulator} .= "<$identifier";
+	$self->{text_accumulator} .= " id=\"$tag->{id}\"" if exists $tag->{id};
+	$self->{text_accumulator} .= ' class="' . join (' ', @{$tag->{class}}) . '"' if exists $tag->{class};
 
-	my $start_tag = '<' . join (' ', @fields) . '>';
-	$self->{text_accumulator} .= $start_tag;
+	if (exists $tag->{attributes}) {
+		foreach my $key (sort keys %{$tag->{attributes}}) {
+			$self->{text_accumulator} .= " $key=\"";
+			push @code, $self->compile_argument_expression($tag->{attributes}{$key});
+			$self->{text_accumulator} .= "\"";
 
-	$self->{text_accumulator} .= $tag->{text} if exists $tag->{text};
+		}
+	}
+	$self->{text_accumulator} .= ">";
+	# push @fields, map "$_=" . $self->compile_html_attribute($tag->{attributes}{$_}), keys %{$tag->{attributes}} if exists $tag->{attributes};
+
+	# my $start_tag = '<' . join (' ', @fields) . '>';
+	# $self->{text_accumulator} .= $start_tag;
+
+	push @code, map $self->compile_argument_expression($_), @{$tag->{text}} if exists $tag->{text};
 
 	push @code, $self->compile_block($tag->{block}) if exists $tag->{block};
 
-	my $end_tag = "</$identifier>";
-	$self->{text_accumulator} .= $end_tag;
+	# my $end_tag = "</$identifier>";
+	$self->{text_accumulator} .= "</$identifier>";
 
 	return @code
 }
 
-sub compile_html_attribute {
+# sub compile_html_attribute {
+# 	my ($self, $expression) = @_;
+
+# 	if ($expression->{type} eq 'string_expression') {
+# 		return "\"$expression->{string}\""
+# 	} elsif ($expression->{type} eq 'variable_expression') {
+# 		return "\"' . \$args[\"$expression->{identifier}\"] . '\""
+# 	} else {
+# 		die "unknown html attribute expression: $expression->{type}";
+# 	}
+# }
+
+sub compile_argument_expression {
 	my ($self, $expression) = @_;
 
 	if ($expression->{type} eq 'string_expression') {
-		return "\"$expression->{string}\""
+		$self->{text_accumulator} .= $expression->{string};
+		return
+		
+	} elsif ($expression->{type} eq 'variable_expression') {
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return $self->flush_accumulator, "\$text .= \$args[\"$expression->{identifier}\"];\n";
+
 	} else {
-		die "unknown html attribute expression: $expression->{type}";
+		die "unknown expression: $expression->{type}";
 	}
 }
 

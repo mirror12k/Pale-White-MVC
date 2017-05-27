@@ -2,7 +2,7 @@ package PaleWhite::GlassParser
 
 
 identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
-symbol_regex = /!|\.|\#|=|,/
+symbol_regex = /!|\.|\#|=|,|\{|\}/
 
 indent_regex = /\t++/
 whitespace_regex = /[\t \r]++/
@@ -59,7 +59,7 @@ object context glass_block {
 	}
 	switch {
 		&match_indent->$_ => {
-			$_{block}[] = !glass_block->!glass_item->$0
+			$_{block}[] = !glass_item->$0
 		}
 		default {
 			return
@@ -78,6 +78,7 @@ object context glass_item {
 				indent => $_
 			}
 			match $newline_regex
+			$_ = !glass_block->$_
 			return
 		}
 		$identifier_regex => {
@@ -87,6 +88,32 @@ object context glass_item {
 				identifier => $0
 				indent => $_
 			}
+			match $newline_regex
+			$_ = !glass_block->$_
+			return
+		}
+		$string_regex => {
+			$_ = !glass_tag_text->{
+				type => 'expression_node'
+				line_number => $0{line_number}
+				expression => {
+					type => 'string_expression'
+					string => !format_string->$0
+				}
+				indent => $_
+			}
+			match $newline_regex
+			return
+		}
+		'{' => {
+			$_ = {
+				type => 'expression_node'
+				line_number => $0{line_number}
+				expression => !glass_argument_expression
+				indent => $_
+			}
+			match '}'
+			$_ = !glass_tag_text->$_
 			match $newline_regex
 			return
 		}
@@ -114,29 +141,47 @@ object context glass_tag {
 object context parse_attribute_arguments {
 	if $identifier_regex => {
 		match '='
-		$_{attributes}{$0} = !glass_expression
+		$_{attributes}{$0} = !glass_argument_expression
 
 		while ',' => {
 			match $identifier_regex, '='
-			$_{attributes}{$3} = !glass_expression
+			$_{attributes}{$3} = !glass_argument_expression
 		}
 	}
 	return
 }
 
 object context glass_tag_text {
-	if $string_regex => {
-		$_{text} = !format_string->$0
+	switch {
+		$string_regex => {
+			$_{text}[] = {
+				type => 'string_expression'
+				string => !format_string->$0
+			}
+		}
+		'{' => {
+			$_{text}[] = !glass_argument_expression
+			match '}'
+		}
+		default {
+			return
+		}
 	}
-	return
 }
 
-object context glass_expression {
+object context glass_argument_expression {
 	switch {
 		$string_regex => {
 			$_ = {
 				type => 'string_expression'
 				string => !format_string->$0
+			}
+			return
+		}
+		$identifier_regex => {
+			$_ = {
+				type => 'variable_expression'
+				identifier => $0
 			}
 			return
 		}

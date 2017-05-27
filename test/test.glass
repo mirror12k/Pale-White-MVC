@@ -8,10 +8,15 @@
 			div#container
 				div.text.asdf
 					a href="http://example.org", alt="a link"
-						p "hello world"
+						p
+							"hello world "
+							{name}
+							"!"
 			div.close#footer
 	!block tail
 		p "test"
 	!block mid
 		div.container
 			p "in a container"
+	!block midend
+		div class=dynamic {dynamic}

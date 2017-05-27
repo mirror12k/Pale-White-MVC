@@ -15,7 +15,7 @@ use feature 'say';
 ##############################
 
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
-our $var_symbol_regex = qr/!|\.|\#|=|,/;
+our $var_symbol_regex = qr/!|\.|\#|=|,|\{|\}/;
 our $var_indent_regex = qr/\t++/;
 our $var_whitespace_regex = qr/[\t \r]++/;
 our $var_newline_regex = qr/\s*\n/s;
@@ -39,8 +39,8 @@ our $ignored_tokens = [
 
 our $contexts = {
 	format_string => 'context_format_string',
+	glass_argument_expression => 'context_glass_argument_expression',
 	glass_block => 'context_glass_block',
-	glass_expression => 'context_glass_expression',
 	glass_helper => 'context_glass_helper',
 	glass_item => 'context_glass_item',
 	glass_tag => 'context_glass_tag',
@@ -134,7 +134,7 @@ sub context_glass_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{block}}, $self->context_glass_block($self->context_glass_item($tokens[0][1]));
+			push @{$context_object->{block}}, $self->context_glass_item($tokens[0][1]);
 			}
 			else {
 			return $context_object;
@@ -157,6 +157,7 @@ sub context_glass_item {
 			$self->confess_at_current_offset('expected qr/\\s*\\n/s')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_newline_regex\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_block($context_object);
 			return $context_object;
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/) {
@@ -164,6 +165,31 @@ sub context_glass_item {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = $self->context_glass_tag_text($self->context_parse_attribute_arguments($self->context_glass_tag({ type => 'html_tag', line_number => $tokens[0][2], identifier => $tokens[0][1], indent => $context_object, })));
+			$self->confess_at_current_offset('expected qr/\\s*\\n/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_newline_regex\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_block($context_object);
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_string_regex\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_tag_text({ type => 'expression_node', line_number => $tokens[0][2], expression => { type => 'string_expression', string => $self->context_format_string($tokens[0][1]), }, indent => $context_object, });
+			$self->confess_at_current_offset('expected qr/\\s*\\n/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_newline_regex\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'expression_node', line_number => $tokens[0][2], expression => $self->context_glass_argument_expression, indent => $context_object, };
+			$self->confess_at_current_offset('expected \'}\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_tag_text($context_object);
 			$self->confess_at_current_offset('expected qr/\\s*\\n/s')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_newline_regex\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
@@ -214,7 +240,7 @@ sub context_parse_attribute_arguments {
 			$self->confess_at_current_offset('expected \'=\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '=';
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object->{attributes}{$tokens[0][1]} = $self->context_glass_expression;
+			$context_object->{attributes}{$tokens[0][1]} = $self->context_glass_argument_expression;
 			while ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -222,7 +248,7 @@ sub context_parse_attribute_arguments {
 			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, \'=\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=';
 			@tokens = (@tokens, $self->step_tokens(2));
-			$context_object->{attributes}{$tokens[3][1]} = $self->context_glass_expression;
+			$context_object->{attributes}{$tokens[3][1]} = $self->context_glass_argument_expression;
 			}
 			}
 			return $context_object;
@@ -240,14 +266,25 @@ sub context_glass_tag_text {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object->{text} = $self->context_format_string($tokens[0][1]);
+			push @{$context_object->{text}}, { type => 'string_expression', string => $self->context_format_string($tokens[0][1]), };
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{text}}, $self->context_glass_argument_expression;
+			$self->confess_at_current_offset('expected \'}\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			else {
 			return $context_object;
+			}
 	}
 	return $context_object;
 }
 
-sub context_glass_expression {
+sub context_glass_argument_expression {
 	my ($self, $context_object) = @_;
 
 	while ($self->more_tokens) {
@@ -258,6 +295,13 @@ sub context_glass_expression {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = { type => 'string_expression', string => $self->context_format_string($tokens[0][1]), };
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'variable_expression', identifier => $tokens[0][1], };
 			return $context_object;
 			}
 			else {
