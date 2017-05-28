@@ -3,4 +3,8 @@ controller MainController {
 	path "/" {
 		render MoreTemplate title="My Controller", name="amy", source="jack";
 	}
+
+	path "/args" [title, source] {
+		render MoreTemplate title=title, name="amy", source=source;
+	}
 }

@@ -60,14 +60,26 @@ list context root {
 object context controller_block {
 	switch {
 		'path' => {
-			match $string_regex, '{'
-			$_{paths}[] = {
-				type => 'match_path'
-				line_number => $0{line_number}
-				path => !format_string->$1
-				block => !path_action_block->[]
+			match $string_regex
+
+			if '[' => {
+				$_{paths}[] = !path_action_block->{
+					type => 'match_path'
+					line_number => $0{line_number}
+					path => !format_string->$1
+					arguments => !arguments_list->[]
+					block => []
+				}
+
+			} else {
+				$_{paths}[] = !path_action_block->{
+					type => 'match_path'
+					line_number => $0{line_number}
+					path => !format_string->$1
+					arguments => []
+					block => []
+				}
 			}
-			match '}'
 		}
 		default {
 			return
@@ -76,11 +88,31 @@ object context controller_block {
 }
 
 
-list context path_action_block {
+list context arguments_list {
+	if $identifier_regex => {
+		push $0
+
+		while ',' => {
+			match $identifier_regex
+			push $2
+		}
+	}
+
+	match ']'
+	return
+}
+
+object context path_action_block {
+	match '{'
+	$_ = !path_action_block_list->$_
+	match '}'
+	return
+}
+object context path_action_block_list {
 	switch {
 		'render' => {
 			match $identifier_regex
-			push {
+			$_{block}[] = {
 				type => 'render_template'
 				line_number => $0{line_number}
 				identifier => $1

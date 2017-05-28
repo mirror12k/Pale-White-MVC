@@ -45,9 +45,11 @@ our $ignored_tokens = [
 our $contexts = {
 	action_arguments => 'context_action_arguments',
 	action_expression => 'context_action_expression',
+	arguments_list => 'context_arguments_list',
 	controller_block => 'context_controller_block',
 	format_string => 'context_format_string',
 	path_action_block => 'context_path_action_block',
+	path_action_block_list => 'context_path_action_block_list',
 	root => 'context_root',
 };
 
@@ -119,13 +121,18 @@ sub context_controller_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/"([^\\\\"]|\\\\[\\\\"])*?"/s, \'{\'')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_string_regex\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '{';
-			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{paths}}, { type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), block => $self->context_path_action_block([]), };
-			$self->confess_at_current_offset('expected \'}\'')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
+			$self->confess_at_current_offset('expected qr/"([^\\\\"]|\\\\[\\\\"])*?"/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_string_regex\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => $self->context_arguments_list([]), block => [], });
+			}
+			else {
+			push @{$context_object->{paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => [], block => [], });
+			}
 			}
 			else {
 			return $context_object;
@@ -134,8 +141,55 @@ sub context_controller_block {
 	return $context_object;
 }
 
-sub context_path_action_block {
+sub context_arguments_list {
 	my ($self, $context_list) = @_;
+
+	while ($self->more_tokens) {
+		my @tokens;
+
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @$context_list, $tokens[0][1];
+			while ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @$context_list, $tokens[2][1];
+			}
+			}
+			$self->confess_at_current_offset('expected \']\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ']';
+			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_list;
+	}
+	return $context_list;
+}
+
+sub context_path_action_block {
+	my ($self, $context_object) = @_;
+
+	while ($self->more_tokens) {
+		my @tokens;
+
+			$self->confess_at_current_offset('expected \'{\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{';
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_path_action_block_list($context_object);
+			$self->confess_at_current_offset('expected \'}\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
+			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_object;
+	}
+	return $context_object;
+}
+
+sub context_path_action_block_list {
+	my ($self, $context_object) = @_;
 
 	while ($self->more_tokens) {
 		my @tokens;
@@ -147,16 +201,16 @@ sub context_path_action_block {
 			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @$context_list, { type => 'render_template', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
+			push @{$context_object->{block}}, { type => 'render_template', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));
 			}
 			else {
-			return $context_list;
+			return $context_object;
 			}
 	}
-	return $context_list;
+	return $context_object;
 }
 
 sub context_action_arguments {

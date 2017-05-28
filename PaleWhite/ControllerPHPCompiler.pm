@@ -79,6 +79,17 @@ sub compile_path {
 	my ($self, $path) = @_;
 	my @code;
 
+	if (@{$path->{arguments}}) {
+		foreach my $arg (@{$path->{arguments}}) {
+			push @code, "if (!isset(\$args['$arg']))\n";
+			push @code, "\tthrow new \\Exception('missing argument \"$arg\" to path \"$path->{path}\"');\n";
+		}
+		foreach my $arg (@{$path->{arguments}}) {
+			push @code, "\$$arg = \$args['$arg'];\n";
+		}
+		push @code, "\n";
+	}
+
 	push @code, map $self->compile_action($_), @{$path->{block}};
 
 	@code = map "\t$_", @code;
