@@ -11,7 +11,7 @@ string_regex = /"([^\\"]|\\[\\"])*?"/s
 comment_regex = /\/\/[^\n]*+\n/s
 whitespace_regex = /\s++/s
 
-format_native_code_substitution = s/\A\{(\{.*?\})\}\Z/$1/s
+format_native_code_substitution = s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/s
 escape_string_substitution = s/\\([\\"])/$1/gs
 format_string_substitution = s/\A"(.*)"\Z/$1/s
 
@@ -25,7 +25,6 @@ tokens {
 	# keyword => $keyword_regex
 	identifier => $identifier_regex
 	integer => $integer_regex
-	string => $string_regex
 	string => $string_regex
 
 	comment => $comment_regex
@@ -81,6 +80,16 @@ object context controller_block {
 				}
 			}
 		}
+		'validator' => {
+			match $identifier_regex, $native_code_block_regex
+
+			$_{validators}[] = {
+				type => 'validator'
+				line_number => $0{line_number}
+				identifier => $1
+				code => !format_native_code->$2
+			}
+		}
 		default {
 			return
 		}
@@ -117,6 +126,16 @@ object context path_action_block_list {
 				line_number => $0{line_number}
 				identifier => $1
 				arguments => !action_arguments->{}
+			}
+			match ';'
+		}
+		'validate' => {
+			match $identifier_regex, 'as', $identifier_regex
+			$_{block}[] = {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				identifier => $1
+				validator_identifier => $3
 			}
 			match ';'
 		}
@@ -170,6 +189,10 @@ object context action_expression {
 item context format_string {
 	$_ = $escape_string_substitution->
 			$format_string_substitution->$_
+	return
+}
+item context format_native_code {
+	$_ = $format_native_code_substitution->$_
 	return
 }
 

@@ -44,6 +44,7 @@ sub compile_controller {
 	$parent = $self->map_class_name($parent);
 
 	push @code, $self->compile_controller_route($controller);
+	push @code, $self->compile_controller_validate($controller);
 	
 	@code = map "\t$_", @code;
 	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
@@ -62,7 +63,7 @@ sub compile_controller_route {
 	return @code unless @paths;
 
 	push @code, "parent::route(\$path, \$args);\n";
-	# push @code, "\n";
+	push @code, "\n";
 	foreach my $path (@paths) {
 		push @code, $self->compile_path($path);
 	}
@@ -94,6 +95,54 @@ sub compile_path {
 
 	@code = map "\t$_", @code;
 	@code = ("if (\$path === '$path->{path}') {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_controller_validate {
+	my ($self, $controller) = @_;
+	my @code;
+
+	my @validators;
+	if (exists $controller->{validators}) {
+		@validators = @{$controller->{validators}};
+	}
+	return @code unless @validators;
+
+	push @code, "\$value = parent::validate(\$type, \$value);\n";
+	push @code, "\n";
+	foreach my $validator (@validators) {
+		push @code, $self->compile_validator($validator);
+	}
+
+	push @code, "\n";
+	push @code, "return \$value;\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function validate (string \$type, \$value) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_validator {
+	my ($self, $validator) = @_;
+	my @code;
+
+	# if (@{$path->{arguments}}) {
+	# 	foreach my $arg (@{$path->{arguments}}) {
+	# 		push @code, "if (!isset(\$args['$arg']))\n";
+	# 		push @code, "\tthrow new \\Exception('missing argument \"$arg\" to path \"$path->{path}\"');\n";
+	# 	}
+	# 	foreach my $arg (@{$path->{arguments}}) {
+	# 		push @code, "\$$arg = \$args['$arg'];\n";
+	# 	}
+	# 	push @code, "\n";
+	# }
+
+	push @code, map "$_\n", map s/\A\t\t?//r, split "\n", $validator->{code};
+
+	@code = map "\t$_", @code;
+	@code = ("if (\$type === '$validator->{identifier}') {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -149,7 +198,8 @@ sub compile_action {
 	if ($action->{type} eq 'render_template') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "echo ((new $action->{identifier}())->render($arguments));\n"
-	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
+	} elsif ($action->{type} eq 'validate_variable') {
+		return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
 	# 	return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{arguments}[0]', \$args);\n"
 	# } elsif ($item->{type} eq 'expression_node') {
 	# 	return $self->compile_argument_expression($item->{expression}), map $self->compile_argument_expression($_), @{$item->{text}}
