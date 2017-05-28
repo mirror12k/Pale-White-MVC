@@ -45,6 +45,7 @@ sub compile_controller {
 
 	push @code, $self->compile_controller_route($controller);
 	push @code, $self->compile_controller_validate($controller);
+	push @code, $self->compile_controller_action($controller);
 	
 	@code = map "\t$_", @code;
 	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
@@ -109,14 +110,12 @@ sub compile_controller_validate {
 	}
 	return @code unless @validators;
 
-	push @code, "\$value = parent::validate(\$type, \$value);\n";
-	push @code, "\n";
+	my $first = 1;
 	foreach my $validator (@validators) {
-		push @code, $self->compile_validator($validator);
+		push @code, $self->compile_validator($validator, $first);
+		$first = 0;
 	}
-
-	push @code, "\n";
-	push @code, "return \$value;\n";
+	push @code, "} else {\n", "\treturn parent::validate(\$type, \$value);\n", "}\n";
 
 	@code = map "\t$_", @code;
 	@code = ("public function validate (string \$type, \$value) {\n", @code, "}\n", "\n");
@@ -125,24 +124,56 @@ sub compile_controller_validate {
 }
 
 sub compile_validator {
-	my ($self, $validator) = @_;
+	my ($self, $validator, $first) = @_;
 	my @code;
-
-	# if (@{$path->{arguments}}) {
-	# 	foreach my $arg (@{$path->{arguments}}) {
-	# 		push @code, "if (!isset(\$args['$arg']))\n";
-	# 		push @code, "\tthrow new \\Exception('missing argument \"$arg\" to path \"$path->{path}\"');\n";
-	# 	}
-	# 	foreach my $arg (@{$path->{arguments}}) {
-	# 		push @code, "\$$arg = \$args['$arg'];\n";
-	# 	}
-	# 	push @code, "\n";
-	# }
 
 	push @code, map "$_\n", map s/\A\t\t?//r, split "\n", $validator->{code};
 
 	@code = map "\t$_", @code;
-	@code = ("if (\$type === '$validator->{identifier}') {\n", @code, "}\n", "\n");
+	if ($first) {
+		@code = ("if (\$type === '$validator->{identifier}') {\n", @code);
+	} else {
+		@code = ("} elseif (\$type === '$validator->{identifier}') {\n", @code);
+	}
+
+	return @code
+}
+
+sub compile_controller_action {
+	my ($self, $controller) = @_;
+	my @code;
+
+	my @actions;
+	if (exists $controller->{actions}) {
+		@actions = @{$controller->{actions}};
+	}
+	return @code unless @actions;
+
+	my $first = 1;
+	foreach my $action (@actions) {
+		push @code, $self->compile_controller_action_call($action, $first);
+		$first = 0;
+	}
+	push @code, "} else {\n", "\treturn parent::action(\$action, \$args);\n", "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function action (string \$action, array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_controller_action_call {
+	my ($self, $action, $first) = @_;
+	my @code;
+
+	push @code, map "$_\n", map s/\A\t\t?//r, split "\n", $action->{code};
+
+	@code = map "\t$_", @code;
+	if ($first) {
+		@code = ("if (\$action === '$action->{identifier}') {\n", @code);
+	} else {
+		@code = ("} elseif (\$action === '$action->{identifier}') {\n", @code);
+	}
 
 	return @code
 }
@@ -198,6 +229,9 @@ sub compile_action {
 	if ($action->{type} eq 'render_template') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "echo ((new $action->{identifier}())->render($arguments));\n"
+	} elsif ($action->{type} eq 'execute_action') {
+		my $arguments = $self->compile_arguments_array($action->{arguments});
+		return "\$this->action('$action->{identifier}', $arguments);\n"
 	} elsif ($action->{type} eq 'validate_variable') {
 		return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
 	# 	return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{arguments}[0]', \$args);\n"

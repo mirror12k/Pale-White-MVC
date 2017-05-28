@@ -80,6 +80,16 @@ object context controller_block {
 				}
 			}
 		}
+		'action' => {
+			match $identifier_regex, $native_code_block_regex
+
+			$_{actions}[] = {
+				type => 'action'
+				line_number => $0{line_number}
+				identifier => $1
+				code => !format_native_code->$2
+			}
+		}
 		'validator' => {
 			match $identifier_regex, $native_code_block_regex
 
@@ -117,12 +127,23 @@ object context path_action_block {
 	match '}'
 	return
 }
+
 object context path_action_block_list {
 	switch {
 		'render' => {
 			match $identifier_regex
 			$_{block}[] = {
 				type => 'render_template'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			match ';'
+		}
+		'action' => {
+			match $identifier_regex
+			$_{block}[] = {
+				type => 'execute_action'
 				line_number => $0{line_number}
 				identifier => $1
 				arguments => !action_arguments->{}

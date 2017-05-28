@@ -134,6 +134,15 @@ sub context_controller_block {
 			push @{$context_object->{paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => [], block => [], });
 			}
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, qr/\\{\\{.*?\\}\\}/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A$var_native_code_block_regex\Z/;
+			@tokens = (@tokens, $self->step_tokens(2));
+			push @{$context_object->{actions}}, { type => 'action', line_number => $tokens[0][2], identifier => $tokens[1][1], code => $self->context_format_native_code($tokens[2][1]), };
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'validator') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -211,6 +220,18 @@ sub context_path_action_block_list {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{block}}, { type => 'render_template', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_identifier_regex\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{block}}, { type => 'execute_action', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));

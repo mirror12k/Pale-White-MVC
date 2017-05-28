@@ -7,15 +7,22 @@ controller MainController {
 	path "/args" [title, source] {
 		validate title as add_punctuation;
 		validate source as source_link;
-		
+
+		action say_hello msg="this is my message";
+
 		render MoreTemplate title=title, name="amy", source=source;
 	}
 
 	validator add_punctuation {{
-		$value = "${value}!";
+		return "${value}!";
 	}}
 
 	validator source_link {{
-		$value = "http://${value}";
+		return "http://${value}";
+	}}
+
+	action say_hello {{
+		$msg = (string)$args['msg'];
+		error_log("hello: $msg");
 	}}
 }
