@@ -1,0 +1,156 @@
+package PaleWhite::ControllerParser
+
+native_code_block_regex = /\{\{.*?\}\}/s
+
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|=|,/
+# keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
+identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
+integer_regex = /\d++/
+
+string_regex = /"([^\\"]|\\[\\"])*?"/s
+comment_regex = /\/\/[^\n]*+\n/s
+whitespace_regex = /\s++/s
+
+format_native_code_substitution = s/\A\{(\{.*?\})\}\Z/$1/s
+escape_string_substitution = s/\\([\\"])/$1/gs
+format_string_substitution = s/\A"(.*)"\Z/$1/s
+
+
+
+
+tokens {
+	native_code_block => $native_code_block_regex
+
+	symbol => $symbol_regex
+	# keyword => $keyword_regex
+	identifier => $identifier_regex
+	integer => $integer_regex
+	string => $string_regex
+	string => $string_regex
+
+	comment => $comment_regex
+	whitespace => $whitespace_regex
+}
+
+ignored_tokens {
+	whitespace
+	comment
+}
+
+
+
+
+list context root {
+	switch {
+		'controller' => {
+			match $identifier_regex, '{'
+			push !controller_block->{
+				type => 'controller_definition'
+				line_number => $0{line_number}
+				identifier => $1
+			}
+			match '}'
+		}
+		default {
+			die 'block statement expected'
+		}
+	}
+}
+
+object context controller_block {
+	switch {
+		'path' => {
+			match $string_regex, '{'
+			$_{paths}[] = {
+				type => 'match_path'
+				line_number => $0{line_number}
+				path => !format_string->$1
+				code => !path_action_block->[]
+			}
+			match '}'
+		}
+		default {
+			return
+		}
+	}
+}
+
+
+list context path_action_block {
+	switch {
+		'render' => {
+			match $identifier_regex
+			push {
+				type => 'render_template'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			match ';'
+		}
+		default {
+			return
+		}
+	}
+}
+
+
+object context action_arguments {
+	if $identifier_regex => {
+		match '='
+		$_{$0} = !action_expression
+
+		while ',' => {
+			match $identifier_regex, '='
+			$_{$3} = !action_expression
+		}
+	}
+	return
+}
+
+
+object context action_expression {
+	switch {
+		$identifier_regex => {
+			$_ = {
+				type => 'variable_expression'
+				line_number => $0{line_number}
+				identifier => $0
+			}
+			return
+		}
+		$string_regex => {
+			$_ = {
+				type => 'string_expression'
+				line_number => $0{line_number}
+				string => !format_string->$0
+			}
+			return
+		}
+		default {
+			die 'expression expected'
+		}
+	}
+}
+
+
+
+item context format_string {
+	$_ = $escape_string_substitution->
+			$format_string_substitution->$_
+	return
+}
+
+
+sub main {{
+	use Data::Dumper;
+	use Sugar::IO::File;
+
+	my $parser = __PACKAGE__->new;
+	foreach my $file (@_) {
+		$parser->{filepath} = Sugar::IO::File->new($file);
+		my $tree = $parser->parse;
+		say Dumper $tree;
+	}
+}}
+

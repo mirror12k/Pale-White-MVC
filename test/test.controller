@@ -1,0 +1,6 @@
+
+controller Main {
+	path "/" {
+		render TestTemplate asdf=qwert, a="b";
+	}
+}
