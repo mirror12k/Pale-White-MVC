@@ -122,7 +122,7 @@ sub context_controller_block {
 			$self->confess_at_current_offset('expected qr/"([^\\\\"]|\\\\[\\\\"])*?"/s, \'{\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_string_regex\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '{';
 			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{paths}}, { type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), code => $self->context_path_action_block([]), };
+			push @{$context_object->{paths}}, { type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), block => $self->context_path_action_block([]), };
 			$self->confess_at_current_offset('expected \'}\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
 			@tokens = (@tokens, $self->step_tokens(1));

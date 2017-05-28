@@ -1,6 +1,6 @@
 
-controller Main {
+controller MainController {
 	path "/" {
-		render TestTemplate asdf=qwert, a="b";
+		render MoreTemplate title="My Controller", name="amy", source="jack";
 	}
 }

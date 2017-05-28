@@ -178,7 +178,7 @@ sub compile_html_tag {
 	# my $start_tag = '<' . join (' ', @fields) . '>';
 	# $self->{text_accumulator} .= $start_tag;
 
-	push @code, map $self->compile_argument_expression($_), @{$tag->{text}} if exists $tag->{text};
+	push @code, $self->compile_argument_expression($tag->{text_expression}) if exists $tag->{text_expression};
 
 	push @code, $self->compile_block($tag->{block}) if exists $tag->{block};
 

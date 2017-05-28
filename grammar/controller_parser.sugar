@@ -65,7 +65,7 @@ object context controller_block {
 				type => 'match_path'
 				line_number => $0{line_number}
 				path => !format_string->$1
-				code => !path_action_block->[]
+				block => !path_action_block->[]
 			}
 			match '}'
 		}
