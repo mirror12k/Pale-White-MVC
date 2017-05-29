@@ -124,7 +124,7 @@ sub compile_template_render_block {
 	push @code, "return \$text;\n";
 
 	@code = map "\t$_", @code;
-	@code = ("public function render_block (string \$block, array \$args) {\n", @code, "}\n", "\n");
+	@code = ("public function render_block (\$block, array \$args) {\n", @code, "}\n", "\n");
 
 	return @code
 }

@@ -72,7 +72,7 @@ sub compile_controller_route {
 	# push @code, "return \$text;\n";
 
 	@code = map "\t$_", @code;
-	@code = ("public function route (string \$path, array \$args) {\n", @code, "}\n", "\n");
+	@code = ("public function route (\$path, array \$args) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -94,8 +94,11 @@ sub compile_path {
 
 	push @code, map $self->compile_action($_), @{$path->{block}};
 
+	my ($condition_code, $match_code) = $self->compile_path_condition($path->{path});
+	@code = (@$match_code, @code);
+
 	@code = map "\t$_", @code;
-	@code = ("if (\$path === '$path->{path}') {\n", @code, "}\n", "\n");
+	@code = ("if ($condition_code) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -118,7 +121,7 @@ sub compile_controller_validate {
 	push @code, "} else {\n", "\treturn parent::validate(\$type, \$value);\n", "}\n";
 
 	@code = map "\t$_", @code;
-	@code = ("public function validate (string \$type, \$value) {\n", @code, "}\n", "\n");
+	@code = ("public function validate (\$type, \$value) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -157,7 +160,7 @@ sub compile_controller_action {
 	push @code, "} else {\n", "\treturn parent::action(\$action, \$args);\n", "}\n";
 
 	@code = map "\t$_", @code;
-	@code = ("public function action (string \$action, array \$args) {\n", @code, "}\n", "\n");
+	@code = ("public function action (\$action, array \$args) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -237,6 +240,49 @@ sub compile_expression {
 	}
 }
 
+our $identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
+
+sub compile_path_condition {
+	my ($self, $condition) = @_;
+
+	my $condition_code;
+	my @match_code;
+
+	warn "debug condition: $condition";
+	my @condition_vars = ($condition =~ /(?|\{\{($identifier_regex=\[\])\}\}|\{\{($identifier_regex)\}\})/g);
+
+	if (@condition_vars) {
+		warn "debug condition vars: " . join ',', @condition_vars;
+
+		$condition =~ s/\{\{($identifier_regex=\[\])\}\}/(.*?)/sg;
+		$condition =~ s/\{\{($identifier_regex)\}\}/([^\/]*?)/sg;
+		$condition =~ s#/#\\/#g;
+
+		warn "debug regex condition: $condition";
+
+		$condition_code = "preg_match('/\\A$condition\\Z/', \$path, \$_matches)";
+
+		foreach my $i (0 .. $#condition_vars) {
+			my $var = $condition_vars[$i];
+			my $index = $i + 1;
+			if ($var =~ /\A($identifier_regex)=\[\]\Z/) {
+				$var = $1;
+				push @match_code, "\$$var = explode('/', \$_matches[$index]);\n";
+			} else {
+				push @match_code, "\$$var = \$_matches[$index];\n";
+			}
+		}
+
+	} else {
+		$condition_code = "\$path === '$condition'";
+	}
+	warn "debug condition code: $condition_code";
+	warn "debug match code: " . join '', @match_code;
+
+	return $condition_code, \@match_code
+	# preg_match("/php/i", "PHP is the web scripting language of choice.")
+}
+
 
 
 
@@ -245,6 +291,8 @@ sub main {
 	use Data::Dumper;
 	use Sugar::IO::File;
 	use PaleWhite::ControllerParser;
+
+	compile_path_condition(undef, "asdf/{{q}}/zxcv/{{z=[]}}");
 
 	my $parser = PaleWhite::ControllerParser->new;
 	foreach my $file (@_) {

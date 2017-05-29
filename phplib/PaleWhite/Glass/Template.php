@@ -9,7 +9,7 @@ abstract class Template {
 		return '';
 	}
 
-	public function render_block (string $block, array $args) {
+	public function render_block ($block, array $args) {
 		return '';
 	}
 }

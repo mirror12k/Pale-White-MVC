@@ -4,7 +4,7 @@
 namespace PaleWhite;
 
 class DatabaseQuery {
-	public function __construct(DatabaseDriver $db, string $query_type) {
+	public function __construct(DatabaseDriver $db, $query_type) {
 		$this->db = $db;
 		$this->query_type = $query_type;
 		$this->query_args = array();
@@ -15,7 +15,7 @@ class DatabaseQuery {
 		return $this;
 	}
 
-	public function table(string $table) {
+	public function table($table) {
 		$this->query_args['table'] = (string)$table;
 		return $this;
 	}
@@ -38,7 +38,7 @@ class DatabaseQuery {
 		return $this;
 	}
 
-	public function limit(int $limit) {
+	public function limit($limit) {
 		$this->query_args['limit'] = (int)$limit;
 		return $this;
 	}

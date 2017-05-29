@@ -49,7 +49,7 @@ class DatabaseDriver {
 		return new DatabaseQuery($this, 'update');
 	}
 
-	public function escape_string(string $string) {
+	public function escape_string($string) {
 		if (!$this->connected)
 			$this->connect();
 

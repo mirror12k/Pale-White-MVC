@@ -4,7 +4,7 @@ controller MainController {
 		render MoreTemplate title="My Controller", name="amy", source="jack";
 	}
 
-	path "/args" [title, source] {
+	path "/args/{{title}}/{{source}}" {
 		validate title as add_punctuation;
 		validate source as source_link;
 
@@ -13,7 +13,7 @@ controller MainController {
 		render MoreTemplate title=title, name="amy", source=source;
 	}
 
-	path "/link" [link] {
+	path "/link/{{link}}" {
 		link = model UserLinkModel id=link;
 		render LinkTemplate link=link;
 	}

@@ -9,14 +9,14 @@ abstract class Model {
 		$this->_data = $data;
 	}
 
-	public function __get(string $name) {
+	public function __get($name) {
 		if (isset($this->_data[$name]))
 			return $this->_data[$name];
 		else
 			throw new \Exception("attempted to get undefined model property: $name");
 	}
 
-	public function __set(string $name, $value) {
+	public function __set($name, $value) {
 		if (isset($this->_data[$name])) {
 			$this->_data[$name] = $value;
 			$this->update_fields(array($name => static::cast_to_store($name, $value)));
@@ -25,7 +25,7 @@ abstract class Model {
 		}
 	}
 
-	public static function get_by_id(int $id) {
+	public static function get_by_id($id) {
 		// return cached item if available
 		if (isset(static::$model_cache['id'][$id]))
 			return static::$model_cache['id'][$id];
@@ -93,11 +93,11 @@ abstract class Model {
 		return $stored;
 	}
 
-	public static function cast_to_store(string $name, $value) {
+	public static function cast_to_store($name, $value) {
 		return $value;
 	}
 
-	public static function cast_from_store(string $name, $value) {
+	public static function cast_from_store($name, $value) {
 		return $value;
 	}
 
