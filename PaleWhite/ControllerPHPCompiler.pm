@@ -58,18 +58,24 @@ sub compile_controller_route {
 	my @code;
 
 	my @paths;
-	if (exists $controller->{paths}) {
-		@paths = @{$controller->{paths}};
-	}
+	@paths = (@paths, @{$controller->{global_paths}}) if exists $controller->{global_paths};
+	@paths = (@paths, @{$controller->{paths}}) if exists $controller->{paths};
 	return @code unless @paths;
 
 	push @code, "parent::route(\$path, \$args);\n";
 	push @code, "\n";
+	my $first = 1;
 	foreach my $path (@paths) {
-		push @code, $self->compile_path($path);
+		push @code, $self->compile_path($path, $first);
+		push @code, "\n";
+		$first = 0 if $path->{type} eq 'match_path';
 	}
 
-	# push @code, "return \$text;\n";
+	if (exists $controller->{default_path}) {
+		push @code, "} else {\n";
+		push @code, map "\t$_", $self->compile_path($controller->{default_path});
+	}
+	push @code, "}\n";
 
 	@code = map "\t$_", @code;
 	@code = ("public function route (\$path, array \$args) {\n", @code, "}\n", "\n");
@@ -78,7 +84,7 @@ sub compile_controller_route {
 }
 
 sub compile_path {
-	my ($self, $path) = @_;
+	my ($self, $path, $first) = @_;
 	my @code;
 
 	if (@{$path->{arguments}}) {
@@ -94,11 +100,17 @@ sub compile_path {
 
 	push @code, map $self->compile_action($_), @{$path->{block}};
 
-	my ($condition_code, $match_code) = $self->compile_path_condition($path->{path});
-	@code = (@$match_code, @code);
+	if ($path->{type} eq 'match_path') {
+		my ($condition_code, $match_code) = $self->compile_path_condition($path->{path});
+		@code = (@$match_code, @code);
 
-	@code = map "\t$_", @code;
-	@code = ("if ($condition_code) {\n", @code, "}\n", "\n");
+		@code = map "\t$_", @code;
+		if ($first) {
+			@code = ("if ($condition_code) {\n", @code);
+		} else {
+			@code = ("} elseif ($condition_code) {\n", @code);
+		}
+	}
 
 	return @code
 }
@@ -248,17 +260,17 @@ sub compile_path_condition {
 	my $condition_code;
 	my @match_code;
 
-	warn "debug condition: $condition";
+	# warn "debug condition: $condition";
 	my @condition_vars = ($condition =~ /(?|\{\{($identifier_regex=\[\])\}\}|\{\{($identifier_regex)\}\})/g);
 
 	if (@condition_vars) {
-		warn "debug condition vars: " . join ',', @condition_vars;
+		# warn "debug condition vars: " . join ',', @condition_vars;
 
 		$condition =~ s/\{\{($identifier_regex=\[\])\}\}/(.*?)/sg;
 		$condition =~ s/\{\{($identifier_regex)\}\}/([^\/]*?)/sg;
 		$condition =~ s#/#\\/#g;
 
-		warn "debug regex condition: $condition";
+		# warn "debug regex condition: $condition";
 
 		$condition_code = "preg_match('/\\A$condition\\Z/', \$path, \$_matches)";
 
@@ -276,11 +288,10 @@ sub compile_path_condition {
 	} else {
 		$condition_code = "\$path === '$condition'";
 	}
-	warn "debug condition code: $condition_code";
-	warn "debug match code: " . join '', @match_code;
+	# warn "debug condition code: $condition_code";
+	# warn "debug match code: " . join '', @match_code;
 
 	return $condition_code, \@match_code
-	# preg_match("/php/i", "PHP is the web scripting language of choice.")
 }
 
 

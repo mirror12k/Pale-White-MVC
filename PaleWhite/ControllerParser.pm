@@ -117,13 +117,30 @@ sub context_controller_block {
 	while ($self->more_tokens) {
 		my @tokens;
 
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path') {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'global') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/"([^\\\\"]|\\\\[\\\\"])*?"/s')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A$var_string_regex\Z/;
-			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{global_paths}}, $self->context_path_action_block({ type => 'global_path', line_number => $tokens[0][2], arguments => $self->context_arguments_list([]), block => [], });
+			}
+			else {
+			push @{$context_object->{global_paths}}, $self->context_path_action_block({ type => 'global_path', line_number => $tokens[0][2], arguments => [], block => [], });
+			}
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'default') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object->{default_path} = $self->context_path_action_block({ type => 'default_path', line_number => $tokens[0][2], arguments => [], block => [], });
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A$var_string_regex\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
 			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;

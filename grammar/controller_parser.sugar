@@ -58,9 +58,33 @@ list context root {
 
 object context controller_block {
 	switch {
-		'path' => {
-			match $string_regex
+		'path', 'global' => {
+			if '[' => {
+				$_{global_paths}[] = !path_action_block->{
+					type => 'global_path'
+					line_number => $0{line_number}
+					arguments => !arguments_list->[]
+					block => []
+				}
 
+			} else {
+				$_{global_paths}[] = !path_action_block->{
+					type => 'global_path'
+					line_number => $0{line_number}
+					arguments => []
+					block => []
+				}
+			}
+		}
+		'path', 'default' => {
+			$_{default_path} = !path_action_block->{
+				type => 'default_path'
+				line_number => $0{line_number}
+				arguments => []
+				block => []
+			}
+		}
+		'path', $string_regex => {
 			if '[' => {
 				$_{paths}[] = !path_action_block->{
 					type => 'match_path'

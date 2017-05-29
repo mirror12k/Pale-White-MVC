@@ -1,5 +1,10 @@
 
 controller MainController {
+
+	path global {
+		action say_hello msg="this is the global path";
+	}
+
 	path "/" {
 		render MoreTemplate title="My Controller", name="amy", source="jack";
 	}
@@ -21,6 +26,10 @@ controller MainController {
 	path "/link_by_path" [link_path] {
 		link = model UserLinkModel link=link_path;
 		render LinkTemplate link=link;
+	}
+
+	path default {
+		render NotFoundTemplate;
 	}
 
 	validator add_punctuation {{

@@ -26,3 +26,8 @@
 
 !template LinkTemplate
 	a href={link.link}, id={link.id} "click me"
+
+!template NotFoundTemplate
+	html
+		body
+			p "404 Not Found"
