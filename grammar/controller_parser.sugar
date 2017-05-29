@@ -160,6 +160,16 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
+		$identifier_regex => {
+			match '='
+			$_{block}[] = {
+				type => 'assign_variable'
+				line_number => $0{line_number}
+				identifier => $0
+				expression => !action_expression
+			}
+			match ';'
+		}
 		default {
 			return
 		}
@@ -183,6 +193,15 @@ object context action_arguments {
 
 object context action_expression {
 	switch {
+		'model', $identifier_regex => {
+			$_ = {
+				type => 'load_model_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			return
+		}
 		$identifier_regex => {
 			$_ = {
 				type => 'variable_expression'
@@ -195,7 +214,15 @@ object context action_expression {
 			$_ = {
 				type => 'string_expression'
 				line_number => $0{line_number}
-				string => !format_string->$0
+				value => !format_string->$0
+			}
+			return
+		}
+		$integer_regex => {
+			$_ = {
+				type => 'integer_expression'
+				line_number => $0{line_number}
+				value => $0
 			}
 			return
 		}

@@ -13,6 +13,16 @@ controller MainController {
 		render MoreTemplate title=title, name="amy", source=source;
 	}
 
+	path "/link" [link] {
+		link = model UserLinkModel id=link;
+		render LinkTemplate link=link;
+	}
+
+	path "/link_by_path" [link_path] {
+		link = model UserLinkModel link=link_path;
+		render LinkTemplate link=link;
+	}
+
 	validator add_punctuation {{
 		return "${value}!";
 	}}

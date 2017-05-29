@@ -30,10 +30,16 @@ abstract class Model {
 		if (isset(static::$model_cache['id'][$id]))
 			return static::$model_cache['id'][$id];
 
+		return static::get_by(array('id' => $id));
+	}
+
+	public static function get_by(array $values) {
+		$values = static::store_data($values);
+
 		global $database;
 		$query = $database->select()
 				->table(static::$table_name)
-				->where(array('id' => $id))
+				->where($values)
 				->limit(1);
 
 		$result = static::get_by_query($query);
@@ -49,7 +55,7 @@ abstract class Model {
 
 		$objects = array();
 		foreach ($result as $data) {
-			$loaded_data = static::load_data($data);
+			$data = static::load_data($data);
 			$objects[] = new static($data);
 		}
 
@@ -57,6 +63,8 @@ abstract class Model {
 	}
 
 	public static function create(array $data) {
+		$data = static::store_data($data);
+
 		global $database;
 		$query = $database->insert()
 				->table(static::$table_name)
@@ -77,6 +85,14 @@ abstract class Model {
 		return $loaded;
 	}
 
+	public static function store_data(array $data) {
+		$stored = array();
+		foreach ($data as $field => $value) {
+			$stored[$field] = static::cast_to_store($field, $value);
+		}
+		return $stored;
+	}
+
 	public static function cast_to_store(string $name, $value) {
 		return $value;
 	}
@@ -86,6 +102,8 @@ abstract class Model {
 	}
 
 	public function update_fields(array $values) {
+		$values = static::store_data($values);
+
 		global $database;
 		$query = $database->update()
 				->table(static::$table_name)
