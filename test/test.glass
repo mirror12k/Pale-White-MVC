@@ -36,3 +36,8 @@
 	html
 		body
 			p {message}
+
+!template UserViewTemplate
+	html
+		body
+			p "you are logged in as {{user.username}}"

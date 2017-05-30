@@ -115,6 +115,54 @@ sub compile_path {
 	return @code
 }
 
+our $identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
+
+sub compile_path_condition {
+	my ($self, $condition) = @_;
+
+	my $condition_code;
+	my @match_code;
+
+	# warn "debug condition: $condition";
+	my @condition_vars = ($condition =~ /(?|\{\{($identifier_regex=\[\])\}\}|\{\{($identifier_regex)\}\}|\{\{((?:$identifier_regex=)?\.\.\.)\}\})/g);
+
+	if (@condition_vars) {
+		# warn "debug condition vars: " . join ',', @condition_vars;
+
+		$condition =~ s/\{\{($identifier_regex=\[\])\}\}/(.+?)/sg;
+		$condition =~ s/\{\{($identifier_regex)\}\}/([^\/]+?)/sg;
+		$condition =~ s/\{\{(($identifier_regex=)?\.\.\.)\}\}/(.+?)/sg;
+		$condition =~ s#/#\\/#g;
+
+		# warn "debug regex condition: $condition";
+
+		$condition_code = "preg_match('/\\A$condition\\Z/', \$path, \$_matches)";
+
+		foreach my $i (0 .. $#condition_vars) {
+			my $var = $condition_vars[$i];
+			my $index = $i + 1;
+			if ($var =~ /\A($identifier_regex)=\[\]\Z/) {
+				$var = $1;
+				push @match_code, "\$$var = explode('/', \$_matches[$index]);\n";
+			} elsif ($var =~ /\A($identifier_regex)=\.\.\.\Z/) {
+				$var = $1;
+				push @match_code, "\$$var = \$_matches[$index];\n";
+			} elsif ($var =~ /\A\.\.\.\Z/) {
+				# nothing
+			} else {
+				push @match_code, "\$$var = \$_matches[$index];\n";
+			}
+		}
+
+	} else {
+		$condition_code = "\$path === '$condition'";
+	}
+	# warn "debug condition code: $condition_code";
+	# warn "debug match code: " . join '', @match_code;
+
+	return $condition_code, \@match_code
+}
+
 sub compile_action_block {
 	my ($self, $block) = @_;
 	return map $self->compile_action($_), @$block;
@@ -210,8 +258,10 @@ sub compile_action {
 		return "\$this->action('$action->{identifier}', $arguments);\n"
 
 	} elsif ($action->{type} eq 'route_controller') {
-		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "(new $action->{identifier}())->route(\$path, $arguments);\n"
+		my $path_argument = exists $action->{arguments}{path} ? $self->compile_expression($action->{arguments}{path}) : '$path';
+		my $args_argument = exists $action->{arguments}{args} ? $self->compile_expression($action->{arguments}{args}) : '$args';
+		# my $arguments = $self->compile_arguments_array($action->{arguments});
+		return "(new $action->{identifier}())->route($path_argument, $args_argument);\n"
 
 	} elsif ($action->{type} eq 'validate_variable') {
 		return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
@@ -254,7 +304,11 @@ sub compile_arguments_array {
 sub compile_expression {
 	my ($self, $expression) = @_;
 
-	if ($expression->{type} eq 'load_model_expression') {
+	if ($expression->{type} eq 'load_optional_model_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "$expression->{identifier}::get_by($arguments)"
+		
+	} elsif ($expression->{type} eq 'load_model_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "\$this->load_model('$expression->{identifier}', $arguments)"
 		
@@ -289,48 +343,6 @@ sub compile_expression {
 	}
 }
 
-our $identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
-
-sub compile_path_condition {
-	my ($self, $condition) = @_;
-
-	my $condition_code;
-	my @match_code;
-
-	# warn "debug condition: $condition";
-	my @condition_vars = ($condition =~ /(?|\{\{($identifier_regex=\[\])\}\}|\{\{($identifier_regex)\}\})/g);
-
-	if (@condition_vars) {
-		# warn "debug condition vars: " . join ',', @condition_vars;
-
-		$condition =~ s/\{\{($identifier_regex=\[\])\}\}/(.*?)/sg;
-		$condition =~ s/\{\{($identifier_regex)\}\}/([^\/]*?)/sg;
-		$condition =~ s#/#\\/#g;
-
-		# warn "debug regex condition: $condition";
-
-		$condition_code = "preg_match('/\\A$condition\\Z/', \$path, \$_matches)";
-
-		foreach my $i (0 .. $#condition_vars) {
-			my $var = $condition_vars[$i];
-			my $index = $i + 1;
-			if ($var =~ /\A($identifier_regex)=\[\]\Z/) {
-				$var = $1;
-				push @match_code, "\$$var = explode('/', \$_matches[$index]);\n";
-			} else {
-				push @match_code, "\$$var = \$_matches[$index];\n";
-			}
-		}
-
-	} else {
-		$condition_code = "\$path === '$condition'";
-	}
-	# warn "debug condition code: $condition_code";
-	# warn "debug match code: " . join '', @match_code;
-
-	return $condition_code, \@match_code
-}
-
 
 
 
@@ -339,8 +351,6 @@ sub main {
 	use Data::Dumper;
 	use Sugar::IO::File;
 	use PaleWhite::ControllerParser;
-
-	compile_path_condition(undef, "asdf/{{q}}/zxcv/{{z=[]}}");
 
 	my $parser = PaleWhite::ControllerParser->new;
 	foreach my $file (@_) {
