@@ -98,7 +98,7 @@ sub compile_path {
 		push @code, "\n";
 	}
 
-	push @code, map $self->compile_action($_), @{$path->{block}};
+	push @code, $self->compile_action_block($path->{block});
 
 	if ($path->{type} eq 'match_path') {
 		my ($condition_code, $match_code) = $self->compile_path_condition($path->{path});
@@ -113,6 +113,11 @@ sub compile_path {
 	}
 
 	return @code
+}
+
+sub compile_action_block {
+	my ($self, $block) = @_;
+	return map $self->compile_action($_), @$block;
 }
 
 sub compile_controller_validate {
@@ -199,14 +204,35 @@ sub compile_action {
 	if ($action->{type} eq 'render_template') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "echo ((new $action->{identifier}())->render($arguments));\n"
-	} elsif ($action->{type} eq 'execute_action') {
+
+	} elsif ($action->{type} eq 'controller_action') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "\$this->action('$action->{identifier}', $arguments);\n"
+
+	} elsif ($action->{type} eq 'route_controller') {
+		my $arguments = $self->compile_arguments_array($action->{arguments});
+		return "(new $action->{identifier}())->route(\$path, $arguments);\n"
+
 	} elsif ($action->{type} eq 'validate_variable') {
 		return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
+		
+	} elsif ($action->{type} eq 'if_statement') {
+		my $expression = $self->compile_expression($action->{expression});
+		my @block = map "\t$_", $self->compile_action_block($action->{block});
+		return "if ($expression) {\n", @block, "}\n"
+
+	} elsif ($action->{type} eq 'else_statement') {
+		my @block = map "\t$_", $self->compile_action_block($action->{block});
+		return "else {\n", @block, "}\n"
+
 	} elsif ($action->{type} eq 'assign_variable') {
 		my $expression = $self->compile_expression($action->{expression});
 		return "\$$action->{identifier} = $expression;\n"
+
+	} elsif ($action->{type} eq 'assign_session_variable') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$_SESSION['$action->{identifier}'] = $expression;\n"
+
 	} else {
 		die "invalid action: $action->{type}";
 	}
@@ -232,12 +258,23 @@ sub compile_expression {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "\$this->load_model('$expression->{identifier}', $arguments)"
 		
+	} elsif ($expression->{type} eq 'render_template_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "((new $expression->{identifier}())->render($arguments))"
+
+	} elsif ($expression->{type} eq 'controller_action_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "\$this->action('$expression->{identifier}', $arguments)"
+
 	} elsif ($expression->{type} eq 'string_expression') {
 		return "\"$expression->{value}\""
 		
 	} elsif ($expression->{type} eq 'integer_expression') {
 		return "$expression->{value}"
 		
+	} elsif ($expression->{type} eq 'session_variable_expression') {
+		return "\$_SESSION['$expression->{identifier}']";
+
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "\$$expression->{identifier}";

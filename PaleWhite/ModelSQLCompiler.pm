@@ -48,7 +48,7 @@ sub compile_model {
 	my %model_properties;
 
 	my @code;
-	push @code, "CREATE TABLE $model->{identifier} (\n";
+	push @code, "CREATE TABLE IF NOT EXISTS $model->{identifier} (\n";
 	my @property_code;
 
 	push @property_code, compile_property({

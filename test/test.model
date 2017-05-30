@@ -28,3 +28,8 @@ model UserLinkModel {
 	}}
 }
 
+
+model UserModel {
+	string username;
+}
+

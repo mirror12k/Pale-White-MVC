@@ -31,3 +31,8 @@
 	html
 		body
 			p "404 Not Found"
+
+!template MessageTemplate
+	html
+		body
+			p {message}

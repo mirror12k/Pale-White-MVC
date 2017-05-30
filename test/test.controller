@@ -28,6 +28,21 @@ controller MainController {
 		render LinkTemplate link=link;
 	}
 
+	path "/test/login/{{username}}" {
+		user = action login_user username=username;
+		if (user) {
+			session.current_user = user.id;
+			render MessageTemplate message="logged in";
+		} else {
+			render MessageTemplate message="no such user found";
+		}
+	}
+
+	path "/test/create_user/{{username}}" {
+		user = action create_user username=username;
+		render MessageTemplate message="created user";
+	}
+
 	path default {
 		render NotFoundTemplate;
 	}
@@ -44,4 +59,20 @@ controller MainController {
 		$msg = (string)$args['msg'];
 		error_log("hello: $msg");
 	}}
+
+	action create_user {{
+		$username = (string)$args['username'];
+		error_log("creating user '$username'");
+
+		$user = UserModel::create(array('username' => $username));
+		return $user;
+	}}
+
+	action login_user {{
+		$username = (string)$args['username'];
+		$user = UserModel::get_by(array('username' => $username));
+		return $user;
+	}}
 }
+
+

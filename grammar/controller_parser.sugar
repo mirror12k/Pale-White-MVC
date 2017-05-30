@@ -2,10 +2,10 @@ package PaleWhite::ControllerParser
 
 native_code_block_regex = /\{\{.*?\}\}/s
 
-symbol_regex = /\{|\}|\[|\]|\(|\)|;|=|,/
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|=|,|\./
 # keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
 identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
-integer_regex = /\d++/
+integer_regex = /-?\d++/
 
 string_regex = /"([^\\"]|\\[\\"])*?"/s
 comment_regex = /\/\/[^\n]*+\n/s
@@ -167,7 +167,17 @@ object context path_action_block_list {
 		'action' => {
 			match $identifier_regex
 			$_{block}[] = {
-				type => 'execute_action'
+				type => 'controller_action'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			match ';'
+		}
+		'route' => {
+			match $identifier_regex
+			$_{block}[] = {
+				type => 'route_controller'
 				line_number => $0{line_number}
 				identifier => $1
 				arguments => !action_arguments->{}
@@ -184,8 +194,31 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
-		$identifier_regex => {
-			match '='
+		'if' => {
+			$_{block}[] = !path_action_block->{
+				type => 'if_statement'
+				line_number => $0{line_number}
+				expression => !branch_action_expression
+				block => []
+			}
+			if 'else' => {
+				$_{block}[] = !path_action_block->{
+					type => 'else_statement'
+					line_number => $0{line_number}
+					block => []
+				}
+			}
+		}
+		'session', '.', $identifier_regex, '=' => {
+			$_{block}[] = {
+				type => 'assign_session_variable'
+				line_number => $0{line_number}
+				identifier => $0
+				expression => !action_expression
+			}
+			match ';'
+		}
+		$identifier_regex, '=' => {
 			$_{block}[] = {
 				type => 'assign_variable'
 				line_number => $0{line_number}
@@ -202,17 +235,24 @@ object context path_action_block_list {
 
 
 object context action_arguments {
-	if $identifier_regex => {
-		match '='
+	if $identifier_regex, '=' => {
 		$_{$0} = !action_expression
 
-		while ',' => {
-			match $identifier_regex, '='
+		while ',', $identifier_regex, '=' => {
 			$_{$3} = !action_expression
 		}
 	}
 	return
 }
+
+
+item context branch_action_expression {
+	match '('
+	$_ = !action_expression
+	match ')'
+	return
+}
+
 
 
 object context action_expression {
@@ -226,8 +266,34 @@ object context action_expression {
 			}
 			return
 		}
-		$identifier_regex => {
+		'render', $identifier_regex => {
 			$_ = {
+				type => 'render_template_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			return
+		}
+		'action', $identifier_regex => {
+			$_ = {
+				type => 'controller_action_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			return
+		}
+		'session', '.', $identifier_regex => {
+			$_ = {
+				type => 'session_variable_expression'
+				line_number => $0{line_number}
+				identifier => $2
+			}
+			return
+		}
+		$identifier_regex => {
+			$_ = !more_action_expression->{
 				type => 'variable_expression'
 				line_number => $0{line_number}
 				identifier => $0
@@ -252,6 +318,23 @@ object context action_expression {
 		}
 		default {
 			die 'expression expected'
+		}
+	}
+}
+
+
+object context more_action_expression {
+	switch {
+		'.', $identifier_regex => {
+			$_ = {
+				type => 'access_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				expression => $_
+			}
+		}
+		default {
+			return
 		}
 	}
 }
