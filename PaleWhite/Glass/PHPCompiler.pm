@@ -7,8 +7,6 @@ use feature 'say';
 
 use Data::Dumper;
 
-use PaleWhite::GlassParser;
-
 
 
 sub new {
@@ -246,23 +244,28 @@ sub compile_value_expression {
 	}
 }
 
+sub compile_file {
+	my ($file) = @_;
+	use Sugar::IO::File;
+	use PaleWhite::GlassParser;
+
+	my $parser = PaleWhite::GlassParser->new;
+	$parser->{filepath} = Sugar::IO::File->new($file);
+	my $tree = $parser->parse;
+	# say Dumper $tree;
+
+	my $compiler = __PACKAGE__->new;
+	my $text = $compiler->compile($tree);
+	return $text;
+}
+
 
 
 
 
 sub main {
-	use Data::Dumper;
-	use Sugar::IO::File;
-
-	my $parser = PaleWhite::GlassParser->new;
 	foreach my $file (@_) {
-		$parser->{filepath} = Sugar::IO::File->new($file);
-		my $tree = $parser->parse;
-		# say Dumper $tree;
-
-		my $compiler = __PACKAGE__->new;
-		my $text = $compiler->compile($tree);
-		say $text;
+		say compile_file($file);
 	}
 }
 

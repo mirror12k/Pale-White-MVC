@@ -7,8 +7,6 @@ use feature 'say';
 
 use Data::Dumper;
 
-use PaleWhite::ModelParser;
-
 
 
 sub compile {
@@ -85,20 +83,25 @@ sub compile_model {
 
 
 
+sub compile_file {
+	my ($file) = @_;
+	use Sugar::IO::File;
+	use PaleWhite::ModelParser;
+
+	my $parser = PaleWhite::ModelParser->new;
+	$parser->{filepath} = Sugar::IO::File->new($file);
+	my $tree = $parser->parse;
+	# say Dumper $tree;
+
+	my $text = compile($tree);
+	return $text;
+}
+
 
 
 sub main {
-	use Data::Dumper;
-	use Sugar::IO::File;
-
-	my $parser = PaleWhite::ModelParser->new;
 	foreach my $file (@_) {
-		$parser->{filepath} = Sugar::IO::File->new($file);
-		my $tree = $parser->parse;
-		# say Dumper $tree;
-
-		my $text = compile($tree);
-		say $text;
+		say compile_file($file);
 	}
 }
 

@@ -32,6 +32,11 @@ controller MainController {
 		route TestController;
 	}
 
+	path "/go_home" {
+		status "302 Redirect";
+		redirect "/";
+	}
+
 	path default {
 		status "404 Not Found";
 		render NotFoundTemplate;

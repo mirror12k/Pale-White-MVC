@@ -352,23 +352,25 @@ sub compile_expression {
 }
 
 
-
-
-
-sub main {
-	use Data::Dumper;
+sub compile_file {
+	my ($file) = @_;
 	use Sugar::IO::File;
 	use PaleWhite::ControllerParser;
 
 	my $parser = PaleWhite::ControllerParser->new;
-	foreach my $file (@_) {
-		$parser->{filepath} = Sugar::IO::File->new($file);
-		my $tree = $parser->parse;
-		# say Dumper $tree;
+	$parser->{filepath} = Sugar::IO::File->new($file);
+	my $tree = $parser->parse;
+	# say Dumper $tree;
 
-		my $compiler = __PACKAGE__->new;
-		my $text = $compiler->compile($tree);
-		say $text;
+	my $compiler = __PACKAGE__->new;
+	my $text = $compiler->compile($tree);
+	return $text;
+}
+
+
+sub main {
+	foreach my $file (@_) {
+		say compile_file($file);
 	}
 }
 
