@@ -164,6 +164,22 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
+		'status' => {
+			$_{block}[] = {
+				type => 'assign_status'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
+			match ';'
+		}
+		'redirect' => {
+			$_{block}[] = {
+				type => 'assign_redirect'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
+			match ';'
+		}
 		'action' => {
 			match $identifier_regex
 			$_{block}[] = {

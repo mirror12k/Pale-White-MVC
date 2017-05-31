@@ -62,7 +62,7 @@ sub compile_controller_route {
 	@paths = (@paths, @{$controller->{paths}}) if exists $controller->{paths};
 	return @code unless @paths;
 
-	push @code, "parent::route(\$path, \$args);\n";
+	push @code, "parent::route(\$res, \$path, \$args);\n";
 	push @code, "\n";
 	my $first = 1;
 	foreach my $path (@paths) {
@@ -78,7 +78,7 @@ sub compile_controller_route {
 	push @code, "}\n";
 
 	@code = map "\t$_", @code;
-	@code = ("public function route (\$path, array \$args) {\n", @code, "}\n", "\n");
+	@code = ("public function route (\\PaleWhite\\Response \$res, \$path, array \$args) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -251,7 +251,15 @@ sub compile_action {
 
 	if ($action->{type} eq 'render_template') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "echo ((new $action->{identifier}())->render($arguments));\n"
+		return "\$res->body .= \$this->render_template('$action->{identifier}', $arguments);\n"
+
+	} elsif ($action->{type} eq 'assign_status') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$res->status = $expression;\n"
+
+	} elsif ($action->{type} eq 'assign_redirect') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$res->redirect = $expression;\n"
 
 	} elsif ($action->{type} eq 'controller_action') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
@@ -261,7 +269,7 @@ sub compile_action {
 		my $path_argument = exists $action->{arguments}{path} ? $self->compile_expression($action->{arguments}{path}) : '$path';
 		my $args_argument = exists $action->{arguments}{args} ? $self->compile_expression($action->{arguments}{args}) : '$args';
 		# my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "(new $action->{identifier}())->route($path_argument, $args_argument);\n"
+		return "\$this->route_subcontroller('$action->{identifier}', \$res, $path_argument, $args_argument);\n"
 
 	} elsif ($action->{type} eq 'validate_variable') {
 		return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"

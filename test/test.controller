@@ -33,6 +33,7 @@ controller MainController {
 	}
 
 	path default {
+		status "404 Not Found";
 		render NotFoundTemplate;
 	}
 
