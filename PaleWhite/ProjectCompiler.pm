@@ -49,8 +49,8 @@ sub compile_project_directory {
 	foreach my $source_path (grep /\.model\Z/, $src_dir->recursive_files) {
 
 		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
-		my $destination_path = $relative_path =~ s/\.model\Z/\.php/r;
-		$destination_path = "$bin_dir/$destination_path";
+		$relative_path =~ s/\.model\Z/\.php/;
+		my $destination_path = "$bin_dir/$relative_path";
 		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
 		# say "model: $source_path ($relative_path => $destination_path ($destination_directory))";
 		say "model: $source_path => $destination_path";
@@ -60,14 +60,14 @@ sub compile_project_directory {
 		my $compiled_sql = PaleWhite::ModelSQLCompiler::compile_file($source_path);
 		$setup_sql_file->append($compiled_sql);
 
-		push @includes, $destination_path;
+		push @includes, $relative_path;
 	}
 
 	foreach my $source_path (grep /\.glass\Z/, $src_dir->recursive_files) {
 
 		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
-		my $destination_path = $relative_path =~ s/\.glass\Z/\.php/r;
-		$destination_path = "$bin_dir/$destination_path";
+		$relative_path =~ s/\.glass\Z/\.php/;
+		my $destination_path = "$bin_dir/$relative_path";
 		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
 		# say "model: $source_path ($relative_path => $destination_path ($destination_directory))";
 		say "template: $source_path => $destination_path";
@@ -75,14 +75,14 @@ sub compile_project_directory {
 		my $compiled_php = PaleWhite::Glass::PHPCompiler::compile_file($source_path);
 		Sugar::IO::File->new($destination_path)->write($compiled_php);
 		
-		push @includes, $destination_path;
+		push @includes, $relative_path;
 	}
 
 	foreach my $source_path (grep /\.controller\Z/, $src_dir->recursive_files) {
 
 		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
-		my $destination_path = $relative_path =~ s/\.controller\Z/\.php/r;
-		$destination_path = "$bin_dir/$destination_path";
+		$relative_path =~ s/\.controller\Z/\.php/;
+		my $destination_path = "$bin_dir/$relative_path";
 		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
 		# say "model: $source_path ($relative_path => $destination_path ($destination_directory))";
 		say "controller: $source_path => $destination_path";
@@ -90,7 +90,7 @@ sub compile_project_directory {
 		my $compiled_php = PaleWhite::ControllerPHPCompiler::compile_file($source_path);
 		Sugar::IO::File->new($destination_path)->write($compiled_php);
 		
-		push @includes, $destination_path;
+		push @includes, $relative_path;
 	}
 
 	my $compiled_php = compile_includes(@includes);
