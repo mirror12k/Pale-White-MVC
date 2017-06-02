@@ -4,7 +4,7 @@ namespace PaleWhite;
 
 abstract class Controller {
 
-	public function route (Response $res, $path, array $args) {}
+	public function route (Request $req, Response $res) {}
 	
 	public function validate ($type, $value) {
 		throw new \Exception("undefined validator requested: '$type'");
@@ -19,9 +19,9 @@ abstract class Controller {
 		return $template->render($args);
 	}
 
-	public function route_subcontroller($controller_class, Response $res, $path, array $args) {
+	public function route_subcontroller($controller_class, Request $req, Response $res) {
 		$controller = new $controller_class();
-		return $controller->route($res, $path, $args);
+		return $controller->route($req, $res);
 	}
 
 	public function load_model($model_class, array $args) {

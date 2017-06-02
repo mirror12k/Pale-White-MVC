@@ -62,7 +62,7 @@ sub compile_controller_route {
 	@paths = (@paths, @{$controller->{paths}}) if exists $controller->{paths};
 	return @code unless @paths;
 
-	push @code, "parent::route(\$res, \$path, \$args);\n";
+	push @code, "parent::route(\$req, \$res);\n";
 	push @code, "\n";
 	my $first = 1;
 	foreach my $path (@paths) {
@@ -78,7 +78,7 @@ sub compile_controller_route {
 	push @code, "}\n";
 
 	@code = map "\t$_", @code;
-	@code = ("public function route (\\PaleWhite\\Response \$res, \$path, array \$args) {\n", @code, "}\n", "\n");
+	@code = ("public function route (\\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -89,11 +89,11 @@ sub compile_path {
 
 	if (@{$path->{arguments}}) {
 		foreach my $arg (@{$path->{arguments}}) {
-			push @code, "if (!isset(\$args['$arg']))\n";
+			push @code, "if (!isset(\$req->args['$arg']))\n";
 			push @code, "\tthrow new \\Exception('missing argument \"$arg\" to path \"$path->{path}\"');\n";
 		}
 		foreach my $arg (@{$path->{arguments}}) {
-			push @code, "\$$arg = \$args['$arg'];\n";
+			push @code, "\$$arg = \$req->args['$arg'];\n";
 		}
 		push @code, "\n";
 	}
@@ -136,7 +136,7 @@ sub compile_path_condition {
 
 		# warn "debug regex condition: $condition";
 
-		$condition_code = "preg_match('/\\A$condition\\Z/', \$path, \$_matches)";
+		$condition_code = "preg_match('/\\A$condition\\Z/', \$req->path, \$_matches)";
 
 		foreach my $i (0 .. $#condition_vars) {
 			my $var = $condition_vars[$i];
@@ -155,7 +155,7 @@ sub compile_path_condition {
 		}
 
 	} else {
-		$condition_code = "\$path === '$condition'";
+		$condition_code = "\$req->path === '$condition'";
 	}
 	# warn "debug condition code: $condition_code";
 	# warn "debug match code: " . join '', @match_code;

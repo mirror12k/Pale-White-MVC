@@ -5,7 +5,7 @@ namespace PaleWhite;
 class HTTPRequestExecutor {
 	public function execute () {
 		global $config;
-		
+
 		global $database;
 		$database = new \PaleWhite\DatabaseDriver($config['database_config']);
 
@@ -21,11 +21,13 @@ class HTTPRequestExecutor {
 		foreach ($_POST as $k => $v)
 			$args[$k] = $v;
 
+		$request = new \PaleWhite\Request($path, $args);
+
 		$response = new \PaleWhite\Response();
 
 		$controller_class = $config['main_controller'];
 		$controller = new $controller_class();
-		$controller->route($response, $path, $args);
+		$controller->route($request, $response);
 
 		if ($response->status !== null) {
 			if (preg_match("/\A(\d+)\s+/", $response->status, $matches)) {
