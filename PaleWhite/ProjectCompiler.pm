@@ -39,12 +39,19 @@ sub compile_project_directory {
 	$src_dir = Sugar::IO::Dir->new($src_dir);
 	$bin_dir = Sugar::IO::Dir->new($bin_dir);
 
+	say "compiling PaleWhite project: $src_dir => $bin_dir";
+
 	my @includes;
 
 	my $setup_sql_file = Sugar::IO::File->new("$bin_dir/setup.sql");
 	my $includes_file = Sugar::IO::File->new("$bin_dir/includes.php");
+	my $config_file = Sugar::IO::File->new("$bin_dir/config.php");
+	my $index_file = Sugar::IO::File->new("$bin_dir/index.php");
+
 	# clear the setup.sql file
 	$setup_sql_file->write('');
+	# add in PaleWhite library as an include
+	push @includes, "phplib/PaleWhite/lib.php";
 
 	foreach my $source_path (grep /\.model\Z/, $src_dir->recursive_files) {
 
@@ -53,7 +60,7 @@ sub compile_project_directory {
 		my $destination_path = "$bin_dir/$relative_path";
 		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
 		# say "model: $source_path ($relative_path => $destination_path ($destination_directory))";
-		say "model: $source_path => $destination_path";
+		say "\tmodel: $source_path => $destination_path";
 
 		my $compiled_php = PaleWhite::ModelPHPCompiler::compile_file($source_path);
 		Sugar::IO::File->new($destination_path)->write($compiled_php);
@@ -62,6 +69,7 @@ sub compile_project_directory {
 
 		push @includes, $relative_path;
 	}
+	say "\tsetup.sql file: $setup_sql_file";
 
 	foreach my $source_path (grep /\.glass\Z/, $src_dir->recursive_files) {
 
@@ -69,8 +77,8 @@ sub compile_project_directory {
 		$relative_path =~ s/\.glass\Z/\.php/;
 		my $destination_path = "$bin_dir/$relative_path";
 		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
-		# say "model: $source_path ($relative_path => $destination_path ($destination_directory))";
-		say "template: $source_path => $destination_path";
+		# say "\tmodel: $source_path ($relative_path => $destination_path ($destination_directory))";
+		say "\ttemplate: $source_path => $destination_path";
 
 		my $compiled_php = PaleWhite::Glass::PHPCompiler::compile_file($source_path);
 		Sugar::IO::File->new($destination_path)->write($compiled_php);
@@ -84,8 +92,8 @@ sub compile_project_directory {
 		$relative_path =~ s/\.controller\Z/\.php/;
 		my $destination_path = "$bin_dir/$relative_path";
 		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
-		# say "model: $source_path ($relative_path => $destination_path ($destination_directory))";
-		say "controller: $source_path => $destination_path";
+		# say "\tmodel: $source_path ($relative_path => $destination_path ($destination_directory))";
+		say "\tcontroller: $source_path => $destination_path";
 
 		my $compiled_php = PaleWhite::ControllerPHPCompiler::compile_file($source_path);
 		Sugar::IO::File->new($destination_path)->write($compiled_php);
@@ -94,7 +102,43 @@ sub compile_project_directory {
 	}
 
 	my $compiled_php = compile_includes(@includes);
+	say "\tincludes file: $includes_file";
 	$includes_file->write($compiled_php);
+
+	unless ($config_file->exists) {
+		say "\tconfig file: $config_file";
+
+		$config_file->write("<?php
+
+global \$config;
+
+\$config = array(
+	'site_base' => '',
+	'main_controller' => 'MainController',
+	'database_config' => array(
+		'mysql_host' => 'localhost',
+		'mysql_username' => 'root',
+		'mysql_password' => '',
+		'mysql_database' => '',
+	),
+);
+
+");
+	}
+
+	unless ($index_file->exists) {
+		say "\tindex file: $index_file";
+		$index_file->write("<?php
+
+require_once 'includes.php';
+require_once 'config.php';
+
+\$executor = new \\PaleWhite\\HTTPRequestExecutor();
+\$executor->execute();
+
+");
+	}
+
 }
 
 

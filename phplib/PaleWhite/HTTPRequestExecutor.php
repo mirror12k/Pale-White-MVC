@@ -5,6 +5,9 @@ namespace PaleWhite;
 class HTTPRequestExecutor {
 	public function execute () {
 		global $config;
+		
+		global $database;
+		$database = new \PaleWhite\DatabaseDriver($config['database_config']);
 
 		session_start();
 		// error_log("[PaleWhite] _SESSION: " . json_encode($_SESSION));
