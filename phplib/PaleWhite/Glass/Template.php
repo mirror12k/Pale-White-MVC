@@ -12,6 +12,11 @@ abstract class Template {
 	public function render_block ($block, array $args) {
 		return '';
 	}
+
+	public function get_site_base() {
+		global $config;
+		return $config['site_base'];
+	}
 }
 
 

@@ -165,6 +165,15 @@ sub compile_html_tag {
 	if (exists $tag->{attributes}) {
 		foreach my $key (sort keys %{$tag->{attributes}}) {
 			$self->{text_accumulator} .= " $key=\"";
+			if ($identifier eq 'a' and $key eq 'href'
+					and ($tag->{attributes}{$key}{type} eq 'string_expression' or $tag->{attributes}{$key}{type} eq 'interpolation_expression')) {
+				my $expression = $tag->{attributes}{$key};
+				$expression = $expression->{expressions}[0] if $expression->{type} eq 'interpolation_expression';
+
+				if ($expression->{string} =~ /\A\//) {
+					push @code, $self->compile_argument_expression({ type => 'variable_expression', identifier => '_site_base' });
+				}
+			}
 			push @code, $self->compile_argument_expression($tag->{attributes}{$key});
 			$self->{text_accumulator} .= "\"";
 
@@ -232,7 +241,11 @@ sub compile_value_expression {
 		
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return "\$args[\"$expression->{identifier}\"]";
+		if ($expression->{identifier} eq '_site_base') {
+			return "\$this->get_site_base()";
+		} else {
+			return "\$args[\"$expression->{identifier}\"]";
+		}
 
 	} elsif ($expression->{type} eq 'access_expression') {
 		my $sub_expression = $self->compile_value_expression($expression->{expression});
