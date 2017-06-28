@@ -56,6 +56,61 @@ sub compile_model {
 			die "unimplemented function type $function->{type}";
 		}
 	}
+	push @code, "\n";
+
+	my %casts;
+	foreach my $property (grep $_->{type} eq 'model_pointer_property', @{$model->{properties}}) {
+		$casts{$property->{identifier}} = $property->{property_type};
+	}
+
+	if (%casts) {
+		# write the custom getter for these variables
+		push @code, "\tpublic function __get(\$name) {\n";
+		my $first = 1;
+		foreach my $identifier (sort keys %casts) {
+			if ($first) {
+				push @code, "\t\tif (\$name === '$identifier') {\n";
+				$first = 0;
+			} else {
+				push @code, "\t\t} elseif (\$name === '$identifier') {\n";
+			}
+			push @code, "\t\t\tif (is_int(\$this->_data['$identifier']))\n";
+			push @code, "\t\t\t\t\$this->_data['$identifier'] = \$this->_data['$identifier'] === 0 ? null "
+					. ": $casts{$identifier}::get_by_id(\$this->_data['$identifier']);\n";
+			# push @code, "\t\t\t}\n";
+			push @code, "\t\t\treturn \$this->_data['$identifier'];\n";
+
+		}
+		push @code, "\t\t} else\n";
+		push @code, "\t\t\treturn parent::__get(\$name);\n";
+		push @code, "\t}\n";
+
+		push @code, "\n";
+
+		# write the custom store for these variables
+		push @code, "\tpublic static function cast_to_store(\$name, \$value) {\n";
+		$first = 1;
+		foreach my $identifier (sort keys %casts) {
+			if ($first) {
+				push @code, "\t\tif (\$name === '$identifier') {\n";
+				$first = 0;
+			} else {
+				push @code, "\t\t} elseif (\$name === '$identifier') {\n";
+			}
+			push @code, "\t\t\tif (!is_int(\$value))\n";
+			push @code, "\t\t\t\t\$this->_data['$identifier'] = \$value === null ? 0 "
+					. ": \$value->id;\n";
+			# push @code, "\t\t\t}\n";
+			push @code, "\t\t\treturn \$this->_data['$identifier'];\n";
+
+		}
+		push @code, "\t\t} else {\n";
+		push @code, "\t\t\treturn parent::cast_to_store(\$name, \$value);\n";
+		push @code, "\t\t}\n";
+		push @code, "\t}\n";
+	}
+
+
 
 	push @code, "}\n";
 	push @code, "\n";

@@ -26,7 +26,7 @@ sub compile_property {
 	my $suffix = '';
 
 	# say Dumper $property;
-	if ($property->{property_type} eq 'int') {
+	if ($property->{type} eq 'model_pointer_property' or $property->{property_type} eq 'int') {
 		$type = 'INT'
 	} elsif ($property->{property_type} eq 'string') {
 		$type = 'VARCHAR(256)'
@@ -34,6 +34,7 @@ sub compile_property {
 		die "undefined property type: $property->{property_type}";
 	}
 
+	$suffix .= " DEFAULT $property->{modifiers}{default}" if exists $property->{modifiers}{default};
 	$suffix .= " NOT NULL auto_increment" if exists $property->{modifiers}{auto_increment};
 	$suffix .= ", UNIQUE KEY `$identifier` (`$identifier`)" if exists $property->{modifiers}{unique_key};
 
@@ -50,6 +51,7 @@ sub compile_model {
 	my @property_code;
 
 	push @property_code, compile_property({
+		type => 'implicit_model_property',
 		identifier => 'id',
 		property_type => 'int',
 		modifiers => {
