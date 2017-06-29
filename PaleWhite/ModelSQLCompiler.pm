@@ -27,9 +27,14 @@ sub compile_property {
 
 	# say Dumper $property;
 	if ($property->{type} eq 'model_pointer_property' or $property->{property_type} eq 'int') {
+		warn "superfluous property size in int property" if exists $property->{modifiers}{property_size};
 		$type = 'INT'
 	} elsif ($property->{property_type} eq 'string') {
-		$type = 'VARCHAR(256)'
+		if (exists $property->{modifiers}{property_size}) {
+			$type = "VARCHAR($property->{modifiers}{property_size})";
+		} else {
+			$type = "TEXT";
+		}
 	} else {
 		die "undefined property type: $property->{property_type}";
 	}

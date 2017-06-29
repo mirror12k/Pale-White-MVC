@@ -44,7 +44,9 @@ our $ignored_tokens = [
 
 our $contexts = {
 	model_block => 'context_model_block',
-	model_property => 'context_model_property',
+	model_property_identifier => 'context_model_property_identifier',
+	model_property_identifier_modifiers => 'context_model_property_identifier_modifiers',
+	model_property_type_modifiers => 'context_model_property_type_modifiers',
 	root => 'context_root',
 };
 
@@ -140,10 +142,7 @@ sub context_model_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{properties}}, $self->context_model_property({ type => 'model_pointer_property', property_type => $var_format_model_identifier_substitution->($tokens[0][1]), identifier => $tokens[1][1], modifiers => { default => '0', }, });
+			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'model_pointer_property', property_type => $var_format_model_identifier_substitution->($tokens[0][1]), modifiers => { default => '0', }, modifiers => $self->context_model_property_type_modifiers({}), });
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));
@@ -152,10 +151,7 @@ sub context_model_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{properties}}, $self->context_model_property({ type => 'model_property', property_type => $tokens[0][1], identifier => $tokens[1][1], });
+			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'model_property', property_type => $tokens[0][1], modifiers => $self->context_model_property_type_modifiers({}), });
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));
@@ -167,7 +163,44 @@ sub context_model_block {
 	return $context_object;
 }
 
-sub context_model_property {
+sub context_model_property_type_modifiers {
+	my ($self, $context_object) = @_;
+
+	while ($self->more_tokens) {
+	my @tokens;
+
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq ']') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(3));
+			$context_object->{property_size} = $tokens[1][1];
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] eq ']') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object->{array} = 'enabled';
+			}
+			else {
+			return $context_object;
+			}
+	}
+	return $context_object;
+}
+
+sub context_model_property_identifier {
+	my ($self, $context_object) = @_;
+	my @tokens;
+
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object->{identifier} = $tokens[0][1];
+			$context_object->{modifiers} = $self->context_model_property_identifier_modifiers($context_object->{modifiers});
+			return $context_object;
+}
+
+sub context_model_property_identifier_modifiers {
 	my ($self, $context_object) = @_;
 
 	while ($self->more_tokens) {
@@ -177,13 +210,13 @@ sub context_model_property {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object->{modifiers}{$tokens[0][1]} = 'enabled';
+			$context_object->{$tokens[0][1]} = 'enabled';
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'auto_increment') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object->{modifiers}{$tokens[0][1]} = 'enabled';
+			$context_object->{$tokens[0][1]} = 'enabled';
 			}
 			else {
 			return $context_object;
