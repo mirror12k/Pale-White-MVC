@@ -14,6 +14,7 @@ sub new {
 	my $self = bless {}, $class;
 
 	$self->{text_accumulator} = '';
+	$self->{local_variable_scope} = {};
 	return $self
 }
 
@@ -145,6 +146,21 @@ sub compile_item {
 		return $self->compile_html_tag($item)
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
 		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{arguments}[0]', \$args);\n"
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
+		my @code;
+		push @code, $self->flush_accumulator;
+		push @code, "foreach (" . $self->compile_value_expression($item->{expression}) . " as " . (
+						exists $item->{key_identifier} ? "\$$item->{key_identifier} => \$$item->{value_identifier}" : "\$$item->{value_identifier}"
+					) . ") {\n";
+		my $prev_scope = $self->{local_variable_scope};
+		$self->{local_variable_scope} = { %$prev_scope };
+		$self->{local_variable_scope}{$item->{value_identifier}} = 1;
+		$self->{local_variable_scope}{$item->{key_identifier}} = 1 if exists $item->{key_identifier};
+		push @code, map "\t$_", $self->compile_block($item->{block});
+		push @code, map "\t$_", $self->flush_accumulator;
+		push @code, "}\n";
+		return @code
+
 	} elsif ($item->{type} eq 'expression_node') {
 		return $self->compile_argument_expression($item->{expression}), map $self->compile_argument_expression($_), @{$item->{text}}
 	} else {
@@ -243,6 +259,8 @@ sub compile_value_expression {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		if ($expression->{identifier} eq '_site_base') {
 			return "\$this->get_site_base()";
+		} elsif (exists $self->{local_variable_scope}{$expression->{identifier}}) {
+			return "\$$expression->{identifier}";
 		} else {
 			return "\$args[\"$expression->{identifier}\"]";
 		}

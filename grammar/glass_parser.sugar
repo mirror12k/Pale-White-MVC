@@ -7,7 +7,7 @@ string_interpolation_middle_regex = /\}\}([^\\"]|\\[\\"])*?\{\{/s
 string_interpolation_end_regex = /\}\}([^\\"]|\\[\\"])*?"/s
 string_regex = /"([^\\"]|\\[\\"])*?"/s
 
-symbol_regex = /!|\.|\#|=|,|\{|\}/
+symbol_regex = /!|\.|\#|=>|=|,|\{|\}/
 
 indent_regex = /\t++/
 whitespace_regex = /[\t \r]++/
@@ -81,6 +81,26 @@ object context glass_block {
 object context glass_item {
 	# we cheat by passing in the indent as the argument
 	switch {
+		'!', 'foreach' => {
+			$_ = {
+				type => 'glass_helper'
+				line_number => $0{line_number}
+				identifier => $1
+				expression => !glass_argument_expression
+				indent => $_
+			}
+			if 'as', $identifier_regex, '=>', $identifier_regex => {
+				$_{key_identifier} = $3
+				$_{value_identifier} = $5
+			} elsif 'as', $identifier_regex => {
+				$_{value_identifier} = $3
+			} else {
+				$_{value_identifier} = '_'
+			}
+			match $newline_regex
+			$_ = !glass_block->$_
+			return
+		}
 		'!', $identifier_regex => {
 			$_ = !glass_helper->{
 				type => 'glass_helper'
