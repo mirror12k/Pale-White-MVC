@@ -37,7 +37,11 @@ sub compile_model {
 
 	push @code, "\tpublic static \$model_properties = array(\n";
 	push @code, "\t\t'id' => 'int',\n";
-	push @code, "\t\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @{$model->{properties}};
+	push @code, "\t\t'$_->{identifier}' => '$_->{property_type}',\n" foreach grep { not exists $_->{modifiers}{array_property} } @{$model->{properties}};
+	push @code, "\t);\n";
+
+	push @code, "\tpublic static \$model_array_properties = array(\n";
+	push @code, "\t\t'$_->{identifier}' => '$_->{property_type}',\n" foreach grep { exists $_->{modifiers}{array_property} } @{$model->{properties}};
 	push @code, "\t);\n";
 
 	push @code, "\n";
@@ -98,10 +102,10 @@ sub compile_model {
 				push @code, "\t\t} elseif (\$name === '$identifier') {\n";
 			}
 			push @code, "\t\t\tif (!is_int(\$value))\n";
-			push @code, "\t\t\t\t\$this->_data['$identifier'] = \$value === null ? 0 "
+			push @code, "\t\t\t\t\$value = \$value === null ? 0 "
 					. ": \$value->id;\n";
 			# push @code, "\t\t\t}\n";
-			push @code, "\t\t\treturn \$this->_data['$identifier'];\n";
+			push @code, "\t\t\treturn \$value;\n";
 
 		}
 		push @code, "\t\t} else {\n";

@@ -25,6 +25,21 @@ abstract class Model {
 		}
 	}
 
+	public function add($array_name, $value) {
+		global $database;
+		$query = $database->insert()
+				->table(static::$table_name . '__array_property__' . $array_name)
+				->values(array('parent_id' => $this->id, 'value' => static::cast_to_store($array_name, $value)));
+
+		$result = $query->fetch();
+		if ($result === true) {
+			$this->_data[$array_name][] = $value;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	public static function get_by_id($id) {
 		// return cached item if available
 		if (isset(static::$model_cache['id'][$id]))
@@ -82,7 +97,24 @@ abstract class Model {
 		foreach ($data as $field => $value) {
 			$loaded[$field] = static::cast_from_store($field, $value);
 		}
+		foreach (static::$model_array_properties as $field => $field_type) {
+			$loaded[$field] = static::load_array_data($data['id'], $field);
+		}
 		return $loaded;
+	}
+	public static function load_array_data($id, $field) {
+		global $database;
+		$query = $database->select()
+				->table(static::$table_name . '__array_property__' . $field)
+				->fields(array('value'))
+				->where(array('parent_id' => $id));
+		$result = $query->fetch();
+
+		$array = array();
+		foreach ($result as $row)
+			$array[] = static::cast_from_store($field, $row['value']);
+
+		return $array;
 	}
 
 	public static function store_data(array $data) {

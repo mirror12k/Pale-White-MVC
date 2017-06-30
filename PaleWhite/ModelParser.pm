@@ -179,7 +179,7 @@ sub context_model_property_type_modifiers {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			$context_object->{array} = 'enabled';
+			$context_object->{array_property} = 'enabled';
 			}
 			else {
 			return $context_object;

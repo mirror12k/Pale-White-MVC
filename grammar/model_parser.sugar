@@ -104,7 +104,7 @@ object context model_property_type_modifiers {
 			$_{property_size} = $1
 		}
 		'[', ']' => {
-			$_{array} = 'enabled'
+			$_{array_property} = 'enabled'
 		}
 		default {
 			return
