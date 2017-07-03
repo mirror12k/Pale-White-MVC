@@ -75,7 +75,8 @@ class DatabaseQuery {
 					$fields[] = "$field = $value";
 				}
 
-				$query .= ' WHERE ' . implode(' AND ', $fields);
+				if (count($fields) > 0)
+					$query .= ' WHERE ' . implode(' AND ', $fields);
 			}
 
 			if (isset($this->query_args['limit'])) {
@@ -151,7 +152,8 @@ class DatabaseQuery {
 					$fields[] = "$field = $value";
 				}
 
-				$query .= ' WHERE ' . implode(' AND ', $fields);
+				if (count($fields) > 0)
+					$query .= ' WHERE ' . implode(' AND ', $fields);
 			}
 
 			if (isset($this->query_args['limit'])) {
@@ -181,7 +183,8 @@ class DatabaseQuery {
 					$fields[] = "$field = $value";
 				}
 
-				$query .= ' WHERE ' . implode(' AND ', $fields);
+				if (count($fields) > 0)
+					$query .= ' WHERE ' . implode(' AND ', $fields);
 			}
 
 			if (isset($this->query_args['limit'])) {

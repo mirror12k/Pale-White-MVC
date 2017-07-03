@@ -320,6 +320,10 @@ sub compile_expression {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "\$this->load_model('$expression->{identifier}', $arguments)"
 		
+	} elsif ($expression->{type} eq 'load_model_list_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "$expression->{identifier}::get_list($arguments)"
+		
 	} elsif ($expression->{type} eq 'render_template_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "((new $expression->{identifier}())->render($arguments))"

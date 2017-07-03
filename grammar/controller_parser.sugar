@@ -291,6 +291,15 @@ object context action_expression {
 			}
 			return
 		}
+		'list', $identifier_regex => {
+			$_ = {
+				type => 'load_model_list_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			return
+		}
 		'render', $identifier_regex => {
 			$_ = {
 				type => 'render_template_expression'

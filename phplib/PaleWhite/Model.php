@@ -87,6 +87,19 @@ abstract class Model {
 			return $result[0];
 	}
 
+	public static function get_list(array $values) {
+		$values = static::store_data($values);
+
+		global $database;
+		$query = $database->select()
+				->table(static::$table_name)
+				->where($values);
+
+		$result = static::get_by_query($query);
+
+		return $result;
+	}
+
 	public static function get_by_query(DatabaseQuery $query) {
 		$result = $query->fetch();
 
@@ -183,14 +196,11 @@ abstract class Model {
 
 	public static function cast_to_store($name, $value) {
 		if (isset(static::$model_submodel_properties[$name])) {
-			error_log("debug value of '$name': " . json_encode($value));
 			if (is_object($value)) {
 				$value = $value->id;
 			} elseif ($value === null) {
 				$value = 0;
 			}
-			// $value = $value === null ? 0 : $value->id;
-			error_log("debug value of '$name': " . json_encode($value));
 		}
 		return $value;
 	}

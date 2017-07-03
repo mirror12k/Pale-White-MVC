@@ -158,6 +158,7 @@ sub compile_item {
 		$self->{local_variable_scope}{$item->{key_identifier}} = 1 if exists $item->{key_identifier};
 		push @code, map "\t$_", $self->compile_block($item->{block});
 		push @code, map "\t$_", $self->flush_accumulator;
+		$self->{local_variable_scope} = $prev_scope;
 		push @code, "}\n";
 		return @code
 
