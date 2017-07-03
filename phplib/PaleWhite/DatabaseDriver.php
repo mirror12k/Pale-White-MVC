@@ -49,6 +49,10 @@ class DatabaseDriver {
 		return new DatabaseQuery($this, 'update');
 	}
 
+	public function delete() {
+		return new DatabaseQuery($this, 'delete');
+	}
+
 	public function escape_string($string) {
 		if (!$this->connected)
 			$this->connect();
@@ -62,6 +66,7 @@ class DatabaseDriver {
 			$this->connect();
 
 		$query_string = $query->compile();
+		error_log("[PaleWhite] executing mysql query: '$query_string'");
 		$result = $this->mysql_connection->query($query_string);
 		if ($this->mysql_connection->error) {
 			throw new \Exception('Database query error: ' . $this->mysql_connection->error);

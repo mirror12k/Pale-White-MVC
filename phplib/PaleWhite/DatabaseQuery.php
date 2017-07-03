@@ -70,7 +70,7 @@ class DatabaseQuery {
 					} elseif (is_numeric($value)) {
 						$value = "$value";
 					} else {
-						die("invalid value type for where field $field: " . gettype($value));
+						throw new \Exception("invalid value type for where field $field: " . gettype($value));
 					}
 					$fields[] = "$field = $value";
 				}
@@ -105,7 +105,7 @@ class DatabaseQuery {
 					} elseif (is_numeric($value)) {
 						$value = "$value";
 					} else {
-						die("invalid value type for where field $field: " . gettype($value));
+						throw new \Exception("invalid value type for where field $field: " . gettype($value));
 					}
 					$values[] = $value;
 				}
@@ -130,7 +130,7 @@ class DatabaseQuery {
 					} elseif (is_numeric($value)) {
 						$value = "$value";
 					} else {
-						die("invalid value type for where field $field: " . gettype($value));
+						throw new \Exception("invalid value type for where field $field: " . gettype($value));
 					}
 					$values[] = "$field = $value";
 				}
@@ -146,7 +146,37 @@ class DatabaseQuery {
 					} elseif (is_numeric($value)) {
 						$value = "$value";
 					} else {
-						die("invalid value type for where field $field: " . gettype($value));
+						throw new \Exception("invalid value type for where field $field: " . gettype($value));
+					}
+					$fields[] = "$field = $value";
+				}
+
+				$query .= ' WHERE ' . implode(' AND ', $fields);
+			}
+
+			if (isset($this->query_args['limit'])) {
+				$query .= ' LIMIT ' . $this->query_args['limit'];
+			}
+
+			return $query;
+		} elseif ($this->query_type === 'delete') {
+			$query = 'DELETE';
+
+
+			if (isset($this->query_args['table'])) {
+				$query .= ' FROM `' . $this->db->escape_string($this->query_args['table']) . '`';
+			}
+
+			if (isset($this->query_args['where'])) {
+				$fields = array();
+				foreach ($this->query_args['where'] as $field => $value) {
+					$field = '`' . $this->db->escape_string($field) . '`';
+					if (is_string($value)) {
+						$value = '\'' . $this->db->escape_string($value) . '\'';
+					} elseif (is_numeric($value)) {
+						$value = "$value";
+					} else {
+						throw new \Exception("invalid value type for where field $field: " . gettype($value));
 					}
 					$fields[] = "$field = $value";
 				}
@@ -161,7 +191,7 @@ class DatabaseQuery {
 			return $query;
 
 		} else {
-			die("invalid query_type: " . $this->query_type);
+			throw new \Exception("invalid query_type: " . $this->query_type);
 		}
 	}
 

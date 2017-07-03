@@ -10,18 +10,40 @@ abstract class Model {
 	}
 
 	public function __get($name) {
-		if (isset($this->_data[$name]))
+		// if (isset($this->_data[$name])) {
+		if (isset(static::$model_properties[$name])) {
+			if (isset(static::$model_submodel_properties[$name]))
+				$this->_data[$name] = $this->get_lazy_loaded_model($name, $this->_data[$name]);
 			return $this->_data[$name];
-		else
-			throw new \Exception("attempted to get undefined model property: $name");
+		} elseif (isset(static::$model_array_properties[$name])) {
+			if (isset(static::$model_submodel_properties[$name]))
+				$this->_data[$name] = $this->get_lazy_loaded_model_array($name, $this->_data[$name]);
+			return $this->_data[$name];
+		} else
+			throw new \Exception("attempted to get undefined model property '$name' in model class: " . get_called_class());
+	}
+
+	public function get_lazy_loaded_model($field, $value) {
+		if (is_int($value) or is_string($value)) {
+			$class = static::$model_submodel_properties[$field];
+			$value = $value === 0 ? null : $class::get_by_id((int)$value);
+		}
+		return $value;
+	}
+
+	public function get_lazy_loaded_model_array($field, $value) {
+		$loaded_value = array();
+		foreach ($value as $item)
+			$loaded_value[] = $this->get_lazy_loaded_model($field, $item);
+		return $loaded_value;
 	}
 
 	public function __set($name, $value) {
 		if (isset($this->_data[$name])) {
 			$this->_data[$name] = $value;
-			$this->update_fields(array($name => static::cast_to_store($name, $value)));
+			$this->update_fields(array($name => $value));
 		} else {
-			throw new \Exception("attempted to set undefined model property: $name");
+			throw new \Exception("attempted to set undefined model property '$name' in model class: " . get_called_class());
 		}
 	}
 
@@ -80,16 +102,38 @@ abstract class Model {
 	public static function create(array $data) {
 		$data = static::store_data($data);
 
+		$item_fields = array();
+		$array_fields = array();
+		foreach ($data as $field => $value) {
+			if (isset(static::$model_properties[$field]))
+				$item_fields[$field] = $value;
+			elseif (isset(static::$model_array_properties[$field]))
+				$array_fields[$field] = $value;
+			else
+				throw new \Exception("attempted to create undefined model property '$field' in model class: " . get_called_class());
+		}
+
 		global $database;
 		$query = $database->insert()
 				->table(static::$table_name)
-				->values($data);
-
+				->values($item_fields);
 		$result = $query->fetch();
-		if ($result === TRUE)
-			return static::get_by_id($database->insert_id);
-		else
+
+		if ($result === TRUE) {
+			$obj_id = $database->insert_id;
+			$obj = static::get_by_id($obj_id);
+			if ($obj === null)
+				throw new \Exception("fatal error creating object (id $obj_id): " . get_called_class());
+
+			// have the object update the array fields itself
+			foreach ($array_fields as $field => $value) {
+				$obj->$field = $value;
+			}
+
+			return $obj;
+		} else {
 			return null;
+		}
 	}
 
 	public static function load_data(array $data) {
@@ -120,12 +164,34 @@ abstract class Model {
 	public static function store_data(array $data) {
 		$stored = array();
 		foreach ($data as $field => $value) {
-			$stored[$field] = static::cast_to_store($field, $value);
+			if (isset(static::$model_properties[$field]))
+				$stored[$field] = static::cast_to_store($field, $value);
+			elseif (isset(static::$model_array_properties[$field]))
+				$stored[$field] = static::store_array_data($field, $value);
+			else
+				throw new \Exception("attempted to cast undefined model property '$field' in model class: " . get_called_class());
 		}
 		return $stored;
 	}
 
+	public static function store_array_data($field, $value) {
+		$stored_array = array();
+		foreach ($value as $item)
+			$stored_array[] = static::cast_to_store($field, $item);
+		return $stored_array;
+	}
+
 	public static function cast_to_store($name, $value) {
+		if (isset(static::$model_submodel_properties[$name])) {
+			error_log("debug value of '$name': " . json_encode($value));
+			if (is_object($value)) {
+				$value = $value->id;
+			} elseif ($value === null) {
+				$value = 0;
+			}
+			// $value = $value === null ? 0 : $value->id;
+			error_log("debug value of '$name': " . json_encode($value));
+		}
 		return $value;
 	}
 
@@ -134,15 +200,49 @@ abstract class Model {
 	}
 
 	public function update_fields(array $values) {
-		$values = static::store_data($values);
+
+		$item_fields = array();
+		$array_fields = array();
+		foreach ($values as $field => $value) {
+			if (isset(static::$model_properties[$field]))
+				$item_fields[$field] = $value;
+			elseif (isset(static::$model_array_properties[$field]))
+				$array_fields[$field] = $value;
+			else
+				throw new \Exception("attempted to update undefined model property '$field' in model class: " . get_called_class());
+		}
+
+
+		if (count($item_fields) > 0) {
+			$item_fields = static::store_data($item_fields);
+
+			global $database;
+			$query = $database->update()
+					->table(static::$table_name)
+					->values($item_fields)
+					->where(array('id' => $this->id));
+			$query->fetch();
+		}
+
+		foreach ($array_fields as $field => $value)
+			$this->update_array_field($field, $value);
+	}
+
+	public function update_array_field($field, $value) {
+		$value = static::store_array_data($field, $value);
 
 		global $database;
-		$query = $database->update()
-				->table(static::$table_name)
-				->values($values)
-				->where(array('id' => $this->id));
+		$delete_query = $database->delete()
+				->table(static::$table_name . '__array_property__' . $field)
+				->where(array('parent_id' => $this->id));
+		$delete_query->fetch();
 
-		$query->fetch();
+		foreach ($value as $item) {
+			$insert_query = $database->insert()
+					->table(static::$table_name . '__array_property__' . $field)
+					->values(array('parent_id' => $this->id, 'value' => $item));
+			$insert_query->fetch();
+		}
 	}
 }
 
