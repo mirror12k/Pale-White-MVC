@@ -19,7 +19,7 @@ our $var_string_interpolation_start_regex = qr/"([^\\"]|\\[\\"])*?\{\{/s;
 our $var_string_interpolation_middle_regex = qr/\}\}([^\\"]|\\[\\"])*?\{\{/s;
 our $var_string_interpolation_end_regex = qr/\}\}([^\\"]|\\[\\"])*?"/s;
 our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
-our $var_symbol_regex = qr/!|\.|\#|=>|=|,|\{|\}/;
+our $var_symbol_regex = qr/!|\.|\#|=>|=|,|\{|\}|-/;
 our $var_indent_regex = qr/\t++/;
 our $var_whitespace_regex = qr/[\t \r]++/;
 our $var_newline_regex = qr/\s*\n/s;
@@ -259,7 +259,7 @@ sub context_glass_tag {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{class}}, $tokens[1][1];
+			push @{$context_object->{class}}, $self->extended_html_class($tokens[1][1]);
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '#' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
@@ -497,6 +497,17 @@ sub match_indent {
 	my ($self, $offset, $item) = @_;
 	return ($self->{tokens}[$offset][1] =~ /\A\t++\Z/
 		and length $self->{tokens}[$offset][1] > length $item->{indent})
+}
+
+sub extended_html_class {
+	my ($self, $class) = @_;
+	while ($self->more_tokens(1)
+			and $self->{tokens}[$self->{tokens_index}][1] eq '-'
+			and $self->{tokens}[$self->{tokens_index} + 1][1] =~ $var_identifier_regex) {
+		my @tokens = $self->step_tokens(2);
+		$class .= "-$tokens[1][1]";
+	}
+	return $class
 }
 
 sub main {

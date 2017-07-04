@@ -7,7 +7,7 @@ string_interpolation_middle_regex = /\}\}([^\\"]|\\[\\"])*?\{\{/s
 string_interpolation_end_regex = /\}\}([^\\"]|\\[\\"])*?"/s
 string_regex = /"([^\\"]|\\[\\"])*?"/s
 
-symbol_regex = /!|\.|\#|=>|=|,|\{|\}/
+symbol_regex = /!|\.|\#|=>|=|,|\{|\}|-/
 
 indent_regex = /\t++/
 whitespace_regex = /[\t \r]++/
@@ -164,7 +164,7 @@ object context glass_item {
 object context glass_tag {
 	switch {
 		'.', $identifier_regex => {
-			$_{class}[] = $1
+			$_{class}[] = &extended_html_class->$1
 		}
 		'#', $identifier_regex => {
 			$_{id} = $1
@@ -349,6 +349,19 @@ sub match_indent {{
 	my ($self, $offset, $item) = @_;
 	return ($self->{tokens}[$offset][1] =~ /\A\t++\Z/
 		and length $self->{tokens}[$offset][1] > length $item->{indent})
+}}
+
+
+# cheap hack to parse the complete tag class
+sub extended_html_class {{
+	my ($self, $class) = @_;
+	while ($self->more_tokens(1)
+			and $self->{tokens}[$self->{tokens_index}][1] eq '-'
+			and $self->{tokens}[$self->{tokens_index} + 1][1] =~ $var_identifier_regex) {
+		my @tokens = $self->step_tokens(2);
+		$class .= "-$tokens[1][1]";
+	}
+	return $class
 }}
 
 sub main {{
