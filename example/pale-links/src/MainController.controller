@@ -1,0 +1,71 @@
+
+
+controller MainController {
+	path "/" {
+		render CreateLinkTemplate;
+	}
+
+	path "/link/{{link_id}}" {
+		validate link_id as int;
+		link = model? LinkModel id=link_id;
+		if (link) {
+			action increment_link_hit_count link=link;
+
+			status "302 Redirect";
+			redirect link.location;
+		} else {
+			status "404 Not Found";
+			render ErrorTemplate message="No Such Link";
+		}
+	}
+
+	path "/view_link/{{link_id}}" {
+		validate link_id as int;
+		link = model? LinkModel id=link_id;
+		if (link) {
+			render ViewLinkTemplate link=link, message="Link Stats";
+		} else {
+			status "404 Not Found";
+			render ErrorTemplate message="No Such Link";
+		}
+	}
+
+	path "/create_link" [location] {
+		link = action create_link location=location;
+		if (link) {
+			view_link = action view_link_url link=link;
+			status "302 Redirect";
+			redirect view_link;
+		} else {
+			status "500 Server Error";
+			render ErrorTemplate message="Failed to Create Link";
+		}
+	}
+
+	path default {
+		status "404 Not Found";
+		render ErrorTemplate message="Not Found";
+	}
+
+	validator int {{
+		return (int)$value;
+	}}
+
+	action create_link {{
+		$location = (string)$args['location'];
+		$link = LinkModel::create(array('location' => $location, 'hit_count' => 0));
+		return $link;
+	}}
+
+	action view_link_url {{
+		$link = $args['link'];
+		return "view_link/" . $link->id;
+	}}
+
+	action increment_link_hit_count {{
+		$link = $args['link'];
+		$link->hit_count = $link->hit_count + 1;
+		error_log("debug hit count: " . $Link->hit_count);
+	}}
+
+}

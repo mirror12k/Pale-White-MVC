@@ -1,0 +1,7 @@
+
+
+
+model LinkModel {
+	string[512] location;
+	int hit_count;
+}

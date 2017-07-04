@@ -43,6 +43,8 @@ sub compile_project_directory {
 
 	my @includes;
 
+	$bin_dir->mk unless $bin_dir->exists;
+
 	my $setup_sql_file = Sugar::IO::File->new("$bin_dir/setup.sql");
 	my $includes_file = Sugar::IO::File->new("$bin_dir/includes.php");
 	my $config_file = Sugar::IO::File->new("$bin_dir/config.php");
@@ -165,6 +167,8 @@ global \$config;
 );
 
 ");
+
+		say "\t\tdefault config written, please add your settings to properly setup your app";
 	}
 
 	unless ($htaccess_file->exists) {
@@ -177,6 +181,8 @@ global \$config;
 	RewriteRule ^ index.php [L]
 </IfModule>
 ");
+		
+		say "\t\tdefault htaccess written, please edit it if necessary";
 	}
 
 	unless ($index_file->exists) {

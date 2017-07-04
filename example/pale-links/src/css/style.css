@@ -1,0 +1,31 @@
+
+
+body {
+	margin: 0px;
+}
+
+.content {
+	margin: 10%;
+}
+
+
+
+.title-bar {
+	padding: 20px 40px;
+	background-color: #CCF;
+	font-family: sans-serif;
+}
+
+
+.title-bar h1 {
+	margin: 0px;
+}
+
+
+
+
+.text {
+	padding: 20px 40px;
+	font-family: sans-serif;
+}
+

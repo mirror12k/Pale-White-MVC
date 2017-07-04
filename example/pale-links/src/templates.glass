@@ -1,0 +1,41 @@
+
+!template BaseTemplate
+	html
+		head
+			!block head
+			link href="/css/style.css", type="text/css", rel="stylesheet"
+		body
+			div.content
+				!block body
+
+!template CreateLinkTemplate extends BaseTemplate
+	!block head
+		title "Create a Link!"
+	!block body
+		div.title-bar
+			h1 "Create a Link"
+		div.text
+			form method="POST",action="create_link"
+				div
+					input name="location", type="text", placeholder="http://www.example.org"
+				div
+					button "Create Link!"
+
+
+!template ErrorTemplate extends BaseTemplate
+	!block head
+		title "Error"
+	!block body
+		h1 {message}
+
+!template ViewLinkTemplate extends BaseTemplate
+	!block head
+		title "View Link Stats"
+	!block body
+		div.title-bar
+			h1 "Link Stats"
+		div.text
+			p "link to {{link.location}}"
+			p "link hits: {{link.hit_count}}"
+			p
+				a href="/link/{{link.id}}" "full link"
