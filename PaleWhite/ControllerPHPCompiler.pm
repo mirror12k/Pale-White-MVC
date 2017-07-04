@@ -57,6 +57,8 @@ sub compile_controller_route {
 	my ($self, $controller) = @_;
 	my @code;
 
+	$self->{context_args_variable} = '$req->args';
+
 	my @paths;
 	@paths = (@paths, @{$controller->{global_paths}}) if exists $controller->{global_paths};
 	@paths = (@paths, @{$controller->{paths}}) if exists $controller->{paths};
@@ -88,8 +90,9 @@ sub compile_path {
 	my @code;
 
 	if (@{$path->{arguments}}) {
+		my $args_var = $self->{context_args_variable};
 		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$path->{arguments}}) {
-			push @code, "if (!isset(\$req->args['$arg->{identifier}']))\n";
+			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
 			push @code, "\tthrow new \\Exception('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
 		}
 		push @code, "\n";
@@ -162,11 +165,6 @@ sub compile_path_condition {
 	return $condition_code, \@match_code
 }
 
-sub compile_action_block {
-	my ($self, $block) = @_;
-	return map $self->compile_action($_), @$block;
-}
-
 sub compile_controller_validate {
 	my ($self, $controller) = @_;
 	my @code;
@@ -210,6 +208,8 @@ sub compile_controller_action {
 	my ($self, $controller) = @_;
 	my @code;
 
+	$self->{context_args_variable} = '$args';
+
 	my @actions;
 	if (exists $controller->{actions}) {
 		@actions = @{$controller->{actions}};
@@ -233,6 +233,17 @@ sub compile_controller_action_call {
 	my ($self, $action, $first) = @_;
 	my @code;
 
+	if (@{$action->{arguments}}) {
+		my $args_var = $self->{context_args_variable};
+		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$action->{arguments}}) {
+			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
+			push @code, "\tthrow new \\Exception('missing argument \"$arg->{identifier}\" to action \"$action->{identifier}\"');\n";
+		}
+		push @code, "\n";
+		push @code, $self->compile_action_block($action->{arguments});
+		push @code, "\n";
+	}
+
 	push @code, map "$_\n", map s/\A\t\t?//r, split "\n", $action->{code};
 
 	@code = map "\t$_", @code;
@@ -243,6 +254,11 @@ sub compile_controller_action_call {
 	}
 
 	return @code
+}
+
+sub compile_action_block {
+	my ($self, $block) = @_;
+	return map $self->compile_action($_), @$block;
 }
 
 sub compile_action {
@@ -271,29 +287,24 @@ sub compile_action {
 		return "\$this->route_subcontroller('$action->{identifier}', \$res, $path_argument, $args_argument);\n"
 
 	} elsif ($action->{type} eq 'argument_specifier') {
-		return "\$$action->{identifier} = \$req->args['$action->{identifier}'];\n"
+		my $args_var = $self->{context_args_variable};
+		return "\$$action->{identifier} = ${args_var}['$action->{identifier}'];\n"
 
 	} elsif ($action->{type} eq 'validate_variable') {
 		if ($action->{validator_identifier} eq 'int') {
 			return "\$$action->{identifier} = (int)\$$action->{identifier};\n"
 		} elsif ($action->{validator_identifier} eq 'string') {
-			if (exists $action->{validator_max_size} and exists $action->{validator_min_size}) {
-				return "\$$action->{identifier} = (string)\$$action->{identifier};\n",
-					"if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
-					"\tthrow new \\Exception('argument \"$action->{identifier}\" exceeded max length of $action->{validator_max_size}');\n",
-					"if (strlen(\$$action->{identifier}) < $action->{validator_min_size})\n",
-					"\tthrow new \\Exception('argument \"$action->{identifier}\" doesnt reach min length of $action->{validator_min_size}');\n"
-			} elsif (exists $action->{validator_max_size}) {
-				return "\$$action->{identifier} = (string)\$$action->{identifier};\n",
-					"if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
+			my @code;
+			push @code, "\$$action->{identifier} = (string)\$$action->{identifier};\n";
+			if (exists $action->{validator_max_size}) {
+				push @code, "if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
 					"\tthrow new \\Exception('argument \"$action->{identifier}\" exceeded max length of $action->{validator_max_size}');\n"
-			} elsif (exists $action->{validator_min_size}) {
-				return "\$$action->{identifier} = (string)\$$action->{identifier};\n",
-					"if (strlen(\$$action->{identifier}) < $action->{validator_min_size})\n",
-					"\tthrow new \\Exception('argument \"$action->{identifier}\" doesnt reach min length of $action->{validator_min_size}');\n"
-			} else {
-				return "\$$action->{identifier} = (string)\$$action->{identifier};\n"
 			}
+			if (exists $action->{validator_min_size}) {
+				push @code, "if (strlen(\$$action->{identifier}) < $action->{validator_min_size})\n",
+					"\tthrow new \\Exception('argument \"$action->{identifier}\" doesnt reach min length of $action->{validator_min_size}');\n"
+			}
+			return @code
 		} else {
 			return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
 		}

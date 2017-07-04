@@ -51,6 +51,7 @@ our $contexts = {
 	format_native_code => 'context_format_native_code',
 	format_string => 'context_format_string',
 	more_action_expression => 'context_more_action_expression',
+	native_code_block => 'context_native_code_block',
 	optional_arguments_list => 'context_optional_arguments_list',
 	path_action_block => 'context_path_action_block',
 	path_action_block_list => 'context_path_action_block_list',
@@ -143,25 +144,36 @@ sub context_controller_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, qr/\\{\\{.*?\\}\\}/s')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_native_code_block_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{actions}}, { type => 'action', line_number => $tokens[0][2], identifier => $tokens[1][1], code => $self->context_format_native_code($tokens[2][1]), };
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{actions}}, { type => 'action', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_optional_arguments_list([]), code => $self->context_native_code_block($tokens[2][1]), };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'validator') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, qr/\\{\\{.*?\\}\\}/s')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_native_code_block_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{validators}}, { type => 'validator', line_number => $tokens[0][2], identifier => $tokens[1][1], code => $self->context_format_native_code($tokens[2][1]), };
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{validators}}, { type => 'validator', line_number => $tokens[0][2], identifier => $tokens[1][1], code => $self->context_native_code_block($tokens[2][1]), };
 			}
 			else {
 			return $context_object;
 			}
 	}
 	return $context_object;
+}
+
+sub context_native_code_block {
+	my ($self, $context_value) = @_;
+	my @tokens;
+
+			$self->confess_at_current_offset('expected qr/\\{\\{.*?\\}\\}/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_native_code_block_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_value = $self->context_format_native_code($tokens[0][1]);
+			return $context_value;
 }
 
 sub context_optional_arguments_list {

@@ -47,13 +47,7 @@ controller MainController {
 		render ErrorTemplate message="Not Found";
 	}
 
-	action create_blog_post {{
-		$author = (string)$args['author'];
-		$title = (string)$args['title'];
-		$body = (string)$args['body'];
-
-		# $comment1 = CommentPostModel::create(array('name' => 'tester', 'body' => 'hello world!'));
-		# $comment2 = CommentPostModel::create(array('name' => 'tester', 'body' => 'goodbye world!'));
+	action create_blog_post [string author, string title, string body] {{
 		$post = BlogPostModel::create(array(
 			'author' => $author,
 			'title' => $title,
@@ -63,11 +57,7 @@ controller MainController {
 		return $post;
 	}}
 
-	action create_blog_comment {{
-		$post = $args['post'];
-		$author = (string)$args['author'];
-		$body = (string)$args['body'];
-
+	action create_blog_comment [post, string author, string body] {{
 		$obj = CommentPostModel::create(array('author' => $author, 'body' => $body));
 		$post = $post->add('comments', $obj);
 

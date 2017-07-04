@@ -65,16 +65,6 @@ object context controller_block {
 				arguments => !optional_arguments_list->[]
 				block => []
 			}
-			# if '[' => {
-
-			# } else {
-			# 	$_{global_paths}[] = !path_action_block->{
-			# 		type => 'global_path'
-			# 		line_number => $0{line_number}
-			# 		arguments => []
-			# 		block => []
-			# 	}
-			# }
 		}
 		'path', 'default' => {
 			$_{default_path} = !path_action_block->{
@@ -92,42 +82,39 @@ object context controller_block {
 				arguments => !optional_arguments_list->[]
 				block => []
 			}
-			# if '[' => {
-
-			# } else {
-			# 	$_{paths}[] = !path_action_block->{
-			# 		type => 'match_path'
-			# 		line_number => $0{line_number}
-			# 		path => !format_string->$1
-			# 		arguments => []
-			# 		block => []
-			# 	}
-			# }
 		}
 		'action' => {
-			match $identifier_regex, $native_code_block_regex
+			match $identifier_regex
 
 			$_{actions}[] = {
 				type => 'action'
 				line_number => $0{line_number}
 				identifier => $1
-				code => !format_native_code->$2
+				arguments => !optional_arguments_list->[]
+				code => !native_code_block->$2
 			}
 		}
 		'validator' => {
-			match $identifier_regex, $native_code_block_regex
+			match $identifier_regex
 
 			$_{validators}[] = {
 				type => 'validator'
 				line_number => $0{line_number}
 				identifier => $1
-				code => !format_native_code->$2
+				code => !native_code_block->$2
 			}
 		}
 		default {
 			return
 		}
 	}
+}
+
+
+item context native_code_block {
+	match $native_code_block_regex
+	$_ = !format_native_code->$0
+	return
 }
 
 
