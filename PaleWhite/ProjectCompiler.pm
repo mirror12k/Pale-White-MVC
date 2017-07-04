@@ -46,6 +46,7 @@ sub compile_project_directory {
 	my $setup_sql_file = Sugar::IO::File->new("$bin_dir/setup.sql");
 	my $includes_file = Sugar::IO::File->new("$bin_dir/includes.php");
 	my $config_file = Sugar::IO::File->new("$bin_dir/config.php");
+	my $htaccess_file = Sugar::IO::File->new("$bin_dir/.htaccess");
 	my $index_file = Sugar::IO::File->new("$bin_dir/index.php");
 
 	# clear the setup.sql file
@@ -53,7 +54,26 @@ sub compile_project_directory {
 	# add in PaleWhite library as an include
 	push @includes, "phplib/PaleWhite/lib.php";
 
-	foreach my $source_path (grep /\.model\Z/, $src_dir->recursive_files) {
+	my @all_files = $src_dir->recursive_files;
+
+	my @model_files;
+	my @template_files;
+	my @controller_files;
+	my @user_files;
+
+	foreach my $file (@all_files) {
+		if ($file =~ /\.model\Z/) {
+			push @model_files, $file;
+		} elsif ($file =~ /\.glass\Z/) {
+			push @template_files, $file;
+		} elsif ($file =~ /\.controller\Z/) {
+			push @controller_files, $file;
+		} else {
+			push @user_files, $file;
+		}
+	}
+
+	foreach my $source_path (@model_files) {
 
 		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
 		$relative_path =~ s/\.model\Z/\.php/;
@@ -63,15 +83,16 @@ sub compile_project_directory {
 		say "\tmodel: $source_path => $destination_path";
 
 		my $compiled_php = PaleWhite::ModelPHPCompiler::compile_file($source_path);
-		Sugar::IO::File->new($destination_path)->write($compiled_php);
+		my $destination_file = Sugar::IO::File->new($destination_path);
+		$destination_file->dir->mk unless $destination_file->dir->exists;
+		$destination_file->write($compiled_php);
 		my $compiled_sql = PaleWhite::ModelSQLCompiler::compile_file($source_path);
 		$setup_sql_file->append($compiled_sql);
 
 		push @includes, $relative_path;
 	}
-	say "\tsetup.sql file: $setup_sql_file";
 
-	foreach my $source_path (grep /\.glass\Z/, $src_dir->recursive_files) {
+	foreach my $source_path (@template_files) {
 
 		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
 		$relative_path =~ s/\.glass\Z/\.php/;
@@ -81,12 +102,14 @@ sub compile_project_directory {
 		say "\ttemplate: $source_path => $destination_path";
 
 		my $compiled_php = PaleWhite::Glass::PHPCompiler::compile_file($source_path);
-		Sugar::IO::File->new($destination_path)->write($compiled_php);
+		my $destination_file = Sugar::IO::File->new($destination_path);
+		$destination_file->dir->mk unless $destination_file->dir->exists;
+		$destination_file->write($compiled_php);
 		
 		push @includes, $relative_path;
 	}
 
-	foreach my $source_path (grep /\.controller\Z/, $src_dir->recursive_files) {
+	foreach my $source_path (@controller_files) {
 
 		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
 		$relative_path =~ s/\.controller\Z/\.php/;
@@ -96,14 +119,32 @@ sub compile_project_directory {
 		say "\tcontroller: $source_path => $destination_path";
 
 		my $compiled_php = PaleWhite::ControllerPHPCompiler::compile_file($source_path);
-		Sugar::IO::File->new($destination_path)->write($compiled_php);
+		my $destination_file = Sugar::IO::File->new($destination_path);
+		$destination_file->dir->mk unless $destination_file->dir->exists;
+		$destination_file->write($compiled_php);
 		
 		push @includes, $relative_path;
+	}
+
+	foreach my $source_path (@user_files) {
+
+		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
+		my $destination_path = "$bin_dir/$relative_path";
+		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
+		# say "\tmodel: $source_path ($relative_path => $destination_path ($destination_directory))";
+		say "\tuser data: $source_path => $destination_path";
+
+		my $text = $source_path->read;
+		my $destination_file = Sugar::IO::File->new($destination_path);
+		# say "debug file: " . $destination_file->dir;
+		$destination_file->dir->mk unless $destination_file->dir->exists;
+		$destination_file->write($text);
 	}
 
 	my $compiled_php = compile_includes(@includes);
 	say "\tincludes file: $includes_file";
 	$includes_file->write($compiled_php);
+	say "\tsetup.sql file: $setup_sql_file";
 
 	unless ($config_file->exists) {
 		say "\tconfig file: $config_file";
@@ -126,6 +167,18 @@ global \$config;
 ");
 	}
 
+	unless ($htaccess_file->exists) {
+		say "\thtaccess file: $htaccess_file";
+
+		$htaccess_file->write("
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteRule ^ index.php [L]
+</IfModule>
+");
+	}
+
 	unless ($index_file->exists) {
 		say "\tindex file: $index_file";
 		$index_file->write("<?php
@@ -144,7 +197,6 @@ require_once 'config.php';
 
 
 sub main {
-	use Data::Dumper;
 
 	die "usage: $0 <src directory> <bin directory>" unless @_ == 2;
 	compile_project_directory(@_);
