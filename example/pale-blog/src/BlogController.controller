@@ -1,0 +1,94 @@
+
+
+controller MainController {
+	path "/" {
+		posts = list BlogPostModel;
+		render HomePageTemplate posts=posts;
+	}
+
+	path "/new_blog" {
+		render CreateBlogTemplate;
+	}
+
+	path "/post_blog" [author, title, body] {
+		validate author as string;
+		validate title as string;
+		validate body as string;
+
+		post = action create_blog_post author=author, title=title, body=body;
+		if (post) {
+			render SuccessLinkTemplate blog_id=post.id, item="blog post";
+		} else {
+			status "500 Server Error";
+			render ErrorTemplate message="failed to create blog post";
+		}
+	}
+
+	path "/post_comment" [blog_id, author, body] {
+		validate blog_id as int;
+		validate author as string;
+		validate body as string;
+
+		post = model? BlogPostModel id=blog_id;
+		if (post) {
+			action create_blog_comment post=post, author=author, body=body;
+			render SuccessLinkTemplate blog_id=post.id, item="blog comment";
+		} else {
+			status "500 Server Error";
+			render ErrorTemplate message="no such blog post found";
+		}
+	}
+
+	path "/blog/{{blog_id}}" {
+		validate blog_id as int;
+		post = model? BlogPostModel id=blog_id;
+		if (post) {
+			render BlogTemplate post=post;
+		} else {
+			status "404 Not Found";
+			render ErrorTemplate message="Blog Not Found";
+		}
+	}
+
+	path default {
+			status "404 Not Found";
+			render ErrorTemplate message="Not Found";
+	}
+
+	validator int {{
+		return (int)$value;
+	}}
+
+	validator string {{
+		return (string)$value;
+	}}
+
+	action create_blog_post {{
+		$author = (string)$args['author'];
+		$title = (string)$args['title'];
+		$body = (string)$args['body'];
+
+		# $comment1 = CommentPostModel::create(array('name' => 'tester', 'body' => 'hello world!'));
+		# $comment2 = CommentPostModel::create(array('name' => 'tester', 'body' => 'goodbye world!'));
+		$post = BlogPostModel::create(array(
+			'author' => $author,
+			'title' => $title,
+			'body' => $body,
+			# 'comments' => array($comment1, $comment2),
+		));
+		return $post;
+	}}
+
+	action create_blog_comment {{
+		$post = $args['post'];
+		$author = (string)$args['author'];
+		$body = (string)$args['body'];
+
+		$obj = CommentPostModel::create(array('author' => $author, 'body' => $body));
+		$post = $post->add('comments', $obj);
+
+		return $post;
+	}}
+}
+
+

@@ -182,8 +182,10 @@ sub compile_html_tag {
 	if (exists $tag->{attributes}) {
 		foreach my $key (sort keys %{$tag->{attributes}}) {
 			$self->{text_accumulator} .= " $key=\"";
-			if ($identifier eq 'a' and $key eq 'href'
-					and ($tag->{attributes}{$key}{type} eq 'string_expression' or $tag->{attributes}{$key}{type} eq 'interpolation_expression')) {
+			if ((
+					($identifier eq 'a' and $key eq 'href')
+					or ($identifier eq 'link' and $key eq 'href')
+				) and ($tag->{attributes}{$key}{type} eq 'string_expression' or $tag->{attributes}{$key}{type} eq 'interpolation_expression')) {
 				my $expression = $tag->{attributes}{$key};
 				$expression = $expression->{expressions}[0] if $expression->{type} eq 'interpolation_expression';
 

@@ -1,0 +1,106 @@
+
+
+body {
+	margin: 0px;
+}
+
+.content {
+	padding: 80px 100px;
+}
+
+.post-list {
+	margin-bottom: 40px;
+}
+
+.footer {
+	margin: 20px;
+}
+
+
+.post-list-entry-title, .title {
+	padding: 10px 40px;
+	background-color: #222;
+	color: #FFF;
+	line-height: 5px;
+	margin: 0px;
+}
+
+.title {
+	background-color: #444;
+}
+
+
+.mini-title {
+	padding: 5px 20px;
+	background-color: #777;
+	color: #FFF;
+	line-height: 5px;
+	margin: 0px;
+	display: inline-block;
+
+}
+
+.mini-title h2 {
+	line-height: normal;
+	margin: 0px;
+}
+
+.post-list-entry-title h1, .title h1 {
+	line-height: normal;
+	margin: 0px;
+}
+
+.post-list-entry-text, .text {
+	padding: 0px 40px;
+}
+
+
+.hint {
+	font-style: italic;
+	font-size: 20px;
+	background-color: #EEE;
+	display: inline-block;
+	padding: 8px 20px;
+}
+
+.hint p {
+	margin: 0px;
+}
+
+a, a:link, a:active, a:visited, a:hover {
+	color:#620;
+	text-decoration: none;
+	background-color: #EDC;
+	font-style: italic;
+	padding: 2px 4px;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+input {
+	border: 1px solid #888;
+	padding: 8px;
+	box-shadow: 0px 5px 0 #444;
+	margin: 10px;
+}
+
+textarea {
+	border: 2px solid #888;
+	padding: 16px;
+	height: 60%;
+	width: 60%;
+	box-shadow: 0px 5px 0 #444;
+	margin: 10px;
+}
+
+button {
+	border: 3px solid #888;
+	padding: 8px;
+	border-radius: 4px;
+	box-shadow: 0px 5px 0 #444;
+	margin: 10px;
+}
+
+

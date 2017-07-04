@@ -1,0 +1,91 @@
+
+!template BaseTemplate
+	html
+		head
+			!block head
+			link href="/css/style.css", type="text/css", rel="stylesheet"
+		body
+			div.content
+				!block body
+				div.footer
+					!block footer
+					a href="/" "blog home"
+
+!template HelloWorldTemplate extends BaseTemplate
+	!block head
+		title "Test Blog!"
+	!block body
+		p "hello world!"
+
+!template HomePageTemplate extends BaseTemplate
+	!block head
+		title "Test Blog!"
+	!block body
+		div.post-list
+			!foreach posts as post
+				div.post-list-entry
+					div.post-list-entry-title
+						h1 {post.title}
+					div.post-list-entry-text
+						p
+							a href="/blog/{{post.id}}" "read this post"
+		div.link
+			a href="/new_blog" "create a new blog"
+
+!template CreateBlogTemplate extends BaseTemplate
+	!block head
+		title "Create a New Blog Post"
+	!block body
+		div.title
+			h1 "Create a New Blog Post"
+		form method="POST",action="post_blog"
+			div
+				input name="author", type="text", placeholder="author"
+				input name="title", type="text", placeholder="title"
+			div
+				textarea name="body"
+			div
+				button "Create Blog Post!"
+
+!template BlogTemplate extends BaseTemplate
+	!block head
+		title "Blog: {{post.title}}"
+	!block body
+		div.title
+			h1 {post.title}
+		div.text
+			div.hint
+				p "by {{post.author}}"
+			p {post.body}
+		!foreach post.comments as comment
+			div.mini-title
+				h2 "comment by {{comment.author}}"
+			div.text
+				p {comment.body}
+		div.comment-submittion
+			form method="POST", action="../post_comment"
+				input name="blog_id", type="hidden", value={post.id}
+				div
+					input name="author", type="text", placeholder="your name"
+				div
+					input name="body", type="text", placeholder="your comment"
+				div
+					button "Post Comment!"
+
+
+!template SuccessLinkTemplate extends BaseTemplate
+	!block head
+		title "Success!"
+	!block body
+		div.title
+			h1 "successfully created {{item}}"
+		p
+			a href="/blog/{{blog_id}}" "click here to view it"
+
+
+!template ErrorTemplate extends BaseTemplate
+	!block head
+		title "Error!"
+	!block body
+		h1 {message}
+

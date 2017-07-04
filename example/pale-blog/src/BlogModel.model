@@ -1,0 +1,15 @@
+
+model BlogPostModel {
+	string[256] author;
+	string[512] title;
+	string body;
+	model::CommentPostModel[] comments;
+}
+
+
+model CommentPostModel {
+	string[256] author;
+	string body;
+}
+
+
