@@ -15,7 +15,7 @@ use feature 'say';
 ##############################
 
 our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
-our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|=|,|\.|\?/;
+our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?/;
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
 our $var_integer_regex = qr/-?\d++/;
 our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
@@ -45,11 +45,13 @@ our $contexts = {
 	action_arguments => 'context_action_arguments',
 	action_expression => 'context_action_expression',
 	arguments_list => 'context_arguments_list',
+	arguments_list_item => 'context_arguments_list_item',
 	branch_action_expression => 'context_branch_action_expression',
 	controller_block => 'context_controller_block',
 	format_native_code => 'context_format_native_code',
 	format_string => 'context_format_string',
 	more_action_expression => 'context_more_action_expression',
+	optional_arguments_list => 'context_optional_arguments_list',
 	path_action_block => 'context_path_action_block',
 	path_action_block_list => 'context_path_action_block_list',
 	root => 'context_root',
@@ -123,15 +125,7 @@ sub context_controller_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[') {
-			my @tokens_freeze = @tokens;
-			my @tokens = @tokens_freeze;
-			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{global_paths}}, $self->context_path_action_block({ type => 'global_path', line_number => $tokens[0][2], arguments => $self->context_arguments_list([]), block => [], });
-			}
-			else {
-			push @{$context_object->{global_paths}}, $self->context_path_action_block({ type => 'global_path', line_number => $tokens[0][2], arguments => [], block => [], });
-			}
+			push @{$context_object->{global_paths}}, $self->context_path_action_block({ type => 'global_path', line_number => $tokens[0][2], arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'default') {
 			my @tokens_freeze = @tokens;
@@ -143,15 +137,7 @@ sub context_controller_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[') {
-			my @tokens_freeze = @tokens;
-			my @tokens = @tokens_freeze;
-			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => $self->context_arguments_list([]), block => [], });
-			}
-			else {
-			push @{$context_object->{paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => [], block => [], });
-			}
+			push @{$context_object->{paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action') {
 			my @tokens_freeze = @tokens;
@@ -178,28 +164,93 @@ sub context_controller_block {
 	return $context_object;
 }
 
-sub context_arguments_list {
+sub context_optional_arguments_list {
 	my ($self, $context_list) = @_;
 	my @tokens;
 
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @$context_list, $tokens[0][1];
+			$context_list = $self->context_arguments_list($context_list);
+			}
+			return $context_list;
+}
+
+sub context_arguments_list {
+	my ($self, $context_list) = @_;
+
+	while ($self->more_tokens) {
+	my @tokens;
+
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ']') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_list;
+			}
+			else {
+			$context_list = $self->context_arguments_list_item($context_list);
 			while ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(1));
-			push @$context_list, $tokens[2][1];
-			}
+			$context_list = $self->context_arguments_list_item($context_list);
 			}
 			$self->confess_at_current_offset('expected \']\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ']';
 			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_list;
+			}
+	}
+	return $context_list;
+}
+
+sub context_arguments_list_item {
+	my ($self, $context_list) = @_;
+	my @tokens;
+
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq ']' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[4][1], };
+			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], validator_min_size => $tokens[2][1], validator_max_size => $tokens[2][1], identifier => $tokens[4][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq ':' and $self->{tokens}[$self->{tokens_index} + 3][1] eq ']' and $self->{tokens}[$self->{tokens_index} + 4][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(5));
+			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[5][1], };
+			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], validator_min_size => $tokens[2][1], identifier => $tokens[5][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] eq ':' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] eq ']' and $self->{tokens}[$self->{tokens_index} + 4][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(5));
+			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[5][1], };
+			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], validator_max_size => $tokens[3][1], identifier => $tokens[5][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq ':' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 4][1] eq ']' and $self->{tokens}[$self->{tokens_index} + 5][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(6));
+			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[6][1], };
+			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], validator_min_size => $tokens[2][1], validator_max_size => $tokens[4][1], identifier => $tokens[6][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[1][1], };
+			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], identifier => $tokens[1][1], };
+			}
+			else {
+			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[0][1], };
+			}
 			return $context_list;
 }
 
@@ -284,7 +335,33 @@ sub context_path_action_block_list {
 			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, \'as\', qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'as' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_identifier_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(3));
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq ']') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(3));
+			push @{$context_object->{block}}, { type => 'validate_variable', line_number => $tokens[0][2], identifier => $tokens[1][1], validator_identifier => $tokens[3][1], validator_min_size => $tokens[5][1], validator_max_size => $tokens[5][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq ':' and $self->{tokens}[$self->{tokens_index} + 3][1] eq ']') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @{$context_object->{block}}, { type => 'validate_variable', line_number => $tokens[0][2], identifier => $tokens[1][1], validator_identifier => $tokens[3][1], validator_min_size => $tokens[5][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] eq ':' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] eq ']') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @{$context_object->{block}}, { type => 'validate_variable', line_number => $tokens[0][2], identifier => $tokens[1][1], validator_identifier => $tokens[3][1], validator_max_size => $tokens[6][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq ':' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 4][1] eq ']') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(5));
+			push @{$context_object->{block}}, { type => 'validate_variable', line_number => $tokens[0][2], identifier => $tokens[1][1], validator_identifier => $tokens[3][1], validator_min_size => $tokens[5][1], validator_max_size => $tokens[7][1], };
+			}
+			else {
 			push @{$context_object->{block}}, { type => 'validate_variable', line_number => $tokens[0][2], identifier => $tokens[1][1], validator_identifier => $tokens[3][1], };
+			}
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));

@@ -30,7 +30,7 @@ controller MainController {
 		}
 	}
 
-	path "/create_link" [location] {
+	path "/create_link" [string[:512] location] {
 		link = action create_link location=location;
 		if (link) {
 			view_link = action view_link_url link=link;
@@ -47,10 +47,6 @@ controller MainController {
 		render ErrorTemplate message="Not Found";
 	}
 
-	validator int {{
-		return (int)$value;
-	}}
-
 	action create_link {{
 		$location = (string)$args['location'];
 		$link = LinkModel::create(array('location' => $location, 'hit_count' => 0));
@@ -65,7 +61,6 @@ controller MainController {
 	action increment_link_hit_count {{
 		$link = $args['link'];
 		$link->hit_count = $link->hit_count + 1;
-		error_log("debug hit count: " . $Link->hit_count);
 	}}
 
 }

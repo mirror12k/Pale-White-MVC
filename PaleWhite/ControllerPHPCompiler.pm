@@ -88,13 +88,12 @@ sub compile_path {
 	my @code;
 
 	if (@{$path->{arguments}}) {
-		foreach my $arg (@{$path->{arguments}}) {
-			push @code, "if (!isset(\$req->args['$arg']))\n";
-			push @code, "\tthrow new \\Exception('missing argument \"$arg\" to path \"$path->{path}\"');\n";
+		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$path->{arguments}}) {
+			push @code, "if (!isset(\$req->args['$arg->{identifier}']))\n";
+			push @code, "\tthrow new \\Exception('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
 		}
-		foreach my $arg (@{$path->{arguments}}) {
-			push @code, "\$$arg = \$req->args['$arg'];\n";
-		}
+		push @code, "\n";
+		push @code, $self->compile_action_block($path->{arguments});
 		push @code, "\n";
 	}
 
@@ -271,8 +270,33 @@ sub compile_action {
 		# my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "\$this->route_subcontroller('$action->{identifier}', \$res, $path_argument, $args_argument);\n"
 
+	} elsif ($action->{type} eq 'argument_specifier') {
+		return "\$$action->{identifier} = \$req->args['$action->{identifier}'];\n"
+
 	} elsif ($action->{type} eq 'validate_variable') {
-		return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
+		if ($action->{validator_identifier} eq 'int') {
+			return "\$$action->{identifier} = (int)\$$action->{identifier};\n"
+		} elsif ($action->{validator_identifier} eq 'string') {
+			if (exists $action->{validator_max_size} and exists $action->{validator_min_size}) {
+				return "\$$action->{identifier} = (string)\$$action->{identifier};\n",
+					"if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
+					"\tthrow new \\Exception('argument \"$action->{identifier}\" exceeded max length of $action->{validator_max_size}');\n",
+					"if (strlen(\$$action->{identifier}) < $action->{validator_min_size})\n",
+					"\tthrow new \\Exception('argument \"$action->{identifier}\" doesnt reach min length of $action->{validator_min_size}');\n"
+			} elsif (exists $action->{validator_max_size}) {
+				return "\$$action->{identifier} = (string)\$$action->{identifier};\n",
+					"if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
+					"\tthrow new \\Exception('argument \"$action->{identifier}\" exceeded max length of $action->{validator_max_size}');\n"
+			} elsif (exists $action->{validator_min_size}) {
+				return "\$$action->{identifier} = (string)\$$action->{identifier};\n",
+					"if (strlen(\$$action->{identifier}) < $action->{validator_min_size})\n",
+					"\tthrow new \\Exception('argument \"$action->{identifier}\" doesnt reach min length of $action->{validator_min_size}');\n"
+			} else {
+				return "\$$action->{identifier} = (string)\$$action->{identifier};\n"
+			}
+		} else {
+			return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
+		}
 		
 	} elsif ($action->{type} eq 'if_statement') {
 		my $expression = $self->compile_expression($action->{expression});

@@ -2,7 +2,7 @@ package PaleWhite::ControllerParser
 
 native_code_block_regex = /\{\{.*?\}\}/s
 
-symbol_regex = /\{|\}|\[|\]|\(|\)|;|=|,|\.|\?/
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?/
 # keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
 identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
 integer_regex = /-?\d++/
@@ -59,22 +59,22 @@ list context root {
 object context controller_block {
 	switch {
 		'path', 'global' => {
-			if '[' => {
-				$_{global_paths}[] = !path_action_block->{
-					type => 'global_path'
-					line_number => $0{line_number}
-					arguments => !arguments_list->[]
-					block => []
-				}
-
-			} else {
-				$_{global_paths}[] = !path_action_block->{
-					type => 'global_path'
-					line_number => $0{line_number}
-					arguments => []
-					block => []
-				}
+			$_{global_paths}[] = !path_action_block->{
+				type => 'global_path'
+				line_number => $0{line_number}
+				arguments => !optional_arguments_list->[]
+				block => []
 			}
+			# if '[' => {
+
+			# } else {
+			# 	$_{global_paths}[] = !path_action_block->{
+			# 		type => 'global_path'
+			# 		line_number => $0{line_number}
+			# 		arguments => []
+			# 		block => []
+			# 	}
+			# }
 		}
 		'path', 'default' => {
 			$_{default_path} = !path_action_block->{
@@ -85,24 +85,24 @@ object context controller_block {
 			}
 		}
 		'path', $string_regex => {
-			if '[' => {
-				$_{paths}[] = !path_action_block->{
-					type => 'match_path'
-					line_number => $0{line_number}
-					path => !format_string->$1
-					arguments => !arguments_list->[]
-					block => []
-				}
-
-			} else {
-				$_{paths}[] = !path_action_block->{
-					type => 'match_path'
-					line_number => $0{line_number}
-					path => !format_string->$1
-					arguments => []
-					block => []
-				}
+			$_{paths}[] = !path_action_block->{
+				type => 'match_path'
+				line_number => $0{line_number}
+				path => !format_string->$1
+				arguments => !optional_arguments_list->[]
+				block => []
 			}
+			# if '[' => {
+
+			# } else {
+			# 	$_{paths}[] = !path_action_block->{
+			# 		type => 'match_path'
+			# 		line_number => $0{line_number}
+			# 		path => !format_string->$1
+			# 		arguments => []
+			# 		block => []
+			# 	}
+			# }
 		}
 		'action' => {
 			match $identifier_regex, $native_code_block_regex
@@ -131,17 +131,108 @@ object context controller_block {
 }
 
 
-list context arguments_list {
-	if $identifier_regex => {
-		push $0
+list context optional_arguments_list {
+	if '[' => {
+		$_ = !arguments_list->$_
+	}
+	return
+}
 
+list context arguments_list {
+	if ']' => {
+		return
+	} else {
+		$_ = !arguments_list_item->$_
 		while ',' => {
-			match $identifier_regex
-			push $2
+			$_ = !arguments_list_item->$_
+		}
+		match ']'
+		return
+	}
+}
+
+list context arguments_list_item {
+	match $identifier_regex
+
+	if '[', $integer_regex, ']', $identifier_regex => {
+		push {
+			type => 'argument_specifier'
+			line_number => $0{line_number}
+			identifier => $4
+		}
+		push {
+			type => 'validate_variable'
+			line_number => $0{line_number}
+			validator_identifier => $0
+			validator_min_size => $2
+			validator_max_size => $2
+			identifier => $4
+		}
+		
+	} elsif '[', $integer_regex, ':', ']', $identifier_regex => {
+		push {
+			type => 'argument_specifier'
+			line_number => $0{line_number}
+			identifier => $5
+		}
+		push {
+			type => 'validate_variable'
+			line_number => $0{line_number}
+			validator_identifier => $0
+			validator_min_size => $2
+			identifier => $5
+		}
+		
+	} elsif '[', ':', $integer_regex, ']', $identifier_regex => {
+		push {
+			type => 'argument_specifier'
+			line_number => $0{line_number}
+			identifier => $5
+		}
+		push {
+			type => 'validate_variable'
+			line_number => $0{line_number}
+			validator_identifier => $0
+			validator_max_size => $3
+			identifier => $5
+		}
+		
+	} elsif '[', $integer_regex, ':', $integer_regex, ']', $identifier_regex => {
+		push {
+			type => 'argument_specifier'
+			line_number => $0{line_number}
+			identifier => $6
+		}
+		push {
+			type => 'validate_variable'
+			line_number => $0{line_number}
+			validator_identifier => $0
+			validator_min_size => $2
+			validator_max_size => $4
+			identifier => $6
+		}
+		
+	} elsif $identifier_regex => {
+		push {
+			type => 'argument_specifier'
+			line_number => $0{line_number}
+			identifier => $1
+		}
+		push {
+			type => 'validate_variable'
+			line_number => $0{line_number}
+			validator_identifier => $0
+			identifier => $1
+		}
+		
+	} else {
+		push {
+			type => 'argument_specifier'
+			line_number => $0{line_number}
+			identifier => $0
 		}
 	}
 
-	match ']'
 	return
 }
 
@@ -202,11 +293,47 @@ object context path_action_block_list {
 		}
 		'validate' => {
 			match $identifier_regex, 'as', $identifier_regex
-			$_{block}[] = {
-				type => 'validate_variable'
-				line_number => $0{line_number}
-				identifier => $1
-				validator_identifier => $3
+			if '[', $integer_regex, ']' => {
+				$_{block}[] = {
+					type => 'validate_variable'
+					line_number => $0{line_number}
+					identifier => $1
+					validator_identifier => $3
+					validator_min_size => $5
+					validator_max_size => $5
+				}
+			} elsif '[', $integer_regex, ':', ']' => {
+				$_{block}[] = {
+					type => 'validate_variable'
+					line_number => $0{line_number}
+					identifier => $1
+					validator_identifier => $3
+					validator_min_size => $5
+				}
+			} elsif '[', ':', $integer_regex, ']' => {
+				$_{block}[] = {
+					type => 'validate_variable'
+					line_number => $0{line_number}
+					identifier => $1
+					validator_identifier => $3
+					validator_max_size => $6
+				}
+			} elsif '[', $integer_regex, ':', $integer_regex, ']' => {
+				$_{block}[] = {
+					type => 'validate_variable'
+					line_number => $0{line_number}
+					identifier => $1
+					validator_identifier => $3
+					validator_min_size => $5
+					validator_max_size => $7
+				}
+			} else {
+				$_{block}[] = {
+					type => 'validate_variable'
+					line_number => $0{line_number}
+					identifier => $1
+					validator_identifier => $3
+				}
 			}
 			match ';'
 		}

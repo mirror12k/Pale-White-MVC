@@ -10,11 +10,7 @@ controller MainController {
 		render CreateBlogTemplate;
 	}
 
-	path "/post_blog" [author, title, body] {
-		validate author as string;
-		validate title as string;
-		validate body as string;
-
+	path "/post_blog" [string author, string title, string body] {
 		post = action create_blog_post author=author, title=title, body=body;
 		if (post) {
 			render SuccessLinkTemplate blog_id=post.id, item="blog post";
@@ -24,11 +20,7 @@ controller MainController {
 		}
 	}
 
-	path "/post_comment" [blog_id, author, body] {
-		validate blog_id as int;
-		validate author as string;
-		validate body as string;
-
+	path "/post_comment" [int blog_id, string author, string body] {
 		post = model? BlogPostModel id=blog_id;
 		if (post) {
 			action create_blog_comment post=post, author=author, body=body;
@@ -51,17 +43,9 @@ controller MainController {
 	}
 
 	path default {
-			status "404 Not Found";
-			render ErrorTemplate message="Not Found";
+		status "404 Not Found";
+		render ErrorTemplate message="Not Found";
 	}
-
-	validator int {{
-		return (int)$value;
-	}}
-
-	validator string {{
-		return (string)$value;
-	}}
 
 	action create_blog_post {{
 		$author = (string)$args['author'];
