@@ -35,10 +35,16 @@ class HTTPRequestExecutor {
 			if ($config['show_exception_trace']) {
 				$response->body = "<!doctype html><html><head><title>Server Error</title></head><body>";
 
-				$response->body .= "<h1>" . $e->getMessage() . "</h1>";
-				$response->body .= "<p>" . $e->getFile() . ":" . $e->getLine() . "</p>";
+				$response->body .= "<h1>a '" . get_class($e) . "' exception occured:</h1>";
+				$response->body .= "<h2>" . $e->getMessage() . "</h2>";
+				$response->body .= "<p>at " . $e->getFile() . ":" . $e->getLine() . "</p>";
 				foreach ($e->getTrace() as $trace) {
-					$response->body .= "<p>" . $trace['file'] . ":" . $trace['line'] . "</p>";
+					$message = $trace['file'] . "(" . $trace['line'] . "): ";
+					if (isset($trace['class'])) {
+						$message .= $trace['class'] . $trace['type'];
+					}
+					$message .= $trace['function'];
+					$response->body .= "<p>$message</p>";
 				}
 
 				$response->body .= "</body></html>";
