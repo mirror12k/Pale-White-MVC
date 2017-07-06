@@ -158,6 +158,8 @@ global \$config;
 \$config = array(
 	'site_base' => '',
 	'main_controller' => 'MainController',
+	'show_exception_trace' => true,
+
 	'database_config' => array(
 		'mysql_host' => 'localhost',
 		'mysql_username' => 'root',
@@ -181,7 +183,7 @@ global \$config;
 	RewriteRule ^ index.php [L]
 </IfModule>
 ");
-		
+
 		say "\t\tdefault htaccess written, please edit it if necessary";
 	}
 

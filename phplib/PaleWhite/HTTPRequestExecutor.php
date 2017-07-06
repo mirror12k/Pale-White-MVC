@@ -25,9 +25,27 @@ class HTTPRequestExecutor {
 
 		$response = new \PaleWhite\Response();
 
-		$controller_class = $config['main_controller'];
-		$controller = new $controller_class();
-		$controller->route($request, $response);
+		try {
+			$controller_class = $config['main_controller'];
+			$controller = new $controller_class();
+			$controller->route($request, $response);
+		} catch (\Exception $e) {
+			$response = new \PaleWhite\Response();
+			$response->status = "500 Server Error";
+			if ($config['show_exception_trace']) {
+				$response->body = "<!doctype html><html><head><title>Server Error</title></head><body>";
+
+				$response->body .= "<h1>" . $e->getMessage() . "</h1>";
+				$response->body .= "<p>" . $e->getFile() . ":" . $e->getLine() . "</p>";
+				foreach ($e->getTrace() as $trace) {
+					$response->body .= "<p>" . $trace['file'] . ":" . $trace['line'] . "</p>";
+				}
+
+				$response->body .= "</body></html>";
+			} else {
+				$response->body = "<!doctype html><html><head><title>Server Error</title></head><body>Server Error</body></html>";
+			}
+		}
 
 		if ($response->status !== null) {
 			if (preg_match("/\A(\d+)\s+/", $response->status, $matches)) {
