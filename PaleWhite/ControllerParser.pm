@@ -134,6 +134,12 @@ sub context_controller_block {
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object->{default_path} = $self->context_path_action_block({ type => 'default_path', line_number => $tokens[0][2], arguments => [], block => [], });
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'error') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object->{error_path} = $self->context_path_action_block({ type => 'error_path', line_number => $tokens[0][2], arguments => [], block => [], });
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_string_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;

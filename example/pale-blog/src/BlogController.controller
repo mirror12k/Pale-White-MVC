@@ -20,7 +20,7 @@ controller MainController {
 		}
 	}
 
-	path "/post_comment" [int blog_id, string author, string body] {
+	path "/post_comment" [int blog_id, string author, string[512:] body] {
 		post = model? BlogPostModel id=blog_id;
 		if (post) {
 			action create_blog_comment post=post, author=author, body=body;
@@ -45,6 +45,11 @@ controller MainController {
 	path default {
 		status "404 Not Found";
 		render ErrorTemplate message="Not Found";
+	}
+
+	path error {
+		status "500 Server Error";
+		render ErrorTemplate message="Something went really wrong :(";
 	}
 
 	action create_blog_post [string author, string title, string body] {{

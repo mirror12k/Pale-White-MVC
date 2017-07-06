@@ -79,7 +79,13 @@ sub compile_controller_route {
 	}
 	push @code, "}\n";
 
+	if (exists $controller->{error_path}) {
+		@code = map "\t$_", @code;
+		my @exception_code = map "\t$_", $self->compile_path($controller->{error_path});
+		@code = ("try {\n", @code, "} catch (\\Exception \$e) {\n", @exception_code, "}\n");
+	}
 	@code = map "\t$_", @code;
+
 	@code = ("public function route (\\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n", @code, "}\n", "\n");
 
 	return @code
