@@ -7,6 +7,8 @@ use feature 'say';
 
 use Data::Dumper;
 
+use HTML::Entities;
+
 
 
 sub new {
@@ -193,9 +195,8 @@ sub compile_html_tag {
 					push @code, $self->compile_argument_expression({ type => 'variable_expression', identifier => '_site_base' });
 				}
 			}
-			push @code, $self->compile_argument_expression($tag->{attributes}{$key});
+			push @code, $self->compile_argument_expression($tag->{attributes}{$key}, 'html_attribute');
 			$self->{text_accumulator} .= "\"";
-
 		}
 	}
 	$self->{text_accumulator} .= ">";
@@ -204,7 +205,7 @@ sub compile_html_tag {
 	# my $start_tag = '<' . join (' ', @fields) . '>';
 	# $self->{text_accumulator} .= $start_tag;
 
-	push @code, $self->compile_argument_expression($tag->{text_expression}) if exists $tag->{text_expression};
+	push @code, $self->compile_argument_expression($tag->{text_expression}, 'text') if exists $tag->{text_expression};
 
 	push @code, $self->compile_block($tag->{block}) if exists $tag->{block};
 
@@ -227,23 +228,36 @@ sub compile_html_tag {
 # }
 
 sub compile_argument_expression {
-	my ($self, $expression) = @_;
+	my ($self, $expression, $context) = @_;
+	$context //= 'none';
 
 	if ($expression->{type} eq 'string_expression') {
-		$self->{text_accumulator} .= $expression->{string};
+		if ($context eq 'html_attribute' or $context eq 'text') {
+			$self->{text_accumulator} .= encode_entities($expression->{string}, '<>&"\'');
+		} else {
+			$self->{text_accumulator} .= $expression->{string};
+		}
 		return
 		
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		# return $self->flush_accumulator, "\$text .= \$args[\"$expression->{identifier}\"];\n";
-		return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
+		if ($context eq 'html_attribute' or $context eq 'text') {
+			return $self->flush_accumulator, "\$text .= htmlspecialchars(" . $self->compile_value_expression($expression) . ");\n";
+		} else {
+			return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
+		}
 
 	} elsif ($expression->{type} eq 'access_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
+		if ($context eq 'html_attribute' or $context eq 'text') {
+			return $self->flush_accumulator, "\$text .= htmlspecialchars(" . $self->compile_value_expression($expression) . ");\n";
+		} else {
+			return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
+		}
 
 	} elsif ($expression->{type} eq 'interpolation_expression') {
-		return map $self->compile_argument_expression($_), @{$expression->{expressions}}
+		return map $self->compile_argument_expression($_, $context), @{$expression->{expressions}}
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		# return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
 
