@@ -2,17 +2,22 @@ package PaleWhite::ModelParser
 
 native_code_block_regex = /\{\{.*?\}\}/s
 
-symbol_regex = /\{|\}|\[|\]|\(|\)|;/
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?/
+# symbol_regex = /\{|\}|\[|\]|\(|\)|;/
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
 identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
-integer_regex = /\d++/
+
+integer_regex = /-?\d++/
+string_regex = /"([^\\"]|\\[\\"])*?"/s
 
 comment_regex = /\/\/[^\n]*+\n/s
 whitespace_regex = /\s++/s
 
-format_native_code_substitution = s/\A\{(\{.*?\})\}\Z/$1/s
+format_native_code_substitution = s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/s
 format_model_identifier_substitution = s/\Amodel:://s
+escape_string_substitution = s/\\([\\"])/$1/gs
+format_string_substitution = s/\A"(.*)"\Z/$1/s
 
 
 

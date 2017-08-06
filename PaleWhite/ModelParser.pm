@@ -15,15 +15,18 @@ use feature 'say';
 ##############################
 
 our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
-our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;/;
+our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?/;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_keyword_regex = qr/\b(model|int|string|getter|setter|cast|to|from|static|function)\b/;
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
-our $var_integer_regex = qr/\d++/;
+our $var_integer_regex = qr/-?\d++/;
+our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
 our $var_comment_regex = qr/\/\/[^\n]*+\n/s;
 our $var_whitespace_regex = qr/\s++/s;
 our $var_format_native_code_substitution = sub { $_[0] =~ s/\A\{(\{.*?\})\}\Z/$1/sr };
 our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
+our $var_escape_string_substitution = sub { $_[0] =~ s/\\([\\"])/$1/gsr };
+our $var_format_string_substitution = sub { $_[0] =~ s/\A"(.*)"\Z/$1/sr };
 
 
 our $tokens = [
