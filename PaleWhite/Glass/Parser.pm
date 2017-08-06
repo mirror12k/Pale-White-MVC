@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-package PaleWhite::GlassParser;
+package PaleWhite::Glass::Parser;
 use parent 'Sugar::Lang::BaseSyntaxParser';
 use strict;
 use warnings;

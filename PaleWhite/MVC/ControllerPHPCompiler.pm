@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-package PaleWhite::ControllerPHPCompiler;
+package PaleWhite::MVC::ControllerPHPCompiler;
 use strict;
 use warnings;
 
@@ -18,14 +18,14 @@ sub new {
 
 
 
-sub compile {
-	my ($self, $tree) = @_;
+# sub compile {
+# 	my ($self, $tree) = @_;
 
-	my $code = "<?php\n\n";
-	$code .= join '', $self->compile_controller($_) foreach @$tree;
+# 	my $code = "<?php\n\n";
+# 	$code .= join '', $self->compile_controller($_) foreach @$tree;
 
-	return $code
-}
+# 	return $code
+# }
 
 sub map_class_name {
 	my ($self, $classname) = @_;
@@ -397,26 +397,28 @@ sub compile_expression {
 }
 
 
-sub compile_file {
-	my ($file) = @_;
-	use Sugar::IO::File;
-	use PaleWhite::ControllerParser;
+# sub compile_file {
+# 	my ($file) = @_;
+# 	use Sugar::IO::File;
+# 	use PaleWhite::ControllerParser;
 
-	my $parser = PaleWhite::ControllerParser->new;
-	$parser->{filepath} = Sugar::IO::File->new($file);
-	my $tree = $parser->parse;
-	# say Dumper $tree;
+# 	my $parser = PaleWhite::ControllerParser->new;
+# 	$parser->{filepath} = Sugar::IO::File->new($file);
+# 	my $tree = $parser->parse;
+# 	# say Dumper $tree;
 
-	my $compiler = __PACKAGE__->new;
-	my $text = $compiler->compile($tree);
-	return $text;
-}
+# 	my $compiler = __PACKAGE__->new;
+# 	my $text = $compiler->compile($tree);
+# 	return $text;
+# }
 
 
-sub main {
-	foreach my $file (@_) {
-		say compile_file($file);
-	}
-}
+# sub main {
+# 	foreach my $file (@_) {
+# 		say compile_file($file);
+# 	}
+# }
 
-caller or main(@ARGV);
+# caller or main(@ARGV);
+
+1;

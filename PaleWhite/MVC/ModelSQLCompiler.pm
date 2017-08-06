@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-package PaleWhite::ModelSQLCompiler;
+package PaleWhite::MVC::ModelSQLCompiler;
 use strict;
 use warnings;
 
@@ -9,14 +9,14 @@ use Data::Dumper;
 
 
 
-sub compile {
-	my ($tree) = @_;
+# sub compile {
+# 	my ($tree) = @_;
 
-	my $code = "\n";
-	$code .= join '', compile_model($_) foreach @$tree;
+# 	my $code = "\n";
+# 	$code .= join '', compile_model($_) foreach @$tree;
 
-	return $code
-}
+# 	return $code
+# }
 
 sub compile_property {
 	my ($property) = @_;
@@ -137,26 +137,28 @@ sub compile_array_property {
 
 
 
-sub compile_file {
-	my ($file) = @_;
-	use Sugar::IO::File;
-	use PaleWhite::ModelParser;
+# sub compile_file {
+# 	my ($file) = @_;
+# 	use Sugar::IO::File;
+# 	use PaleWhite::ModelParser;
 
-	my $parser = PaleWhite::ModelParser->new;
-	$parser->{filepath} = Sugar::IO::File->new($file);
-	my $tree = $parser->parse;
-	# say Dumper $tree;
+# 	my $parser = PaleWhite::ModelParser->new;
+# 	$parser->{filepath} = Sugar::IO::File->new($file);
+# 	my $tree = $parser->parse;
+# 	# say Dumper $tree;
 
-	my $text = compile($tree);
-	return $text;
-}
+# 	my $text = compile($tree);
+# 	return $text;
+# }
 
 
 
-sub main {
-	foreach my $file (@_) {
-		say compile_file($file);
-	}
-}
+# sub main {
+# 	foreach my $file (@_) {
+# 		say compile_file($file);
+# 	}
+# }
 
-caller or main(@ARGV);
+# caller or main(@ARGV);
+
+1;

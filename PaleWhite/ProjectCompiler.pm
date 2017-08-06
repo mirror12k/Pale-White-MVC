@@ -10,10 +10,11 @@ use Data::Dumper;
 use Sugar::IO::File;
 use Sugar::IO::Dir;
 
-use PaleWhite::ControllerPHPCompiler;
 use PaleWhite::Glass::PHPCompiler;
-use PaleWhite::ModelPHPCompiler;
-use PaleWhite::ModelSQLCompiler;
+# use PaleWhite::ControllerPHPCompiler;
+# use PaleWhite::ModelPHPCompiler;
+# use PaleWhite::ModelSQLCompiler;
+use PaleWhite::MVC::Compiler;
 
 
 
@@ -64,12 +65,12 @@ sub compile_project_directory {
 	my @user_files;
 
 	foreach my $file (@all_files) {
-		if ($file =~ /\.model\Z/) {
+		if ($file =~ /\.white\Z/) {
 			push @model_files, $file;
 		} elsif ($file =~ /\.glass\Z/) {
 			push @template_files, $file;
-		} elsif ($file =~ /\.controller\Z/) {
-			push @controller_files, $file;
+		# } elsif ($file =~ /\.controller\Z/) {
+		# 	push @controller_files, $file;
 		} else {
 			push @user_files, $file;
 		}
@@ -78,17 +79,21 @@ sub compile_project_directory {
 	foreach my $source_path (@model_files) {
 
 		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
-		$relative_path =~ s/\.model\Z/\.php/;
+		$relative_path =~ s/\.white\Z/\.php/;
 		my $destination_path = "$bin_dir/$relative_path";
 		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
 		# say "model: $source_path ($relative_path => $destination_path ($destination_directory))";
-		say "\tmodel: $source_path => $destination_path";
+		say "\tmvc: $source_path => $destination_path";
 
-		my $compiled_php = PaleWhite::ModelPHPCompiler::compile_file($source_path);
+		my $compiler = PaleWhite::MVC::Compiler->new;
+		$compiler->parse_file($source_path);
+
+		my $compiled_php = $compiler->compile_php;
 		my $destination_file = Sugar::IO::File->new($destination_path);
 		$destination_file->dir->mk unless $destination_file->dir->exists;
 		$destination_file->write($compiled_php);
-		my $compiled_sql = PaleWhite::ModelSQLCompiler::compile_file($source_path);
+
+		my $compiled_sql = $compiler->compile_sql;
 		$setup_sql_file->append($compiled_sql);
 
 		push @includes, $relative_path;
@@ -111,22 +116,22 @@ sub compile_project_directory {
 		push @includes, $relative_path;
 	}
 
-	foreach my $source_path (@controller_files) {
+	# foreach my $source_path (@controller_files) {
 
-		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
-		$relative_path =~ s/\.controller\Z/\.php/;
-		my $destination_path = "$bin_dir/$relative_path";
-		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
-		# say "\tmodel: $source_path ($relative_path => $destination_path ($destination_directory))";
-		say "\tcontroller: $source_path => $destination_path";
+	# 	my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
+	# 	$relative_path =~ s/\.controller\Z/\.php/;
+	# 	my $destination_path = "$bin_dir/$relative_path";
+	# 	my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
+	# 	# say "\tmodel: $source_path ($relative_path => $destination_path ($destination_directory))";
+	# 	say "\tcontroller: $source_path => $destination_path";
 
-		my $compiled_php = PaleWhite::ControllerPHPCompiler::compile_file($source_path);
-		my $destination_file = Sugar::IO::File->new($destination_path);
-		$destination_file->dir->mk unless $destination_file->dir->exists;
-		$destination_file->write($compiled_php);
+	# 	my $compiled_php = PaleWhite::ControllerPHPCompiler::compile_file($source_path);
+	# 	my $destination_file = Sugar::IO::File->new($destination_path);
+	# 	$destination_file->dir->mk unless $destination_file->dir->exists;
+	# 	$destination_file->write($compiled_php);
 		
-		push @includes, $relative_path;
-	}
+	# 	push @includes, $relative_path;
+	# }
 
 	foreach my $source_path (@user_files) {
 

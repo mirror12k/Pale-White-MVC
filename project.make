@@ -15,9 +15,9 @@ SITE_FOLDER = site
 
 build:
 	sh
-		~/src/perl/repo/Sugar/Lang/GrammarCompiler.pm grammar/glass_parser.sugar > PaleWhite/GlassParser.pm
-		~/src/perl/repo/Sugar/Lang/GrammarCompiler.pm grammar/model_parser.sugar > PaleWhite/ModelParser.pm
-		~/src/perl/repo/Sugar/Lang/GrammarCompiler.pm grammar/controller_parser.sugar > PaleWhite/ControllerParser.pm
+		~/src/perl/repo/Sugar/Lang/GrammarCompiler.pm grammar/glass_parser.sugar > PaleWhite/Glass/Parser.pm
+		~/src/perl/repo/Sugar/Lang/GrammarCompiler.pm grammar/pale_white_parser.sugar > PaleWhite/MVC/Parser.pm
+		# ~/src/perl/repo/Sugar/Lang/GrammarCompiler.pm grammar/controller_parser.sugar > PaleWhite/ControllerParser.pm
 
 tail_log:
 	ssh $(USER):$(PASSWORD)@$(SSH_SERVER)

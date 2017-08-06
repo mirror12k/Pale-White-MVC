@@ -281,9 +281,9 @@ sub compile_value_expression {
 sub compile_file {
 	my ($file) = @_;
 	use Sugar::IO::File;
-	use PaleWhite::GlassParser;
+	use PaleWhite::Glass::Parser;
 
-	my $parser = PaleWhite::GlassParser->new;
+	my $parser = PaleWhite::Glass::Parser->new;
 	$parser->{filepath} = Sugar::IO::File->new($file);
 	my $tree = $parser->parse;
 	# say Dumper $tree;
