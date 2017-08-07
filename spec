@@ -57,6 +57,7 @@ templated and pre-compiled mvc
 		further wishlist:
 			meta arrays and meta objects for models
 			an admin backend for viewing/editting models as listed items
+			salted+hashed password field for easy comparison
 
 
 
@@ -300,7 +301,7 @@ templated and pre-compiled mvc
 				}
 		
 			an automatically generated index.php file generated to include all pacakges and start the controller
-			
+
 
 		wishlist:
 			regex path arguments
@@ -327,7 +328,7 @@ templated and pre-compiled mvc
 
 				// validate later
 				ajax '/check_csrf_token' [ token ] {
-					validate token as csrf_token;
+					validate token as _csrf_token;
 				}
 
 				basic synchronized session token

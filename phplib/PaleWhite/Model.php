@@ -4,42 +4,40 @@ namespace PaleWhite;
 // base model class which provides a lot of magic methods for compiled models
 abstract class Model {
 	public $_data;
+	public $_loaded = array();
 
 	public function __construct(array $data) {
 		$this->_data = $data;
 	}
 
+	// model access methods
 	public function __get($name) {
-		// if (isset($this->_data[$name])) {
 		if (isset(static::$model_properties[$name])) {
-			if (isset(static::$model_submodel_properties[$name]))
-				$this->_data[$name] = $this->get_lazy_loaded_model($name, $this->_data[$name]);
+			if (isset(static::$model_submodel_properties[$name]) && !isset($this->_loaded[$name]))
+			{
+				$this->_data[$name] = static::get_lazy_loaded_model($name, $this->_data[$name]);
+				$this->_loaded[$name] = true;
+			}
 			return $this->_data[$name];
+
 		} elseif (isset(static::$model_array_properties[$name])) {
-			if (isset(static::$model_submodel_properties[$name]))
-				$this->_data[$name] = $this->get_lazy_loaded_model_array($name, $this->_data[$name]);
+			if (!isset($this->_loaded[$name]))
+			{
+				$this->_data[$name] = static::load_array_data($this->_data['id'], $name);
+				if (isset(static::$model_submodel_properties[$name]))
+					$this->_data[$name] = static::get_lazy_loaded_model_array($name, $this->_data[$name]);
+				$this->_loaded[$name] = true;
+			}
 			return $this->_data[$name];
+
 		} else
 			throw new \Exception("attempted to get undefined model property '$name' in model class: " . get_called_class());
 	}
 
-	public function get_lazy_loaded_model($field, $value) {
-		if (is_int($value) or is_string($value)) {
-			$class = static::$model_submodel_properties[$field];
-			$value = $value === 0 ? null : $class::get_by_id((int)$value);
-		}
-		return $value;
-	}
-
-	public function get_lazy_loaded_model_array($field, $value) {
-		$loaded_value = array();
-		foreach ($value as $item)
-			$loaded_value[] = $this->get_lazy_loaded_model($field, $item);
-		return $loaded_value;
-	}
-
 	public function __set($name, $value) {
-		if (isset($this->_data[$name])) {
+		if ($name === 'id') {
+			throw new \Exception("attempted to set model property 'id' in model class: " . get_called_class());
+		} elseif (isset($this->_data[$name])) {
 			$this->_data[$name] = $value;
 			$this->update_fields(array($name => $value));
 		} else {
@@ -51,7 +49,7 @@ abstract class Model {
 		global $database;
 		$query = $database->insert()
 				->table(static::$table_name . '__array_property__' . $array_name)
-				->values(array('parent_id' => $this->id, 'value' => static::cast_to_store($array_name, $value)));
+				->values(array('parent_id' => $this->_data['id'], 'value' => static::cast_to_store($array_name, $value)));
 
 		$result = $query->fetch();
 		if ($result === true) {
@@ -62,6 +60,7 @@ abstract class Model {
 		}
 	}
 
+	// model static access/creation methods
 	public static function get_by_id($id) {
 		// return cached item if available
 		if (isset(static::$model_cache['id'][$id]))
@@ -87,13 +86,16 @@ abstract class Model {
 			return $result[0];
 	}
 
-	public static function get_list(array $values) {
+	public static function get_list(array $values, $limit=null) {
 		$values = static::store_data($values);
 
 		global $database;
 		$query = $database->select()
 				->table(static::$table_name)
 				->where($values);
+
+		if (isset($limit))
+			$query->limit($limit);
 
 		$result = static::get_by_query($query);
 
@@ -149,17 +151,18 @@ abstract class Model {
 		}
 	}
 
-	public static function load_data(array $data) {
+	private static function load_data(array $data) {
 		$loaded = array();
 		foreach ($data as $field => $value) {
 			$loaded[$field] = static::cast_from_store($field, $value);
 		}
-		foreach (static::$model_array_properties as $field => $field_type) {
-			$loaded[$field] = static::load_array_data($data['id'], $field);
-		}
+		// foreach (static::$model_array_properties as $field => $field_type) {
+		// 	$loaded[$field] = static::load_array_data($data['id'], $field);
+		// }
 		return $loaded;
 	}
-	public static function load_array_data($id, $field) {
+
+	private static function load_array_data($id, $field) {
 		global $database;
 		$query = $database->select()
 				->table(static::$table_name . '__array_property__' . $field)
@@ -174,7 +177,7 @@ abstract class Model {
 		return $array;
 	}
 
-	public static function store_data(array $data) {
+	private static function store_data(array $data) {
 		$stored = array();
 		foreach ($data as $field => $value) {
 			if (isset(static::$model_properties[$field]))
@@ -187,7 +190,7 @@ abstract class Model {
 		return $stored;
 	}
 
-	public static function store_array_data($field, $value) {
+	private static function store_array_data($field, $value) {
 		$stored_array = array();
 		foreach ($value as $item)
 			$stored_array[] = static::cast_to_store($field, $item);
@@ -209,7 +212,32 @@ abstract class Model {
 		return $value;
 	}
 
-	public function update_fields(array $values) {
+	public static function cast_model_from_store($name, $value) {
+		if (isset(static::$model_submodel_properties[$name])) {
+			$class = static::$model_submodel_properties[$name];
+			$value = (int)$value;
+			$value = $value === 0 ? null : $class::get_by_id((int)$value);
+		} else
+			throw new \Exception("attempt to cast model from store on non-model property '$name' in model class: "
+					. get_called_class());
+		return $value;
+	}
+
+	private static function get_lazy_loaded_model($field, $value) {
+		if (is_int($value) or is_string($value)) {
+			$value = static::cast_model_from_store($field, $value);
+		}
+		return $value;
+	}
+
+	private static function get_lazy_loaded_model_array($field, $value) {
+		$loaded_value = array();
+		foreach ($value as $item)
+			$loaded_value[] = static::cast_model_from_store($field, $item);
+		return $loaded_value;
+	}
+
+	private function update_fields(array $values) {
 
 		$item_fields = array();
 		$array_fields = array();
@@ -230,7 +258,7 @@ abstract class Model {
 			$query = $database->update()
 					->table(static::$table_name)
 					->values($item_fields)
-					->where(array('id' => $this->id));
+					->where(array('id' => $this->_data['id']));
 			$query->fetch();
 		}
 
@@ -238,19 +266,19 @@ abstract class Model {
 			$this->update_array_field($field, $value);
 	}
 
-	public function update_array_field($field, $value) {
+	private function update_array_field($field, $value) {
 		$value = static::store_array_data($field, $value);
 
 		global $database;
 		$delete_query = $database->delete()
 				->table(static::$table_name . '__array_property__' . $field)
-				->where(array('parent_id' => $this->id));
+				->where(array('parent_id' => $this->_data['id']));
 		$delete_query->fetch();
 
 		foreach ($value as $item) {
 			$insert_query = $database->insert()
 					->table(static::$table_name . '__array_property__' . $field)
-					->values(array('parent_id' => $this->id, 'value' => $item));
+					->values(array('parent_id' => $this->_data['id'], 'value' => $item));
 			$insert_query->fetch();
 		}
 	}
