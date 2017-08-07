@@ -60,6 +60,31 @@ abstract class Model {
 		}
 	}
 
+	public function remove($array_name, $value, $limit=null) {
+		global $database;
+		$query = $database->delete()
+				->table(static::$table_name . '__array_property__' . $array_name)
+				->where(array('parent_id' => $this->_data['id'], 'value' => static::cast_to_store($array_name, $value)));
+
+		if (isset($limit))
+			$query->limit($limit);
+
+		$result = $query->fetch();
+		return $result;
+	}
+
+	public function delete() {
+		global $database;
+		$query = $database->delete()
+				->table(static::$table_name)
+				->where(array('id' => $this->_data['id']));
+
+		unset($this->_model_cache['id'][$this->_data['id']]);
+
+		$result = $query->fetch();
+		return $result;
+	}
+
 	// model static access/creation methods
 	public static function get_by_id($id) {
 		// return cached item if available
