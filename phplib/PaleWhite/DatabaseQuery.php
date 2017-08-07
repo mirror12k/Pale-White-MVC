@@ -62,21 +62,7 @@ class DatabaseQuery {
 			}
 
 			if (isset($this->query_args['where'])) {
-				$fields = array();
-				foreach ($this->query_args['where'] as $field => $value) {
-					$field = '`' . $this->db->escape_string($field) . '`';
-					if (is_string($value)) {
-						$value = '\'' . $this->db->escape_string($value) . '\'';
-					} elseif (is_numeric($value)) {
-						$value = "$value";
-					} else {
-						throw new \Exception("invalid value type for where field $field: " . gettype($value));
-					}
-					$fields[] = "$field = $value";
-				}
-
-				if (count($fields) > 0)
-					$query .= ' WHERE ' . implode(' AND ', $fields);
+				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
 			}
 
 			if (isset($this->query_args['limit'])) {
@@ -139,21 +125,7 @@ class DatabaseQuery {
 			}
 
 			if (isset($this->query_args['where'])) {
-				$fields = array();
-				foreach ($this->query_args['where'] as $field => $value) {
-					$field = '`' . $this->db->escape_string($field) . '`';
-					if (is_string($value)) {
-						$value = '\'' . $this->db->escape_string($value) . '\'';
-					} elseif (is_numeric($value)) {
-						$value = "$value";
-					} else {
-						throw new \Exception("invalid value type for where field $field: " . gettype($value));
-					}
-					$fields[] = "$field = $value";
-				}
-
-				if (count($fields) > 0)
-					$query .= ' WHERE ' . implode(' AND ', $fields);
+				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
 			}
 
 			if (isset($this->query_args['limit'])) {
@@ -170,21 +142,7 @@ class DatabaseQuery {
 			}
 
 			if (isset($this->query_args['where'])) {
-				$fields = array();
-				foreach ($this->query_args['where'] as $field => $value) {
-					$field = '`' . $this->db->escape_string($field) . '`';
-					if (is_string($value)) {
-						$value = '\'' . $this->db->escape_string($value) . '\'';
-					} elseif (is_numeric($value)) {
-						$value = "$value";
-					} else {
-						throw new \Exception("invalid value type for where field $field: " . gettype($value));
-					}
-					$fields[] = "$field = $value";
-				}
-
-				if (count($fields) > 0)
-					$query .= ' WHERE ' . implode(' AND ', $fields);
+				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
 			}
 
 			if (isset($this->query_args['limit'])) {
@@ -196,6 +154,45 @@ class DatabaseQuery {
 		} else {
 			throw new \Exception("invalid query_type: " . $this->query_type);
 		}
+	}
+
+	public function compile_where_clause($where_clause)
+	{
+		$fields = array();
+		foreach ($where_clause as $field => $value) {
+			$field = '`' . $this->db->escape_string($field) . '`';
+			if (is_array($value)) {
+				$escaped_values = array();
+				foreach ($value as $subvalue) {
+					if (is_string($subvalue)) {
+						$escaped_values[] = '\'' . $this->db->escape_string($subvalue) . '\'';
+					} elseif (is_numeric($subvalue)) {
+						$escaped_values[] = "$subvalue";
+					} else {
+						throw new \Exception("invalid value type for where field $field: " . gettype($value));
+					}
+				}
+				if (count($escaped_values) < 1)
+					throw new \Exception("empty value list for where field $field!");
+
+				$escaped_values = implode(",", $escaped_values);
+				$fields[] = "$field IN ($escaped_values)";
+			} else {
+				if (is_string($value)) {
+					$value = '\'' . $this->db->escape_string($value) . '\'';
+				} elseif (is_numeric($value)) {
+					$value = "$value";
+				} else {
+					throw new \Exception("invalid value type for where field $field: " . gettype($value));
+				}
+				$fields[] = "$field = $value";
+			}
+		}
+
+		if (count($fields) > 0)
+			return 'WHERE ' . implode(' AND ', $fields);
+		else
+			return '';
 	}
 
 	public function fetch() {

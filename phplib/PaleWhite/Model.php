@@ -3,8 +3,8 @@
 namespace PaleWhite;
 // base model class which provides a lot of magic methods for compiled models
 abstract class Model {
-	public $_data;
-	public $_loaded = array();
+	private $_data;
+	private $_loaded = array();
 
 	public function __construct(array $data) {
 		$this->_data = $data;
@@ -63,10 +63,30 @@ abstract class Model {
 	// model static access/creation methods
 	public static function get_by_id($id) {
 		// return cached item if available
-		if (isset(static::$model_cache['id'][$id]))
-			return static::$model_cache['id'][$id];
+		if (isset(static::$_model_cache['id'][$id]))
+			return static::$_model_cache['id'][$id];
 
 		return static::get_by(array('id' => $id));
+	}
+
+	public static function get_multiple_by_id(array $ids_list) {
+		// // return cached item if available
+		// if (isset(static::$_model_cache['id'][$id]))
+		// 	return static::$_model_cache['id'][$id];
+
+		// retrieve the items as a list
+		$items = static::get_list(array('id' => $ids_list));
+		// order the items by id
+		$items_by_id = array();
+		foreach ($items as $item)
+			$items_by_id[$item->id] = $item;
+
+		// reorder the items by the given ids_list order
+		$results = array();
+		foreach ($ids_list as $id)
+			$results[] = isset($items_by_id[$id]) ? $items_by_id[$id] : null;
+
+		return $results;
 	}
 
 	public static function get_by(array $values) {
@@ -212,29 +232,36 @@ abstract class Model {
 		return $value;
 	}
 
-	public static function cast_model_from_store($name, $value) {
-		if (isset(static::$model_submodel_properties[$name])) {
-			$class = static::$model_submodel_properties[$name];
-			$value = (int)$value;
-			$value = $value === 0 ? null : $class::get_by_id((int)$value);
-		} else
-			throw new \Exception("attempt to cast model from store on non-model property '$name' in model class: "
-					. get_called_class());
-		return $value;
+	// public static function cast_model_from_store($name, $value) {
+	// 	if (!isset(static::$model_submodel_properties[$name]))
+	// 		throw new \Exception("attempt to cast model from store on non-model property '$name' in model class: "
+	// 				. get_called_class());
+
+	// 	$class = static::$model_submodel_properties[$name];
+	// 	$value = (int)$value;
+	// 	$value = $value === 0 ? null : $class::get_by_id((int)$value);
+	// 	return $value;
+	// }
+
+	private static function get_lazy_loaded_model($name, $value) {
+		if (!isset(static::$model_submodel_properties[$name]))
+			throw new \Exception("attempt to lazy load non-model property '$name' in model class: " . get_called_class());
+
+		$class = static::$model_submodel_properties[$name];
+		$value = (int)$value;
+		return $value === 0 ? null : $class::get_by_id((int)$value);
+		// if (is_int($value) or is_string($value)) {
+		// 	$value = static::cast_model_from_store($name, $value);
+		// }
+		// return $value;
 	}
 
-	private static function get_lazy_loaded_model($field, $value) {
-		if (is_int($value) or is_string($value)) {
-			$value = static::cast_model_from_store($field, $value);
-		}
-		return $value;
-	}
-
-	private static function get_lazy_loaded_model_array($field, $value) {
-		$loaded_value = array();
-		foreach ($value as $item)
-			$loaded_value[] = static::cast_model_from_store($field, $item);
-		return $loaded_value;
+	private static function get_lazy_loaded_model_array($name, $value) {
+		if (!isset(static::$model_submodel_properties[$name]))
+			throw new \Exception("attempt to lazy load non-model property '$name' in model class: " . get_called_class());
+		
+		$class = static::$model_submodel_properties[$name];
+		return $class::get_multiple_by_id($value);
 	}
 
 	private function update_fields(array $values) {

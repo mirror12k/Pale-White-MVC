@@ -28,7 +28,7 @@ sub compile_model {
 	push @code, "class $model->{identifier} extends \\PaleWhite\\Model {\n";
 	push @code, "\tpublic static \$table_name = '$model->{identifier}';\n";
 
-	push @code, "\tpublic static \$model_cache = array('id' => array());\n";
+	push @code, "\tpublic static \$_model_cache = array('id' => array());\n";
 	# push @code, "\t\t'id' => array(),\n";
 	# foreach my $property (@{$model->{properties}}) {
 	# 	push @code, "\t\t'$property->{identifier}' => array(),\n";
