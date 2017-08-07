@@ -110,30 +110,53 @@ templated and pre-compiled mvc
 					}
 				}
 
-		wishlist
+		done:
 			tag classes and ids
 				div.container#main_container
+
 			tag properties
 				a href="https://asdf", alt="my link"
+
 			template args inlined into text
 				!template ArgyTemplate
 					p "hello there {{username}}!"
-					{{raw_html}}
+
 			loops
 				!foreach users as user
-					li "user: {{user->username}}"
+					li "user: {{user.username}}"
+
+		wishlist
+			inline html
+				div.container
+					{< html_var >}
 			calling sub templates with optional arguments
 				!template SuperTemplate
 					div.user_container
 						!template UserContainerTemplate user=user, color='red'
-			passing templates as arguments
+
+			passing templates as arguments and values
 				!template SuperTemplate
 					div.super_container
-						!template RenderContainerTemplate template=UserContainerTemplate
+						// invoke template from variable
+						!template $dynamic_template
+						// pass the name of a template
+						!template RenderContainerTemplate template="UserContainerTemplate"
+
+			anonymous template definitions
+				!template SuperTemplate
+					// include the template here,
+					!template RenderContainerTemplate
+						// render blocks INSIDE the included template
+						!block border
+							{my_awesome_border}
+						!block container
+							!template UserContainerTemplate
+
 			simpler div containers
 				!template NestedDivsTemplate
 					#main_container
 						.container
+
 			extensible helper plugins
 			optional compilation to a big javascript package to allow client-side sites
 
@@ -237,17 +260,52 @@ templated and pre-compiled mvc
 				} 
 			}
 
-
-		wishlist:
-			regex path arguments
-				path '/page/{{page=/\d+/}}' {}
+		done:
 			argument list paths which match multiple words seperated by slashes
 				// this will match paths like '/search/asdf/qwer/zxcv' and produce an array of terms ['asdf', 'qwer', 'zxcv']
-				path '/search/{{{terms}}}' {}
+				path '/search/{{terms=[]}}' {}
+
 			global paths to act like middleware
 				path global {
 					// perform user authentication
 				}
+
+			user session and permission validation
+				// try to find a user by given user_id
+				current_user = model? UserModel id=user_id
+				if (current_user) {
+					// if it is a valid user, we can set the session to his id
+					session.current_user = user.id;
+					render MessageTemplate message="logged in";
+				} else {
+					// otherwise report an error
+					render MessageTemplate message="no such user found";
+				}
+
+				// after login, can always access the user by session
+				current_user = model? UserModel id=session.current_user
+
+			sugar syntax for loading objects as models
+				// call UserLinkModel->get_by(array('id' => $link))
+				link = model UserLinkModel id=link;
+				// call UserLinkModel->get_by(array('link' => $link_string))
+				link = model UserLinkModel link=link_string;
+				// call UserLinkModel->list(array('page' => $page))
+				links = list UserLinkModel page=page;
+
+			dispatch another controller
+				path '/special/.*' {
+					// launches AnotherController->route($path, $args)
+					route AnotherController;
+				}
+		
+			an automatically generated index.php file generated to include all pacakges and start the controller
+			
+
+		wishlist:
+			regex path arguments
+				path '/page/{{page=/\d+/}}' {}
+
 			ajax paths which return json responses
 				// arguments are taken from json data
 				ajax '/create/link' [ asdf, zxcv ] {
@@ -256,23 +314,58 @@ templated and pre-compiled mvc
 					// returns a json response
 					return status='success', data=link_id
 				}
-			user session and permission validation
-				// calls UserModel->login(array('id' => $current_user))
-				current_user = login UserModel id=session->current_user
-				session->current_user = current_user->id
-			sugar syntax for loading objects as models
-				// call UserLinkModel->get_by(array('id' => $link))
-				link = model UserLinkModel id=link
-				// call UserLinkModel->get_by(array('link' => $link_string))
-				link = model UserLinkModel link=link_string
-				// call UserLinkModel->list(array('page' => $page))
-				links = list UserLinkModel page=page
 
-			dispatch another controller
-				path '/special/.*' {
-					// launches AnotherController->route($path, $args)
-					route AnotherController
+			csrf tokens
+				// set in glass compilers:
+				form
+					input type="hidden", value={_csrf_token}
+
+				// optionally generated serverside
+				ajax '/get_csrf_token' {
+					return token=_csrf_token
 				}
+
+				// validate later
+				ajax '/check_csrf_token' [ token ] {
+					validate token as csrf_token;
+				}
+
+				basic synchronized session token
+
+			secure file upload
+				// declare a file directory for uploading stuff
+				file_upload_directory meme_videos => '/meme_videos' {
+					// can validate user permissions before accepting the file
+				}
+
+				// use it in an ajax path
+				ajax '/do_stuff' [ file::meme_videos file ] {
+					// validate the user and arguments
+					validate ...;
+
+					// after validation, we accept the file transfer
+					filepath = accept_file_upload file;
+
+					// record the file somehow by creating a model out of it or something
+					return status="success"
+				}
+
+				// later we can load the file by filepath and specify the content_type
+				path "/video/{{video_id}}.webm" {
+					video = model VideoModel video_id=video_id;
+					content_type "video/webm";
+					render_file video.filepath;
+				}
+
+				// models can tie files to themselves so that the file is deleted when the model is deleted
+				// by simply creating the VideoModel with this file argument, it is tied to the file
+				model VideoModel {
+					file::meme_videos filepath;
+					model::comment[] comments;
+				}
+
+				files are stored on disk by file hash and with no extention to forbid any extention-based execution
+
 
 			websockets/ajax client-heavy site
 				load all glass templates as client-side javascript files
@@ -289,7 +382,9 @@ templated and pre-compiled mvc
 			a cli to perform server-side action easier?
 			automatic admin backend for viewing and editting modeled objects?
 			a description package which outlines all contained packages?
-			an automatically generated index.php file generated to include all pacakges and start the controller
+			view controllers to easily assign logic to specific views?
+
 			a testing suite which is done from server-side cli php execution
 				doesnt render templates fully, just returns the template names and arguments passed as the test status
 				this way controller logic can be checked without depending on templating output
+
