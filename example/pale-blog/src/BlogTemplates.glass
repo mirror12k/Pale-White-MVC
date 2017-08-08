@@ -39,6 +39,7 @@
 		div.title
 			h1 "Create a New Blog Post"
 		form method="POST",action="post_blog"
+			!_csrf_token_input
 			div
 				input name="author", type="text", placeholder="author"
 				input name="title", type="text", placeholder="title"
@@ -64,6 +65,7 @@
 				p {comment.body}
 		div.comment-submittion
 			form method="POST", action="../post_comment"
+				!_csrf_token_input
 				input name="blog_id", type="hidden", value={post.id}
 				div
 					input name="author", type="text", placeholder="your name"

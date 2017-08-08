@@ -10,7 +10,7 @@ controller MainController {
 		render CreateBlogTemplate;
 	}
 
-	path "/post_blog" [string author, string title, string body] {
+	path "/post_blog" [!_csrf_token, string author, string title, string body] {
 		post = action create_blog_post author=author, title=title, body=body;
 		if (post) {
 			render SuccessLinkTemplate blog_id=post.id, item="blog post";
@@ -20,7 +20,7 @@ controller MainController {
 		}
 	}
 
-	path "/post_comment" [int blog_id, string author, string body] {
+	path "/post_comment" [!_csrf_token, int blog_id, string author, string body] {
 		post = model? BlogPostModel id=blog_id;
 		if (post) {
 			action create_blog_comment post=post, author=author, body=body;

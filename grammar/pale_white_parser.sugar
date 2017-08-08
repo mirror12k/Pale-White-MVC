@@ -2,7 +2,7 @@ package PaleWhite::MVC::Parser
 
 native_code_block_regex = /\{\{.*?\}\}/s
 
-symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?/
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?|!/
 # symbol_regex = /\{|\}|\[|\]|\(|\)|;/
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
@@ -240,86 +240,102 @@ list context arguments_list {
 }
 
 list context arguments_list_item {
-	match $identifier_regex
+	if $identifier_regex => {
+		if '[', $integer_regex, ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $4
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				validator_min_size => $2
+				validator_max_size => $2
+				identifier => $4
+			}
+			
+		} elsif '[', $integer_regex, ':', ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $5
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				validator_min_size => $2
+				identifier => $5
+			}
+			
+		} elsif '[', ':', $integer_regex, ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $5
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				validator_max_size => $3
+				identifier => $5
+			}
+			
+		} elsif '[', $integer_regex, ':', $integer_regex, ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $6
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				validator_min_size => $2
+				validator_max_size => $4
+				identifier => $6
+			}
+			
+		} elsif $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $1
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				identifier => $1
+			}
+			
+		} else {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $0
+			}
+		}
+	} elsif '!', $identifier_regex => {
+		push {
+			type => 'argument_specifier'
+			line_number => $0{line_number}
+			identifier => $1
+		}
+		push {
+			type => 'validate_variable'
+			line_number => $0{line_number}
+			validator_identifier => $1
+			identifier => $1
+		}
 
-	if '[', $integer_regex, ']', $identifier_regex => {
-		push {
-			type => 'argument_specifier'
-			line_number => $0{line_number}
-			identifier => $4
-		}
-		push {
-			type => 'validate_variable'
-			line_number => $0{line_number}
-			validator_identifier => $0
-			validator_min_size => $2
-			validator_max_size => $2
-			identifier => $4
-		}
-		
-	} elsif '[', $integer_regex, ':', ']', $identifier_regex => {
-		push {
-			type => 'argument_specifier'
-			line_number => $0{line_number}
-			identifier => $5
-		}
-		push {
-			type => 'validate_variable'
-			line_number => $0{line_number}
-			validator_identifier => $0
-			validator_min_size => $2
-			identifier => $5
-		}
-		
-	} elsif '[', ':', $integer_regex, ']', $identifier_regex => {
-		push {
-			type => 'argument_specifier'
-			line_number => $0{line_number}
-			identifier => $5
-		}
-		push {
-			type => 'validate_variable'
-			line_number => $0{line_number}
-			validator_identifier => $0
-			validator_max_size => $3
-			identifier => $5
-		}
-		
-	} elsif '[', $integer_regex, ':', $integer_regex, ']', $identifier_regex => {
-		push {
-			type => 'argument_specifier'
-			line_number => $0{line_number}
-			identifier => $6
-		}
-		push {
-			type => 'validate_variable'
-			line_number => $0{line_number}
-			validator_identifier => $0
-			validator_min_size => $2
-			validator_max_size => $4
-			identifier => $6
-		}
-		
-	} elsif $identifier_regex => {
-		push {
-			type => 'argument_specifier'
-			line_number => $0{line_number}
-			identifier => $1
-		}
-		push {
-			type => 'validate_variable'
-			line_number => $0{line_number}
-			validator_identifier => $0
-			identifier => $1
-		}
-		
 	} else {
-		push {
-			type => 'argument_specifier'
-			line_number => $0{line_number}
-			identifier => $0
-		}
+		die 'expected argument list'
 	}
+
 
 	return
 }

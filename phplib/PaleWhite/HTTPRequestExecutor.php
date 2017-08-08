@@ -36,9 +36,6 @@ class HTTPRequestExecutor {
 				throw new \Exception("failed to generate csrf token, not enough entropy");
 			$_SESSION['pale_white_csrf_token'] = bin2hex($seed);
 		}
-		// if (isset($_POST['_csrf_token']) && !hash_equals($_SESSION['pale_white_csrf_token'], $_POST['_csrf_token']))
-		// 	throw new \Exception("incorrect csrf token");
-		// error_log("[PaleWhite] _SESSION: " . json_encode($_SESSION));
 
 		// process the path
 		$url = parse_url(urldecode($_SERVER['REQUEST_URI']));
@@ -60,9 +57,9 @@ class HTTPRequestExecutor {
 			$controller_class = $config['main_controller'];
 			$controller = new $controller_class();
 
-			// validate a csrf token if it exists
-			if (isset($_POST['_csrf_token']))
-				$controller->validate_csrf_token((string)$_POST['_csrf_token']);
+			// // validate a csrf token if it exists
+			// if (isset($_POST['_csrf_token']))
+			// 	$controller->validate_csrf_token((string)$_POST['_csrf_token']);
 
 			$controller->route($request, $response);
 		} catch (\Exception $e) {
