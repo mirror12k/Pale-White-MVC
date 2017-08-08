@@ -9,6 +9,9 @@ use Data::Dumper;
 
 
 
+our $model_identifier_regex = qr/\Amodel::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*\Z/s;
+
+
 sub new {
 	my ($class, %args) = @_;
 	my $self = bless {}, $class;
@@ -132,7 +135,8 @@ sub compile_path_condition {
 	my @match_code;
 
 	# warn "debug condition: $condition";
-	my @condition_vars = ($condition =~ /(?|\{\{($identifier_regex=\[\])\}\}|\{\{($identifier_regex)\}\}|\{\{((?:$identifier_regex=)?\.\.\.)\}\})/g);
+	my @condition_vars = ($condition =~ 
+			/(?|\{\{($identifier_regex=\[\])\}\}|\{\{($identifier_regex)\}\}|\{\{((?:$identifier_regex=)?\.\.\.)\}\})/g);
 
 	if (@condition_vars) {
 		# warn "debug condition vars: " . join ',', @condition_vars;
@@ -299,20 +303,32 @@ sub compile_action {
 	} elsif ($action->{type} eq 'validate_variable') {
 		if ($action->{validator_identifier} eq 'int') {
 			return "\$$action->{identifier} = (int)\$$action->{identifier};\n"
+
 		} elsif ($action->{validator_identifier} eq 'string') {
 			my @code;
 			push @code, "\$$action->{identifier} = (string)\$$action->{identifier};\n";
 			if (exists $action->{validator_max_size}) {
 				push @code, "if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
-					"\tthrow new \\Exception('argument \"$action->{identifier}\" exceeded max length of $action->{validator_max_size}');\n"
+					"\tthrow new \\Exception('argument \"$action->{identifier}\" "
+							. "exceeded max length of $action->{validator_max_size}');\n"
 			}
 			if (exists $action->{validator_min_size}) {
 				push @code, "if (strlen(\$$action->{identifier}) < $action->{validator_min_size})\n",
-					"\tthrow new \\Exception('argument \"$action->{identifier}\" doesnt reach min length of $action->{validator_min_size}');\n"
+					"\tthrow new \\Exception('argument \"$action->{identifier}\" "
+							. "doesnt reach min length of $action->{validator_min_size}');\n"
 			}
 			return @code
+
+		} elsif ($action->{validator_identifier} =~ $model_identifier_regex) {
+			my $model_class = $action->{validator_identifier};
+			$model_class =~ s/\Amodel::/\\/s;
+			$model_class =~ s/::/\\/s;
+			return "if (! \$$action->{identifier} instanceof $model_class)\n",
+				"\tthrow new \\Exception('argument \"$action->{identifier}\" not an instance of \"$model_class\" model');\n"
+
 		} elsif ($action->{validator_identifier} eq '_csrf_token') {
 			return "\$this->validate_csrf_token(\$$action->{identifier});\n"
+
 		} else {
 			return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
 		}

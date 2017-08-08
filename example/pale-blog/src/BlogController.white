@@ -47,10 +47,10 @@ controller MainController {
 		render ErrorTemplate message="Not Found";
 	}
 
-	path error {
-		status "500 Server Error";
-		render ErrorTemplate message="Something went really wrong :(";
-	}
+	# path error {
+	# 	status "500 Server Error";
+	# 	render ErrorTemplate message="Something went really wrong :(";
+	# }
 
 	action create_blog_post [string author, string title, string body] {{
 		$post = BlogPostModel::create(array(
@@ -62,7 +62,7 @@ controller MainController {
 		return $post;
 	}}
 
-	action create_blog_comment [post, string author, string body] {{
+	action create_blog_comment [model::BlogPostModel post, string author, string body] {{
 		$obj = CommentPostModel::create(array('author' => $author, 'body' => $body));
 		$post = $post->add('comments', $obj);
 
