@@ -3,7 +3,7 @@
 	html
 		head
 			!block head
-			link href="/css/style.css", type="text/css", rel="stylesheet"
+			link href="/css/style.css" type="text/css" rel="stylesheet"
 		body
 			div.content
 				!block body
@@ -38,11 +38,11 @@
 	!block body
 		div.title
 			h1 "Create a New Blog Post"
-		form method="POST",action="post_blog"
+		form method="POST" action="post_blog"
 			!_csrf_token_input
 			div
-				input name="author", type="text", placeholder="author"
-				input name="title", type="text", placeholder="title"
+				input name="author" type="text" placeholder="author"
+				input name="title" type="text" placeholder="title"
 			div
 				textarea name="body"
 			div
@@ -64,13 +64,13 @@
 			div.text
 				p {comment.body}
 		div.comment-submittion
-			form method="POST", action="../post_comment"
+			form method="POST" action="../post_comment"
 				!_csrf_token_input
-				input name="blog_id", type="hidden", value={post.id}
+				input name="blog_id" type="hidden" value={post.id}
 				div
-					input name="author", type="text", placeholder="your name"
+					input name="author" type="text" placeholder="your name"
 				div
-					input name="body", type="text", placeholder="your comment"
+					input name="body" type="text" placeholder="your comment"
 				div
 					button "Post Comment!"
 

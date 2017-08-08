@@ -3,7 +3,7 @@
 	html
 		head
 			!block head
-			link href="/css/style.css", type="text/css", rel="stylesheet"
+			link href="/css/style.css" type="text/css" rel="stylesheet"
 		body
 			div.content
 				!block body
@@ -15,9 +15,9 @@
 		div.title-bar
 			h1 "Create a Link"
 		div.text
-			form method="POST",action="create_link"
+			form method="POST" action="create_link"
 				div
-					input name="location", type="text", placeholder="http://www.example.org"
+					input name="location" type="text" placeholder="http://www.example.org"
 				div
 					button "Create Link!"
 

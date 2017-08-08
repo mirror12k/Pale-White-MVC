@@ -180,9 +180,8 @@ object context parse_attribute_arguments {
 		match '='
 		$_{attributes}{$0} = !glass_tag_attribute
 
-		while ',' => {
-			match $identifier_regex, '='
-			$_{attributes}{$3} = !glass_tag_attribute
+		while $identifier_regex, '=' => {
+			$_{attributes}{$2} = !glass_tag_attribute
 		}
 	}
 	return
