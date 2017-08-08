@@ -311,6 +311,8 @@ sub compile_action {
 					"\tthrow new \\Exception('argument \"$action->{identifier}\" doesnt reach min length of $action->{validator_min_size}');\n"
 			}
 			return @code
+		} elsif ($action->{validator_identifier} eq '_csrf_token') {
+			return "\$this->validate_csrf_token(\$$action->{identifier});\n"
 		} else {
 			return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
 		}
@@ -384,7 +386,11 @@ sub compile_expression {
 
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return "\$$expression->{identifier}";
+		if ($expression->{identifier} eq '_csrf_token') {
+			return "\$_SESSION['pale_white_csrf_token']";
+		} else {
+			return "\$$expression->{identifier}";
+		}
 
 	} elsif ($expression->{type} eq 'access_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});

@@ -1,5 +1,7 @@
 <?php
 
+
+
 namespace PaleWhite;
 
 abstract class Controller {
@@ -31,6 +33,11 @@ abstract class Controller {
 			throw new \Exception("invalid '$model_class'!");
 		
 		return $object;
+	}
+
+	public function validate_csrf_token($token) {
+		if (!hash_equals($_SESSION['pale_white_csrf_token'], $token))
+			throw new \Exception("incorrect csrf token");
 	}
 }
 

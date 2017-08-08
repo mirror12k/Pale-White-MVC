@@ -17,6 +17,10 @@ abstract class Template {
 		global $config;
 		return $config['site_base'];
 	}
+
+	public function get_csrf_token() {
+		return $_SESSION['pale_white_csrf_token'];
+	}
 }
 
 

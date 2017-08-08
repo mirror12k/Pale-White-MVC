@@ -148,6 +148,26 @@ sub compile_item {
 		return $self->compile_html_tag($item)
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
 		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{arguments}[0]', \$args);\n"
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq '_csrf_token_input') {
+		# equivalent to 'input name="_csrf_token", type="hidden", value={_csrf_token}'
+		return $self->compile_html_tag({
+			identifier => 'input',
+			attributes => {
+				name => { type => 'string_expression', string => "_csrf_token", },
+				type => { type => 'string_expression', string => "hidden", },
+				value => { type => 'variable_expression', identifier => "_csrf_token", },
+			},
+		})
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq '_csrf_token_meta') {
+		# equivalent to 'input name="_csrf_token", type="hidden", value={_csrf_token}'
+		return $self->compile_html_tag({
+			identifier => 'meta',
+			id => '_csrf_token',
+			attributes => {
+				name => { type => 'string_expression', string => "_csrf_token", },
+				content => { type => 'variable_expression', identifier => "_csrf_token", },
+			},
+		})
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
 		my @code;
 		push @code, $self->flush_accumulator;
@@ -276,6 +296,8 @@ sub compile_value_expression {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		if ($expression->{identifier} eq '_site_base') {
 			return "\$this->get_site_base()";
+		} elsif ($expression->{identifier} eq '_csrf_token') {
+			return "\$this->get_csrf_token()";
 		} elsif (exists $self->{local_variable_scope}{$expression->{identifier}}) {
 			return "\$$expression->{identifier}";
 		} else {
