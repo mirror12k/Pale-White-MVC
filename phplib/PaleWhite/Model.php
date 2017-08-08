@@ -74,6 +74,8 @@ abstract class Model {
 	}
 
 	public function delete() {
+		$this->on_delete();
+
 		global $database;
 		$query = $database->delete()
 				->table(static::$table_name)
@@ -84,6 +86,9 @@ abstract class Model {
 		$result = $query->fetch();
 		return $result;
 	}
+
+	public function on_create() {}
+	public function on_delete() {}
 
 	// model static access/creation methods
 	public static function get_by_id($id) {
@@ -190,6 +195,8 @@ abstract class Model {
 				$obj->$field = $value;
 			}
 
+			$obj->on_create();
+
 			return $obj;
 		} else {
 			return null;
@@ -285,6 +292,8 @@ abstract class Model {
 		if (!isset(static::$model_submodel_properties[$name]))
 			throw new \Exception("attempt to lazy load non-model property '$name' in model class: " . get_called_class());
 		
+		if (count($value) === 0)
+			return array();
 		$class = static::$model_submodel_properties[$name];
 		return $class::get_multiple_by_id($value);
 	}

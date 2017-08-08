@@ -18,6 +18,7 @@ our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
 our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?|!/;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_keyword_regex = qr/\b(model|int|string|getter|setter|cast|to|from|static|function)\b/;
+our $var_event_identifier_regex = qr/create|delete/;
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
 our $var_integer_regex = qr/-?\d++/;
 our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
@@ -27,6 +28,7 @@ our $var_format_native_code_substitution = sub { $_[0] =~ s/\A\{\{\s*\n(.*?)\s*\
 our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
 our $var_escape_string_substitution = sub { $_[0] =~ s/\\([\\"])/$1/gsr };
 our $var_format_string_substitution = sub { $_[0] =~ s/\A"(.*)"\Z/$1/sr };
+our $var_format_event_identifier_substitution = sub { $_[0] =~ s/\A/on_/sr };
 
 
 our $tokens = [
@@ -166,6 +168,15 @@ sub context_model_block {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_native_code_block_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(2));
 			push @{$context_object->{functions}}, { type => 'model_static_function', identifier => $tokens[2][1], code => $var_format_native_code_substitution->($tokens[5][1]), };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'on' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_event_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$self->confess_at_current_offset('expected qr/\\{\\{.*?\\}\\}/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_native_code_block_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{functions}}, { type => 'on_event_function', identifier => $var_format_event_identifier_substitution->($tokens[1][1]), code => $var_format_native_code_substitution->($tokens[2][1]), };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_model_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;

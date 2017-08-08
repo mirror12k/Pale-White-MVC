@@ -54,6 +54,14 @@ templated and pre-compiled mvc
 		staticly cache model objects by id and other fields to prevent retrieving them multiple times
 		this will also produce a setup.sql file for the create table statement for this model
 
+		on-creation and on deletion hooks:
+			on create {{
+				error_log("model created!");
+			}}
+			on delete {{
+				error_log("model deleted!");
+			}}
+
 		further wishlist:
 			meta arrays and meta objects for models
 			an admin backend for viewing/editting models as listed items
@@ -303,6 +311,43 @@ templated and pre-compiled mvc
 			an automatically generated index.php file generated to include all pacakges and start the controller
 
 
+
+			csrf tokens
+				// set in glass compilers:
+				form
+					!_csrf_token_input
+				// equivalent to
+				form
+					input name="_csrf_token", type="hidden", value={_csrf_token}
+
+				// alternatively add a meta tag in the head for javascript to use:
+				head
+					!_csrf_token_meta
+				// equivalent to
+				head
+					meta id="_csrf_token", name="_csrf_token", content={_csrf_token}
+
+				// optionally generated serverside
+				ajax '/get_csrf_token' {
+					return token=_csrf_token
+				}
+
+				// validate in arguments
+				path '/check_csrf_token' [ !_csrf_token ] {
+					// good to go!
+				}
+
+				// optionally validate later
+				path '/check_later' [ _csrf_token ] {
+					validate _csrf_token as _csrf_token;
+					// good to go!
+				}
+
+			model validation:
+				action post_comment [model::ParentBlogModel blog] {
+					// good to go!
+				}
+
 		wishlist:
 			regex path arguments
 				path '/page/{{page=/\d+/}}' {}
@@ -315,23 +360,6 @@ templated and pre-compiled mvc
 					// returns a json response
 					return status='success', data=link_id
 				}
-
-			csrf tokens
-				// set in glass compilers:
-				form
-					input type="hidden", value={_csrf_token}
-
-				// optionally generated serverside
-				ajax '/get_csrf_token' {
-					return token=_csrf_token
-				}
-
-				// validate later
-				ajax '/check_csrf_token' [ token ] {
-					validate token as _csrf_token;
-				}
-
-				basic synchronized session token
 
 			secure file upload
 				// declare a file directory for uploading stuff
@@ -367,6 +395,7 @@ templated and pre-compiled mvc
 
 				files are stored on disk by file hash and with no extention to forbid any extention-based execution
 
+			log file recording all exceptions occuring in the application
 
 			websockets/ajax client-heavy site
 				load all glass templates as client-side javascript files

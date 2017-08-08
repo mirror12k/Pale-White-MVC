@@ -22,7 +22,6 @@ use Data::Dumper;
 sub compile_model {
 	my ($model) = @_;
 
-	my %model_functions;
 
 	my @code;
 	push @code, "class $model->{identifier} extends \\PaleWhite\\Model {\n";
@@ -65,17 +64,25 @@ sub compile_model {
 	}
 
 	push @code, "\n";
+	my %model_functions;
 	foreach my $function (@{$model->{functions}}) {
 		die "duplicate function $function->{identifier} defined in model $model->{identifier}"
 				if exists $model_functions{$function->{identifier}};
 		$model_functions{$function->{identifier}} = 1;
 
 		if ($function->{type} eq 'model_function') {
-			my $function_code = "\tpublic function $function->{identifier} () $function->{code}";
-			push @code, map "$_\n", split "\n", $function_code;
+			push @code, "\tpublic function $function->{identifier} () {\n";
+			push @code, map "$_\n", split "\n", $function->{code};
+			push @code, "\t}\n";
 		} elsif ($function->{type} eq 'model_static_function') {
-			my $function_code = "\tpublic static function $function->{identifier} () $function->{code}";
-			push @code, map "$_\n", split "\n", $function_code;
+			push @code, "\tpublic static function $function->{identifier} () {\n";
+			push @code, map "$_\n", split "\n", $function->{code};
+			push @code, "\t}\n";
+		} elsif ($function->{type} eq 'on_event_function') {
+			push @code, "\tpublic function $function->{identifier} () {\n";
+			push @code, "\t\tparent::$function->{identifier}();\n";
+			push @code, map "$_\n", split "\n", $function->{code};
+			push @code, "\t}\n";
 		} else {
 			die "unimplemented function type $function->{type}";
 		}
