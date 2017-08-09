@@ -6,9 +6,22 @@ class FileUpload {
 	public $temp_filepath;
 	public $file_size;
 
+	public $cached_mime_type;
+
 	public function __construct($temp_filepath, $file_size) {
 		$this->temp_filepath = $temp_filepath;
 		$this->file_size = $file_size;
+	}
+
+	public function __get($name) {
+		if ($name === 'mime_type') {
+			if (!isset($this->cached_mime_type))
+				$this->cached_mime_type = mime_content_type($this->temp_filepath);
+			return $this->cached_mime_type;
+
+		} else {
+			throw new \Exception("attempt to get unknown field $name");
+		}
 	}
 }
 
@@ -63,6 +76,8 @@ class FileDirectoryFile {
 	public $filepath;
 	public $file_directory_class;
 
+	public $cached_mime_type;
+
 	public function __construct($filename, $filepath, $file_directory_class) {
 		$this->filename = $filename;
 		$this->filepath = $filepath;
@@ -71,5 +86,23 @@ class FileDirectoryFile {
 
 	public function delete_file() {
 		return unlink($this->filepath);
+	}
+
+	public function __get($name) {
+		if ($name === 'mime_type') {
+			if (!isset($this->cached_mime_type))
+				$this->cached_mime_type = mime_content_type($this->filepath);
+			return $this->cached_mime_type;
+
+		} elseif ($name === 'url') {
+			if (strpos($this->filepath, "./") !== 0)
+				throw new \Exception("file directory path isnt relative for a url path");
+			global $config;
+
+			return $config['site_base'] . substr($this->filepath, 1);
+
+		} else {
+			throw new \Exception("attempt to get unknown field $name");
+		}
 	}
 }

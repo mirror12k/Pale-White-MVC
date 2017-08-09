@@ -290,6 +290,10 @@ sub compile_action {
 		my $expression = $self->compile_expression($action->{expression});
 		return "\$res->redirect = $expression;\n"
 
+	} elsif ($action->{type} eq 'assign_header') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$res->headers['$action->{header_string}'] = $expression;\n"
+
 	} elsif ($action->{type} eq 'controller_action') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "\$this->action('$action->{identifier}', $arguments);\n"
@@ -402,6 +406,10 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'render_template_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "((new $expression->{identifier}())->render($arguments))"
+		
+	} elsif ($expression->{type} eq 'render_file_expression') {
+		my $subexpression = $self->compile_expression($expression->{expression});
+		return "file_get_contents(${subexpression}->filepath)"
 
 	} elsif ($expression->{type} eq 'controller_action_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});

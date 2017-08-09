@@ -58,6 +58,18 @@ class HTTPRequestExecutor {
 				// error_log("[PaleWhite] \$_FILES[$field]: " . json_encode($file_upload));
 				if (!isset($file_upload['error']) || is_array($file_upload['error']))
 					throw new \Exception("invalid file upload");
+				if ($file_upload['error'] === UPLOAD_ERR_INI_SIZE)
+					throw new \Exception("file upload failed: size exceeded");
+					// may need to increase upload limits in your php.ini
+					// under post_max_size and upload_max_filesize
+				if ($file_upload['error'] === UPLOAD_ERR_PARTIAL)
+					throw new \Exception("file upload failed: failed to upload whole file");
+				if ($file_upload['error'] === UPLOAD_ERR_NO_FILE)
+					throw new \Exception("file upload failed: no file sent");
+				if ($file_upload['error'] === UPLOAD_ERR_NO_TMP_DIR)
+					throw new \Exception("file upload failed: no tmp directory");
+				if ($file_upload['error'] === UPLOAD_ERR_CANT_WRITE)
+					throw new \Exception("file upload failed: cant write directory");
 				if ($file_upload['error'] !== UPLOAD_ERR_OK)
 					throw new \Exception("file upload failed");
 				$file_container = new \PaleWhite\FileUpload($file_upload['tmp_name'], $file_upload['size']);
@@ -125,6 +137,11 @@ class HTTPRequestExecutor {
 			} else {
 				header("Location: " . $response->redirect);
 			}
+		}
+
+		// if the response has a redirect, send it
+		foreach ($response->headers as $header => $value) {
+			header("$header: $value");
 		}
 
 		// send the body

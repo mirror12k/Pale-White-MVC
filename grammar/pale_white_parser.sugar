@@ -429,6 +429,16 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
+		'header' => {
+			match $string_regex, '='
+			$_{block}[] = {
+				type => 'assign_header'
+				line_number => $0{line_number}
+				header_string => !format_string->$1
+				expression => !action_expression
+			}
+			match ';'
+		}
 		'action' => {
 			match $identifier_regex
 			$_{block}[] = {
@@ -622,6 +632,13 @@ object context action_expression {
 				arguments => !action_arguments->{}
 			}
 			return
+		}
+		'render_file' => {
+			$_ = {
+				type => 'render_file_expression'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
 		}
 		'action', $identifier_regex => {
 			$_ = {

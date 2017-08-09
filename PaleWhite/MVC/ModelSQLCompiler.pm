@@ -31,7 +31,7 @@ sub compile_property {
 		$type = 'INT';
 	} elsif ($property->{type} eq 'file_pointer_property') {
 		warn "superfluous property size in file pointer property" if exists $property->{modifiers}{property_size};
-		$type = 'VARCHAR(4096)';
+		$type = 'VARCHAR(256)';
 	} elsif ($property->{property_type} eq 'string') {
 		if (exists $property->{modifiers}{property_size}) {
 			$type = "VARCHAR($property->{modifiers}{property_size})";
