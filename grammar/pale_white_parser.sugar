@@ -5,6 +5,7 @@ native_code_block_regex = /\{\{.*?\}\}/s
 symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?|!/
 # symbol_regex = /\{|\}|\[|\]|\(|\)|;/
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
+file_identifier_regex = /file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
 event_identifier_regex = /create|delete/
 identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
@@ -17,6 +18,7 @@ whitespace_regex = /\s++/s
 
 format_native_code_substitution = s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/s
 format_model_identifier_substitution = s/\Amodel:://s
+format_file_identifier_substitution = s/\Afile:://s
 escape_string_substitution = s/\\([\\"])/$1/gs
 format_string_substitution = s/\A"(.*)"\Z/$1/s
 format_event_identifier_substitution = s/\A/on_/s
@@ -28,6 +30,7 @@ tokens {
 
 	symbol => $symbol_regex
 	model_identifier => $model_identifier_regex
+	file_identifier => $file_identifier_regex
 	keyword => $keyword_regex
 	identifier => $identifier_regex
 	
@@ -62,6 +65,16 @@ list context root {
 				type => 'controller_definition'
 				line_number => $0{line_number}
 				identifier => $1
+			}
+			match '}'
+		}
+		'file_directory' => {
+			match $identifier_regex, $string_regex, '{'
+			push !file_directory_block->{
+				type => 'file_directory_definition'
+				line_number => $0{line_number}
+				identifier => $1
+				directory => !format_string->$2
 			}
 			match '}'
 		}
@@ -105,6 +118,17 @@ object context model_block {
 				property_type => $format_model_identifier_substitution->$0
 				modifiers => {
 					default => '0'
+				}
+				modifiers => !model_property_type_modifiers->{}
+			}
+			match ';'
+		}
+		$file_identifier_regex => {
+			$_{properties}[] = !model_property_identifier->{
+				type => 'file_pointer_property'
+				property_type => $format_file_identifier_substitution->$0
+				modifiers => {
+					default => '""'
 				}
 				modifiers => !model_property_type_modifiers->{}
 			}
@@ -381,6 +405,14 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
+		'render_file' => {
+			$_{block}[] = {
+				type => 'render_file'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
+			match ';'
+		}
 		'status' => {
 			$_{block}[] = {
 				type => 'assign_status'
@@ -555,9 +587,27 @@ object context action_expression {
 			}
 			return
 		}
+		'file', $identifier_regex => {
+			$_ = {
+				type => 'load_file_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			return
+		}
 		'list', $identifier_regex => {
 			$_ = {
 				type => 'load_model_list_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			return
+		}
+		'create', $identifier_regex => {
+			$_ = {
+				type => 'create_model_expression'
 				line_number => $0{line_number}
 				identifier => $1
 				arguments => !action_arguments->{}
@@ -636,6 +686,12 @@ object context more_action_expression {
 		}
 	}
 }
+
+
+object context file_directory_block {
+	return
+}
+
 
 
 

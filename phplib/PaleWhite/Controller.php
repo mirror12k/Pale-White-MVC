@@ -35,6 +35,15 @@ abstract class Controller {
 		return $object;
 	}
 
+	public function load_file($file_directory, array $args) {
+		$file = $file_directory::file($args);
+
+		if ($file === null)
+			throw new \Exception("invalid file!");
+		
+		return $file;
+	}
+
 	public function validate_csrf_token($token) {
 		if (!hash_equals($_SESSION['pale_white_csrf_token'], $token))
 			throw new \Exception("incorrect csrf token");

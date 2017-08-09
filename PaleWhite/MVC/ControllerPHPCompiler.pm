@@ -276,7 +276,11 @@ sub compile_action {
 
 	if ($action->{type} eq 'render_template') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$res->body .= \$this->render_template('$action->{identifier}', $arguments);\n"
+		return "\$res->body = \$this->render_template('$action->{identifier}', $arguments);\n"
+
+	} elsif ($action->{type} eq 'render_file') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$res->body = $expression;\n"
 
 	} elsif ($action->{type} eq 'assign_status') {
 		my $expression = $self->compile_expression($action->{expression});
@@ -383,9 +387,17 @@ sub compile_expression {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "\$this->load_model('$expression->{identifier}', $arguments)"
 		
+	} elsif ($expression->{type} eq 'load_file_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "\$this->load_file('$expression->{identifier}', $arguments)"
+		
 	} elsif ($expression->{type} eq 'load_model_list_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "$expression->{identifier}::get_list($arguments)"
+		
+	} elsif ($expression->{type} eq 'create_model_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "$expression->{identifier}::create($arguments)"
 		
 	} elsif ($expression->{type} eq 'render_template_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});

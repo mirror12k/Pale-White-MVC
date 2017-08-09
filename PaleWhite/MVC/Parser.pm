@@ -17,6 +17,7 @@ use feature 'say';
 our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
 our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?|!/;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
+our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_keyword_regex = qr/\b(model|int|string|getter|setter|cast|to|from|static|function)\b/;
 our $var_event_identifier_regex = qr/create|delete/;
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
@@ -26,6 +27,7 @@ our $var_comment_regex = qr/#[^\n]*+\n/s;
 our $var_whitespace_regex = qr/\s++/s;
 our $var_format_native_code_substitution = sub { $_[0] =~ s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/sr };
 our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
+our $var_format_file_identifier_substitution = sub { $_[0] =~ s/\Afile:://sr };
 our $var_escape_string_substitution = sub { $_[0] =~ s/\\([\\"])/$1/gsr };
 our $var_format_string_substitution = sub { $_[0] =~ s/\A"(.*)"\Z/$1/sr };
 our $var_format_event_identifier_substitution = sub { $_[0] =~ s/\A/on_/sr };
@@ -35,6 +37,7 @@ our $tokens = [
 	'native_code_block' => $var_native_code_block_regex,
 	'symbol' => $var_symbol_regex,
 	'model_identifier' => $var_model_identifier_regex,
+	'file_identifier' => $var_file_identifier_regex,
 	'keyword' => $var_keyword_regex,
 	'identifier' => $var_identifier_regex,
 	'integer' => $var_integer_regex,
@@ -55,6 +58,7 @@ our $contexts = {
 	arguments_list_item => 'context_arguments_list_item',
 	branch_action_expression => 'context_branch_action_expression',
 	controller_block => 'context_controller_block',
+	file_directory_block => 'context_file_directory_block',
 	format_native_code => 'context_format_native_code',
 	format_string => 'context_format_string',
 	model_block => 'context_model_block',
@@ -132,6 +136,18 @@ sub context_root {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
 			@tokens = (@tokens, $self->step_tokens(1));
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'file_directory') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, qr/"([^\\\\"]|\\\\[\\\\"])*?"/s, \'{\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_string_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq '{';
+			@tokens = (@tokens, $self->step_tokens(3));
+			push @$context_list, $self->context_file_directory_block({ type => 'file_directory_definition', line_number => $tokens[0][2], identifier => $tokens[1][1], directory => $self->context_format_string($tokens[2][1]), });
+			$self->confess_at_current_offset('expected \'}\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
 			else {
 			$self->confess_at_current_offset('block statement expected');
 			}
@@ -183,6 +199,15 @@ sub context_model_block {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'model_pointer_property', property_type => $var_format_model_identifier_substitution->($tokens[0][1]), modifiers => { default => '0', }, modifiers => $self->context_model_property_type_modifiers({}), });
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_file_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'file_pointer_property', property_type => $var_format_file_identifier_substitution->($tokens[0][1]), modifiers => { default => '""', }, modifiers => $self->context_model_property_type_modifiers({}), });
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));
@@ -472,6 +497,15 @@ sub context_path_action_block_list {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'render_file') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{block}}, { type => 'render_file', line_number => $tokens[0][2], expression => $self->context_action_expression, };
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'status') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -653,11 +687,25 @@ sub context_action_expression {
 			$context_object = { type => 'load_model_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'file' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object = { type => 'load_file_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
+			return $context_object;
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'list' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object = { type => 'load_model_list_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'create' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object = { type => 'create_model_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'render' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
@@ -726,6 +774,13 @@ sub context_more_action_expression {
 			}
 	}
 	return $context_object;
+}
+
+sub context_file_directory_block {
+	my ($self, $context_object) = @_;
+	my @tokens;
+
+			return $context_object;
 }
 
 sub context_format_string {

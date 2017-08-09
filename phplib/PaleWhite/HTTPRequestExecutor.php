@@ -55,7 +55,7 @@ class HTTPRequestExecutor {
 			// process any file uploads into args
 			foreach ($_FILES as $field => $file_upload)
 			{
-				error_log("got file for argument $field: " . json_encode($file_upload));
+				// error_log("[PaleWhite] \$_FILES[$field]: " . json_encode($file_upload));
 				if (!isset($file_upload['error']) || is_array($file_upload['error']))
 					throw new \Exception("invalid file upload");
 				if ($file_upload['error'] !== UPLOAD_ERR_OK)
@@ -129,7 +129,12 @@ class HTTPRequestExecutor {
 
 		// send the body
 		if ($response->body !== null) {
-			echo($response->body);
+			if ($response->body instanceof \PaleWhite\FileDirectoryFile) {
+				error_log("[PaleWhite] sending file: '" . $response->body->filepath . "'");
+				readfile($response->body->filepath);
+			} else {
+				echo($response->body);
+			}
 		}
 	}
 }

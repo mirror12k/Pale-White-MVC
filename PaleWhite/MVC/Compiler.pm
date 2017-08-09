@@ -12,6 +12,7 @@ use Sugar::IO::File;
 use PaleWhite::MVC::Parser;
 use PaleWhite::MVC::ModelSQLCompiler;
 use PaleWhite::MVC::ControllerPHPCompiler;
+use PaleWhite::MVC::FileDirectoryPHPCompiler;
 use PaleWhite::MVC::ModelPHPCompiler;
 
 
@@ -62,6 +63,9 @@ sub compile_php {
 		} elsif ($item->{type} eq 'controller_definition') {
 			my $compiler = PaleWhite::MVC::ControllerPHPCompiler->new;
 			push @code, $compiler->compile_controller($item);
+		} elsif ($item->{type} eq 'file_directory_definition') {
+			my $compiler = PaleWhite::MVC::FileDirectoryPHPCompiler->new;
+			push @code, $compiler->compile_file_directory($item);
 		} else {
 			die "unimplemented mvc syntax item: $item->{type}";
 		}

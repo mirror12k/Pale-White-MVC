@@ -3,7 +3,7 @@
 namespace PaleWhite;
 // base model class which provides a lot of magic methods for compiled models
 abstract class Model {
-	private $_data;
+	public $_data;
 	private $_loaded = array();
 
 	public function __construct(array $data) {
@@ -13,16 +13,14 @@ abstract class Model {
 	// model access methods
 	public function __get($name) {
 		if (isset(static::$model_properties[$name])) {
-			if (isset(static::$model_submodel_properties[$name]) && !isset($this->_loaded[$name]))
-			{
+			if (isset(static::$model_submodel_properties[$name]) && !isset($this->_loaded[$name])) {
 				$this->_data[$name] = static::get_lazy_loaded_model($name, $this->_data[$name]);
 				$this->_loaded[$name] = true;
 			}
 			return $this->_data[$name];
 
 		} elseif (isset(static::$model_array_properties[$name])) {
-			if (!isset($this->_loaded[$name]))
-			{
+			if (!isset($this->_loaded[$name])) {
 				$this->_data[$name] = static::load_array_data($this->_data['id'], $name);
 				if (isset(static::$model_submodel_properties[$name]))
 					$this->_data[$name] = static::get_lazy_loaded_model_array($name, $this->_data[$name]);
@@ -205,6 +203,7 @@ abstract class Model {
 
 	private static function load_data(array $data) {
 		$loaded = array();
+		// error_log("debug load_data on " . get_called_class() . ": " . json_encode($data));
 		foreach ($data as $field => $value) {
 			$loaded[$field] = static::cast_from_store($field, $value);
 		}
@@ -251,16 +250,29 @@ abstract class Model {
 
 	public static function cast_to_store($name, $value) {
 		if (isset(static::$model_submodel_properties[$name])) {
-			if (is_object($value)) {
+			if ($value instanceof \PaleWhite\Model) {
 				$value = $value->id;
 			} elseif ($value === null) {
 				$value = 0;
+			}
+		} elseif (isset(static::$model_file_properties[$name])) {
+			if ($value instanceof \PaleWhite\FileDirectoryFile) {
+				$value = $value->filename;
+			} elseif ($value === null) {
+				$value = '';
 			}
 		}
 		return $value;
 	}
 
 	public static function cast_from_store($name, $value) {
+		if (isset(static::$model_file_properties[$name]))
+		{
+			$class = static::$model_file_properties[$name];
+			$value = (string)$value;
+			$value = ($value === "" ? null : $class::load_file($value));
+		}
+
 		return $value;
 	}
 
@@ -281,7 +293,7 @@ abstract class Model {
 
 		$class = static::$model_submodel_properties[$name];
 		$value = (int)$value;
-		return $value === 0 ? null : $class::get_by_id((int)$value);
+		return $value === 0 ? null : $class::get_by_id($value);
 		// if (is_int($value) or is_string($value)) {
 		// 	$value = static::cast_model_from_store($name, $value);
 		// }
@@ -297,6 +309,28 @@ abstract class Model {
 		$class = static::$model_submodel_properties[$name];
 		return $class::get_multiple_by_id($value);
 	}
+
+	// private static function get_lazy_loaded_file($name, $value) {
+	// 	if (!isset(static::$model_file_properties[$name]))
+	// 		throw new \Exception("attempt to lazy load non-file property '$name' in model class: " . get_called_class());
+
+	// 	$class = static::$model_file_properties[$name];
+	// 	$value = (string)$value;
+	// 	return $value === "" ? null : $class::load_file($value);
+	// }
+
+	// private static function get_lazy_loaded_file_array($name, $value) {
+	// 	if (!isset(static::$model_file_properties[$name]))
+	// 		throw new \Exception("attempt to lazy load non-file property '$name' in model class: " . get_called_class());
+		
+	// 	$class = static::$model_file_properties[$name];
+
+	// 	$files = array();
+	// 	foreach ($value as $filepath)
+	// 		$files[] = $value === "" ? null : $class::load_file($value);
+
+	// 	return $files;
+	// }
 
 	private function update_fields(array $values) {
 

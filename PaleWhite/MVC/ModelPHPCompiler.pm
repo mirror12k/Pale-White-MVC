@@ -37,6 +37,7 @@ sub compile_model {
 	my @model_properties = grep { not exists $_->{modifiers}{array_property} } @{$model->{properties}};
 	my @model_array_properties = grep { exists $_->{modifiers}{array_property} } @{$model->{properties}};
 	my @model_submodel_properties = grep { $_->{type} eq 'model_pointer_property' } @{$model->{properties}};
+	my @model_file_properties = grep { $_->{type} eq 'file_pointer_property' } @{$model->{properties}};
 
 	if (@model_properties) {
 		push @code, "\tpublic static \$model_properties = array(\n";
@@ -61,6 +62,14 @@ sub compile_model {
 		push @code, "\t);\n";
 	} else {
 		push @code, "\tpublic static \$model_submodel_properties = array();\n";
+	}
+
+	if (@model_file_properties) {
+		push @code, "\tpublic static \$model_file_properties = array(\n";
+		push @code, "\t\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @model_file_properties;
+		push @code, "\t);\n";
+	} else {
+		push @code, "\tpublic static \$model_file_properties = array();\n";
 	}
 
 	push @code, "\n";
