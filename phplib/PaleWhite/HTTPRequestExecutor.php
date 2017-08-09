@@ -23,36 +23,51 @@ class HTTPRequestExecutor {
 	public function execute () {
 		global $config;
 
-		// set up the global environment
-		global $database;
-		$database = new \PaleWhite\DatabaseDriver($config['database_config']);
-
-		// enable the session
-		session_start();
-		if (!isset($_SESSION['pale_white_csrf_token']))
-		{
-			$seed = openssl_random_pseudo_bytes(32);
-			if ($seed === false)
-				throw new \Exception("failed to generate csrf token, not enough entropy");
-			$_SESSION['pale_white_csrf_token'] = bin2hex($seed);
-		}
-
 		// process the path
 		$url = parse_url(urldecode($_SERVER['REQUEST_URI']));
 		$path = $url['path'];
 		$path = substr($path, strlen($config['site_base']));
+
 		error_log("[PaleWhite] routing '$path'");
 
-		// process any arguments
-		$args = array();
-		foreach ($_POST as $k => $v)
-			$args[$k] = $v;
-
-		// set up api objects
-		$request = new \PaleWhite\Request($path, $args);
-		$response = new \PaleWhite\Response();
-
 		try {
+
+			// set up the global environment
+			global $database;
+			$database = new \PaleWhite\DatabaseDriver($config['database_config']);
+
+			// enable the session
+			session_start();
+			// error_log("[PaleWhite] _SESSION: " . json_encode($_SESSION));
+			if (!isset($_SESSION['pale_white_csrf_token']))
+			{
+				$seed = openssl_random_pseudo_bytes(32);
+				if ($seed === false)
+					throw new \Exception("failed to generate csrf token, not enough entropy");
+				$_SESSION['pale_white_csrf_token'] = bin2hex($seed);
+			}
+
+			// process any post arguments
+			$args = array();
+			foreach ($_POST as $k => $v)
+				$args[$k] = $v;
+
+			// process any file uploads into args
+			foreach ($_FILES as $field => $file_upload)
+			{
+				error_log("got file for argument $field: " . json_encode($file_upload));
+				if (!isset($file_upload['error']) || is_array($file_upload['error']))
+					throw new \Exception("invalid file upload");
+				if ($file_upload['error'] !== UPLOAD_ERR_OK)
+					throw new \Exception("file upload failed");
+				$file_container = new \PaleWhite\FileUpload($file_upload['tmp_name'], $file_upload['size']);
+				$args[$field] = $file_container;
+			}
+
+			// set up api objects
+			$request = new \PaleWhite\Request($path, $args);
+			$response = new \PaleWhite\Response();
+
 			// call the main controller and try to route through it
 			$controller_class = $config['main_controller'];
 			$controller = new $controller_class();
@@ -62,6 +77,7 @@ class HTTPRequestExecutor {
 			// 	$controller->validate_csrf_token((string)$_POST['_csrf_token']);
 
 			$controller->route($request, $response);
+
 		} catch (\Exception $e) {
 			// last-chance exception catch
 			$response = new \PaleWhite\Response();
@@ -89,6 +105,8 @@ class HTTPRequestExecutor {
 				$response->body = "<!doctype html><html><head><title>Server Error</title></head><body>Server Error</body></html>";
 			}
 		}
+
+		// after the request has been process and a response has been generated
 
 		// if the response has a status, send it
 		if ($response->status !== null) {

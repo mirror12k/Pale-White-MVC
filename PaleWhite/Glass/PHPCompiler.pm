@@ -172,8 +172,10 @@ sub compile_item {
 		my @code;
 		push @code, $self->flush_accumulator;
 		push @code, "foreach (" . $self->compile_value_expression($item->{expression}) . " as " . (
-						exists $item->{key_identifier} ? "\$$item->{key_identifier} => \$$item->{value_identifier}" : "\$$item->{value_identifier}"
-					) . ") {\n";
+					exists $item->{key_identifier}
+						? "\$$item->{key_identifier} => \$$item->{value_identifier}"
+						: "\$$item->{value_identifier}"
+				) . ") {\n";
 		my $prev_scope = $self->{local_variable_scope};
 		$self->{local_variable_scope} = { %$prev_scope };
 		$self->{local_variable_scope}{$item->{value_identifier}} = 1;
@@ -204,10 +206,13 @@ sub compile_html_tag {
 	if (exists $tag->{attributes}) {
 		foreach my $key (sort keys %{$tag->{attributes}}) {
 			$self->{text_accumulator} .= " $key=\"";
-			if ((
-					($identifier eq 'a' and $key eq 'href')
-					or ($identifier eq 'link' and $key eq 'href')
-				) and ($tag->{attributes}{$key}{type} eq 'string_expression' or $tag->{attributes}{$key}{type} eq 'interpolation_expression')) {
+			if (
+					(
+						($identifier eq 'a' and $key eq 'href')
+						or ($identifier eq 'link' and $key eq 'href')
+						or ($identifier eq 'form' and $key eq 'action')
+					) and ($tag->{attributes}{$key}{type} eq 'string_expression' or
+						$tag->{attributes}{$key}{type} eq 'interpolation_expression')) {
 				my $expression = $tag->{attributes}{$key};
 				$expression = $expression->{expressions}[0] if $expression->{type} eq 'interpolation_expression';
 
@@ -220,7 +225,8 @@ sub compile_html_tag {
 		}
 	}
 	$self->{text_accumulator} .= ">";
-	# push @fields, map "$_=" . $self->compile_html_attribute($tag->{attributes}{$_}), keys %{$tag->{attributes}} if exists $tag->{attributes};
+	# push @fields, map "$_=" . $self->compile_html_attribute($tag->{attributes}{$_}), keys %{$tag->{attributes}}
+	# 	if exists $tag->{attributes};
 
 	# my $start_tag = '<' . join (' ', @fields) . '>';
 	# $self->{text_accumulator} .= $start_tag;

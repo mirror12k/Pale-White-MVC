@@ -323,8 +323,12 @@ sub compile_action {
 			my $model_class = $action->{validator_identifier};
 			$model_class =~ s/\Amodel::/\\/s;
 			$model_class =~ s/::/\\/s;
-			return "if (! \$$action->{identifier} instanceof $model_class)\n",
+			return "if (! (\$$action->{identifier} instanceof \\PaleWhite\\Model && \$$action->{identifier} instanceof $model_class))\n",
 				"\tthrow new \\Exception('argument \"$action->{identifier}\" not an instance of \"$model_class\" model');\n"
+
+		} elsif ($action->{validator_identifier} eq '_file_upload') {
+			return "if (! \$$action->{identifier} instanceof \\PaleWhite\\FileUpload)\n",
+				"\tthrow new \\Exception('argument \"$action->{identifier}\" not a file upload');\n"
 
 		} elsif ($action->{validator_identifier} eq '_csrf_token') {
 			return "\$this->validate_csrf_token(\$$action->{identifier});\n"

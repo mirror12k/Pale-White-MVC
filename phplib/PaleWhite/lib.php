@@ -3,6 +3,7 @@
 
 require_once 'Request.php';
 require_once 'Response.php';
+require_once 'FileUpload.php';
 require_once 'DatabaseDriver.php';
 require_once 'DatabaseQuery.php';
 require_once 'Model.php';
