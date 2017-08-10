@@ -1,0 +1,78 @@
+
+file_directory VideoUploadsDirectory "./uploads" {}
+
+
+model VideoFileModel {
+	file::VideoUploadsDirectory video_file;
+	int views;
+	string[255] video_name;
+
+	on delete {{
+		if ($this->video_file !== null)
+			$this->video_file->delete();
+	}}
+}
+
+controller MainController {
+	path "/" {
+		render UploadPageTemplate;
+	}
+
+	path "/post_video" [ !_csrf_token, string[1:255] video_name, _file_upload video_file ] {
+		my_file = file VideoUploadsDirectory accept_upload=video_file;
+		video_model = create VideoFileModel video_name=video_name, video_file=my_file, views=0;
+
+		if (video_model) {
+			status "302 Redirect";
+			video_url = action view_video_url video=video_model;
+			redirect video_url;
+		} else {
+			render ErrorTemplate error="failed to create file model!";
+		}
+	}
+
+	path "/delete_video" [ !_csrf_token, int video_id ] {
+		video_model = model? VideoFileModel id=video_id;
+
+		if (video_model) {
+			action delete_video video=video_model;
+			status "302 Redirect";
+			redirect "/";
+		} else {
+			render ErrorTemplate error="failed to create file model!";
+		}
+	}
+
+	path "/view/{{video_id}}" {
+		validate video_id as int;
+		
+		video_model = model? VideoFileModel id=video_id;
+		if (video_model) {
+			if (video_model.video_file) {
+				render VideoPageTemplate video_model=video_model;
+				# header "Content-Type" = video.video_file.mime_type;
+				# render_file video.video_file;
+			} else {
+				status "404 Not Found";
+				render ErrorTemplate error="file is missing";
+			}
+		} else {
+			status "404 Not Found";
+			render ErrorTemplate error="no such video!";
+		}
+	}
+
+	path default {
+		status "404 Not Found";
+		render ErrorTemplate error="Not Found";
+	}
+
+	action delete_video [ model::VideoFileModel video ] {{
+		$video->delete();
+	}}
+
+	action view_video_url [ model::VideoFileModel video ] {{
+		return "view/" . $video->id;
+	}}
+}
+

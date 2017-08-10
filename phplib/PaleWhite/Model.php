@@ -79,7 +79,7 @@ abstract class Model {
 				->table(static::$table_name)
 				->where(array('id' => $this->_data['id']));
 
-		unset($this->_model_cache['id'][$this->_data['id']]);
+		unset(static::$_model_cache['id'][$this->_data['id']]);
 
 		$result = $query->fetch();
 		return $result;

@@ -84,7 +84,7 @@ class FileDirectoryFile {
 		$this->file_directory_class = $file_directory_class;
 	}
 
-	public function delete_file() {
+	public function delete() {
 		return unlink($this->filepath);
 	}
 

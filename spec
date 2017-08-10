@@ -363,17 +363,17 @@ templated and pre-compiled mvc
 
 			secure file upload
 				// declare a file directory for uploading stuff
-				file_upload_directory meme_videos => '/meme_videos' {
-					// can validate user permissions before accepting the file
+				file_directory MemeVideoUploadDirectory '/meme_videos' {
+					// properties of file directory
 				}
 
 				// use it in an ajax path
-				ajax '/do_stuff' [ file::meme_videos file ] {
+				ajax '/do_stuff' [ _file_upload user_file ] {
 					// validate the user and arguments
 					validate ...;
 
 					// after validation, we accept the file transfer
-					filepath = accept_file_upload file;
+					filepath = file MemeVideoUploadDirectory from=user_file;
 
 					// record the file somehow by creating a model out of it or something
 					return status="success"
