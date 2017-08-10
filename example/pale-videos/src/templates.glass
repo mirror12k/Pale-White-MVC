@@ -8,12 +8,16 @@
 			link href="/css/style.css" type="text/css" rel="stylesheet"
 		body
 			div.header
-				!block header
+				div.header_link
+					a href="/" "Videos List"
+				div.header_link
+					a href="/upload" "Upload Video"
 			div.content
 				!block content
 			div.footer
+				div
+					a href="/" "<<< home"
 				!block footer
-				a href="/" "home"
 
 !template HelloWorldTemplate extends BaseTemplate
 	!block content
@@ -21,25 +25,46 @@
 
 !template ErrorTemplate extends BaseTemplate
 	!block content
-		h1 "Error!"
-		p {error}
+		div.error_container
+			div.title
+				h1 "Error!"
+			div.text
+				p {error}
+
+!template VideosListTemplate extends BaseTemplate
+	!block content
+		div.videos_list
+			!foreach videos_list as video_model
+				div.text
+					a href="/view/{{video_model.id}}"
+						{video_model.video_name}
 
 !template UploadPageTemplate extends BaseTemplate
 	!block content
-		h1 "please upload your video:"
-		form method="POST" action="/post_video" enctype="multipart/form-data"
-			!_csrf_token_input
-			input type="text" name="video_name" placeholder="video name"
-			input type="file" name="video_file"
-			button "submit video!"
+		div.submission_form
+			div.title
+				h1 "please upload your video:"
+			form method="POST" action="/post_video" enctype="multipart/form-data"
+				!_csrf_token_input
+				div.form_entry
+					input type="text" name="video_name" placeholder="video name"
+				div.form_entry
+					input type="file" name="video_file"
+				div.form_entry
+					button "Submit Video!"
 
 !template VideoPageTemplate extends BaseTemplate
 	!block content
-		h1 "{{video_model.video_name}}"
-		video controls=""
-			source src={video_model.video_file.url} type={video_model.video_file.mime_type}
-		form method="POST" action="/delete_video"
-			!_csrf_token_input
-			input type="hidden" name="video_id" value={video_model.id}
-			button "delete this video"
+		div.video_background
+			div.video_content
+				div.title
+					h1 "{{video_model.video_name}}"
+				div.video_block
+					video controls=""
+						source src={video_model.video_file.url} type={video_model.video_file.mime_type}
+				div.delete_button
+					form method="POST" action="/delete_video"
+						!_csrf_token_input
+						input type="hidden" name="video_id" value={video_model.id}
+						button "delete this video"
 

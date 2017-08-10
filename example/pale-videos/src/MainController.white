@@ -14,7 +14,13 @@ model VideoFileModel {
 }
 
 controller MainController {
+
 	path "/" {
+		videos_list = list VideoFileModel;
+		render VideosListTemplate videos_list=videos_list;
+	}
+
+	path "/upload" {
 		render UploadPageTemplate;
 	}
 
