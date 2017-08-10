@@ -210,6 +210,7 @@ sub compile_html_tag {
 					(
 						($identifier eq 'a' and $key eq 'href')
 						or ($identifier eq 'link' and $key eq 'href')
+						or ($identifier eq 'script' and $key eq 'src')
 						or ($identifier eq 'form' and $key eq 'action')
 					) and ($tag->{attributes}{$key}{type} eq 'string_expression' or
 						$tag->{attributes}{$key}{type} eq 'interpolation_expression')) {

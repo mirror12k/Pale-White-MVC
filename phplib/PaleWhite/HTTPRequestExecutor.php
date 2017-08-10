@@ -64,16 +64,18 @@ class HTTPRequestExecutor {
 					// under post_max_size and upload_max_filesize
 				if ($file_upload['error'] === UPLOAD_ERR_PARTIAL)
 					throw new \Exception("file upload failed: failed to upload whole file");
-				if ($file_upload['error'] === UPLOAD_ERR_NO_FILE)
-					throw new \Exception("file upload failed: no file sent");
 				if ($file_upload['error'] === UPLOAD_ERR_NO_TMP_DIR)
 					throw new \Exception("file upload failed: no tmp directory");
 				if ($file_upload['error'] === UPLOAD_ERR_CANT_WRITE)
 					throw new \Exception("file upload failed: cant write directory");
-				if ($file_upload['error'] !== UPLOAD_ERR_OK)
+				if ($file_upload['error'] === UPLOAD_ERR_OK) {
+					$file_container = new \PaleWhite\FileUpload($file_upload['tmp_name'], $file_upload['size']);
+					$args[$field] = $file_container;
+				} elseif ($file_upload['error'] === UPLOAD_ERR_NO_FILE) {
+					$args[$field] = null;
+				} else {
 					throw new \Exception("file upload failed");
-				$file_container = new \PaleWhite\FileUpload($file_upload['tmp_name'], $file_upload['size']);
-				$args[$field] = $file_container;
+				}
 			}
 
 			// set up api objects
