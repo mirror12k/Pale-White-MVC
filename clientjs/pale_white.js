@@ -23,14 +23,21 @@ pale_white = {
 	send_ajax_trigger: function (url, args) {
 		var xhr = new XMLHttpRequest();
 		xhr.open("POST", url, true);
-		xhr.setRequestHeader("Content-Type", "application/json");
 		xhr.setRequestHeader("X-Requested-With", "pale_white/ajax");
 		xhr.addEventListener('readystatechange', function () {
 			if (xhr.readyState == 4) {
 				pale_white.on_ajax_trigger_response(JSON.parse(xhr.response));
 			}
 		});
-		xhr.send(JSON.stringify(args));
+		
+		if (args instanceof FormData) {
+			// xhr.setRequestHeader("Content-Type", "multipart/form-data");
+			xhr.send(args);
+						
+		} else {
+			xhr.setRequestHeader("Content-Type", "application/json");
+			xhr.send(JSON.stringify(args));
+		}
 	},
 	on_ajax_trigger_response: function (data) {
 		console.log("[PaleWhite] got response: ", data);
@@ -61,13 +68,20 @@ pale_white = {
 		});
 	},
 	parse_form_input: function (form) {
-		var nodes = form.querySelectorAll('input');
-		var data = {};
-		for (var i = 0; i < nodes.length; i++) {
-			var node = nodes[i];
-			if (node.getAttribute('name') !== undefined) {
-				data[node.getAttribute('name')] = node.value;
+		var form_data = new FormData(form);
+
+		// see if the input has any files
+		for(var pair of form_data.entries()) {
+			if (pair[1] instanceof File) {
+				// if there is a file, we return the form data as is
+				return form_data;
 			}
+		}
+
+		// otherwise we parse a JSON-ready object
+		var data = {};
+		for(var pair of form_data.entries()) {
+			data[pair[0]] = pair[1];
 		}
 		return data;
 	},

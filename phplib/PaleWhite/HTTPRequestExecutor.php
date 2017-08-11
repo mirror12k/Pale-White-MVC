@@ -55,12 +55,12 @@ class HTTPRequestExecutor {
 				$_SESSION['pale_white_csrf_token'] = bin2hex($seed);
 			}
 
-			if ($is_ajax) {
+			if (isset($_SERVER['CONTENT_TYPE']) && $_SERVER['CONTENT_TYPE'] === 'application/json') {
 				// get json input from ajax request
 				$input = file_get_contents('php://input');
 				$args = json_decode($input, true);
-				// error_log("[PaleWhite] got ajax request: " . json_encode($args));
-				
+				// error_log("[PaleWhite] got json request data: " . json_encode($args));
+
 			} else {
 				// process any post arguments
 				$args = array();
@@ -92,6 +92,7 @@ class HTTPRequestExecutor {
 						throw new \Exception("file upload failed");
 					}
 				}
+				// error_log("[PaleWhite] got post request data: " . json_encode($args));
 			}
 
 			// set up api objects
