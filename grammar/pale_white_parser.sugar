@@ -619,13 +619,6 @@ object context action_arguments {
 			return
 		}
 	}
-	# if $identifier_regex, '=' => {
-
-	# 	while ',', $identifier_regex, '=' => {
-	# 		$_{$3} = !action_expression
-	# 	}
-	# }
-	# return
 }
 
 

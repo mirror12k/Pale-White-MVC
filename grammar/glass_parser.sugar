@@ -101,6 +101,54 @@ object context glass_item {
 			$_ = !glass_block->$_
 			return
 		}
+		'!', 'block' => {
+			match $identifier_regex
+			$_ = {
+				type => 'glass_helper'
+				line_number => $0{line_number}
+				identifier => $1
+				argument => $2
+				indent => $_
+			}
+			match $newline_regex
+			$_ = !glass_block->$_
+			return
+		}
+		'!', 'template' => {
+			if $identifier_regex, 'extends', $identifier_regex, $newline_regex => {
+				$_ = {
+					type => 'glass_helper'
+					line_number => $0{line_number}
+					identifier => $1
+					argument => $2
+					parent_template => $4
+					indent => $_
+				}
+				$_ = !glass_block->$_
+			} elsif $identifier_regex, $newline_regex => {
+				$_ = {
+					type => 'glass_helper'
+					line_number => $0{line_number}
+					identifier => $1
+					argument => $2
+					indent => $_
+				}
+				$_ = !glass_block->$_
+			} elsif $identifier_regex => {
+				$_ = {
+					type => 'glass_helper'
+					line_number => $0{line_number}
+					identifier => 'template_call'
+					template => $2
+					arguments => !glass_arguments->{}
+					indent => $_
+				}
+				$_ = !glass_block->$_
+			} else {
+				die 'expected template call or definition'
+			}
+			return
+		}
 		'!', $identifier_regex => {
 			$_ = !glass_helper->{
 				type => 'glass_helper'
@@ -158,6 +206,19 @@ object context glass_item {
 			die 'glass item expected'
 		}
 	}
+}
+
+
+object context glass_arguments {
+	while $identifier_regex, '=' => {
+		$_{$0} = !glass_argument_expression
+		if ',' => {
+			# good to continue
+		} else {
+			return
+		}
+	}
+	return
 }
 
 

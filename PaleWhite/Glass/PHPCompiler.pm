@@ -52,12 +52,13 @@ sub map_class_name {
 
 sub compile_template {
 	my ($self, $template) = @_;
-	die "invalid template: $template->{type}" unless $template->{type} eq 'glass_helper' and $template->{identifier} eq 'template';
+	die "invalid template: $template->{type}:$template->{identifier}"
+			unless $template->{type} eq 'glass_helper' and $template->{identifier} eq 'template';
 
-	my $identifier = $template->{arguments}[0];
+	my $identifier = $template->{argument};
 	my @code;
 
-	my $parent = $template->{arguments}[2] // 'PaleWhite/Glass/Template';
+	my $parent = $template->{parent_template} // 'PaleWhite/Glass/Template';
 	$parent = $self->map_class_name($parent);
 
 	push @code, $self->compile_template_render($template);
@@ -103,7 +104,7 @@ sub compile_template_render_block {
 	my %blocks;
 	if (exists $template->{block}) {
 		foreach my $item (grep { $_->{type} eq 'glass_helper' and $_->{identifier} eq 'block' } @{$template->{block}}) {
-			$blocks{$item->{arguments}[0]} = $item;
+			$blocks{$item->{argument}} = $item;
 		}
 	}
 
@@ -147,7 +148,12 @@ sub compile_item {
 	if ($item->{type} eq 'html_tag') {
 		return $self->compile_html_tag($item)
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
-		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{arguments}[0]', \$args);\n"
+		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{argument}', \$args);\n"
+
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'template_call') {
+		my $arguments = $self->compile_arguments($item->{arguments});
+		return $self->flush_accumulator, "\$text .= \$this->render_template('$item->{template}', $arguments);\n"
+
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq '_csrf_token_input') {
 		# equivalent to 'input name="_csrf_token", type="hidden", value={_csrf_token}'
 		return $self->compile_html_tag({
@@ -253,6 +259,15 @@ sub compile_html_tag {
 # 		die "unknown html attribute expression: $expression->{type}";
 # 	}
 # }
+
+sub compile_arguments {
+	my ($self, $arguments) = @_;
+	my @args;
+	foreach my $key (sort keys %$arguments) {
+		push @args, "'$key' => " . $self->compile_value_expression($arguments->{$key});
+	}
+	return "array(" . join(', ', @args) . ")"
+}
 
 sub compile_argument_expression {
 	my ($self, $expression, $context) = @_;
