@@ -218,6 +218,39 @@ object context controller_block {
 				block => []
 			}
 		}
+		'ajax', 'global' => {
+			$_{global_ajax_paths}[] = !path_action_block->{
+				type => 'global_path'
+				line_number => $0{line_number}
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
+		'ajax', 'default' => {
+			$_{default_ajax_path} = !path_action_block->{
+				type => 'default_path'
+				line_number => $0{line_number}
+				arguments => []
+				block => []
+			}
+		}
+		'ajax', 'error' => {
+			$_{error_ajax_path} = !path_action_block->{
+				type => 'error_path'
+				line_number => $0{line_number}
+				arguments => []
+				block => []
+			}
+		}
+		'ajax', $string_regex => {
+			$_{ajax_paths}[] = !path_action_block->{
+				type => 'match_path'
+				line_number => $0{line_number}
+				path => !format_string->$1
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
 		'action' => {
 			match $identifier_regex
 
@@ -410,6 +443,14 @@ object context path_action_block_list {
 				type => 'render_file'
 				line_number => $0{line_number}
 				expression => !action_expression
+			}
+			match ';'
+		}
+		'render_json' => {
+			$_{block}[] = {
+				type => 'render_json'
+				line_number => $0{line_number}
+				arguments => !action_arguments->{}
 			}
 			match ';'
 		}

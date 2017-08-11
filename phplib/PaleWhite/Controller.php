@@ -7,6 +7,7 @@ namespace PaleWhite;
 abstract class Controller {
 
 	public function route (Request $req, Response $res) {}
+	public function route_ajax (Request $req, Response $res) {}
 	
 	public function validate ($type, $value) {
 		throw new \Exception("undefined validator requested: '$type'");

@@ -28,7 +28,15 @@ class HTTPRequestExecutor {
 		$path = $url['path'];
 		$path = substr($path, strlen($config['site_base']));
 
-		error_log("[PaleWhite] routing '$path'");
+
+		if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && (string)$_SERVER['HTTP_X_REQUESTED_WITH'] === 'pale_white/ajax') {
+			$is_ajax = true;
+			error_log("[PaleWhite] routing ajax '$path'");
+		} else {
+			$is_ajax = false;
+			error_log("[PaleWhite] routing '$path'");
+		}
+
 
 		try {
 
@@ -47,34 +55,41 @@ class HTTPRequestExecutor {
 				$_SESSION['pale_white_csrf_token'] = bin2hex($seed);
 			}
 
-			// process any post arguments
-			$args = array();
-			foreach ($_POST as $k => $v)
-				$args[$k] = $v;
+			if ($is_ajax) {
+				// get json input from ajax request
+				$input = file_get_contents('php://input');
+				$args = json_decode($input, true);
+				error_log("got ajax request: " . json_encode($args));
+			} else {
+				// process any post arguments
+				$args = array();
+				foreach ($_POST as $k => $v)
+					$args[$k] = $v;
 
-			// process any file uploads into args
-			foreach ($_FILES as $field => $file_upload)
-			{
-				// error_log("[PaleWhite] \$_FILES[$field]: " . json_encode($file_upload));
-				if (!isset($file_upload['error']) || is_array($file_upload['error']))
-					throw new \Exception("invalid file upload");
-				if ($file_upload['error'] === UPLOAD_ERR_INI_SIZE)
-					throw new \Exception("file upload failed: size exceeded");
-					// may need to increase upload limits in your php.ini
-					// under post_max_size and upload_max_filesize
-				if ($file_upload['error'] === UPLOAD_ERR_PARTIAL)
-					throw new \Exception("file upload failed: failed to upload whole file");
-				if ($file_upload['error'] === UPLOAD_ERR_NO_TMP_DIR)
-					throw new \Exception("file upload failed: no tmp directory");
-				if ($file_upload['error'] === UPLOAD_ERR_CANT_WRITE)
-					throw new \Exception("file upload failed: cant write directory");
-				if ($file_upload['error'] === UPLOAD_ERR_OK) {
-					$file_container = new \PaleWhite\FileUpload($file_upload['tmp_name'], $file_upload['size']);
-					$args[$field] = $file_container;
-				} elseif ($file_upload['error'] === UPLOAD_ERR_NO_FILE) {
-					$args[$field] = null;
-				} else {
-					throw new \Exception("file upload failed");
+				// process any file uploads into args
+				foreach ($_FILES as $field => $file_upload)
+				{
+					// error_log("[PaleWhite] \$_FILES[$field]: " . json_encode($file_upload));
+					if (!isset($file_upload['error']) || is_array($file_upload['error']))
+						throw new \Exception("invalid file upload");
+					if ($file_upload['error'] === UPLOAD_ERR_INI_SIZE)
+						throw new \Exception("file upload failed: size exceeded");
+						// may need to increase upload limits in your php.ini
+						// under post_max_size and upload_max_filesize
+					if ($file_upload['error'] === UPLOAD_ERR_PARTIAL)
+						throw new \Exception("file upload failed: failed to upload whole file");
+					if ($file_upload['error'] === UPLOAD_ERR_NO_TMP_DIR)
+						throw new \Exception("file upload failed: no tmp directory");
+					if ($file_upload['error'] === UPLOAD_ERR_CANT_WRITE)
+						throw new \Exception("file upload failed: cant write directory");
+					if ($file_upload['error'] === UPLOAD_ERR_OK) {
+						$file_container = new \PaleWhite\FileUpload($file_upload['tmp_name'], $file_upload['size']);
+						$args[$field] = $file_container;
+					} elseif ($file_upload['error'] === UPLOAD_ERR_NO_FILE) {
+						$args[$field] = null;
+					} else {
+						throw new \Exception("file upload failed");
+					}
 				}
 			}
 
@@ -90,33 +105,71 @@ class HTTPRequestExecutor {
 			// if (isset($_POST['_csrf_token']))
 			// 	$controller->validate_csrf_token((string)$_POST['_csrf_token']);
 
-			$controller->route($request, $response);
+			if ($is_ajax) {
+				$controller->route_ajax($request, $response);
+			} else {
+				$controller->route($request, $response);
+			}
 
 		} catch (\Exception $e) {
 			// last-chance exception catch
 			$response = new \PaleWhite\Response();
 			$response->status = "500 Server Error";
-			if ($config['show_exception_trace']) {
-				// show a detailed dump of data if show_exception_trace is enabled
-				$response->body = "<!doctype html><html><head><title>Server Error</title></head><body>";
+			if ($is_ajax) {
+				if ($config['show_exception_trace']) {
+					// show a detailed dump of data if show_exception_trace is enabled
+					$exception_trace = array(
+						'exception_class' => get_class($e),
+						'exception_message' => $e->getMessage(),
+						'file' => $e->getFile(),
+						'line' => $e->getLine(),
+						'stacktrace' => array(),
+					);
 
-				$response->body .= "<h1>a '" . get_class($e) . "' exception occured:</h1>";
-				$response->body .= "<h2>" . $e->getMessage() . "</h2>";
-				$response->body .= "<p>at " . $e->getFile() . ":" . $e->getLine() . "</p>";
+					foreach ($e->getTrace() as $trace) {
+						$message = $trace['file'] . "(" . $trace['line'] . "): ";
+						if (isset($trace['class'])) {
+							$message .= $trace['class'] . $trace['type'];
+						}
+						$message .= $trace['function'];
 
-				foreach ($e->getTrace() as $trace) {
-					$message = $trace['file'] . "(" . $trace['line'] . "): ";
-					if (isset($trace['class'])) {
-						$message .= $trace['class'] . $trace['type'];
+						$exception_trace['stacktrace'][] = $message;
 					}
-					$message .= $trace['function'];
-					$response->body .= "<p>$message</p>";
-				}
 
-				$response->body .= "</body></html>";
+					$response->body .= "</body></html>";
+					$response->body = array(
+						'status' => 'error',
+						'error' => 'a "' . get_class($e) . '" exception occurred: ' . $e->getMessage(),
+						'exception_trace' => $exception_trace,
+					);
+				} else {
+					// show a bland server error message
+					$response->body = array('status' => 'error', 'error' => 'Server Exception Occurred');
+				}
 			} else {
-				// show a bland server error message
-				$response->body = "<!doctype html><html><head><title>Server Error</title></head><body>Server Error</body></html>";
+				if ($config['show_exception_trace']) {
+					// show a detailed dump of data if show_exception_trace is enabled
+					$response->body = "<!doctype html><html><head><title>Server Error</title></head><body>";
+
+					$response->body .= "<h1>a '" . get_class($e) . "' exception occurred:</h1>";
+					$response->body .= "<h2>" . $e->getMessage() . "</h2>";
+					$response->body .= "<p>at " . $e->getFile() . ":" . $e->getLine() . "</p>";
+
+					foreach ($e->getTrace() as $trace) {
+						$message = $trace['file'] . "(" . $trace['line'] . "): ";
+						if (isset($trace['class'])) {
+							$message .= $trace['class'] . $trace['type'];
+						}
+						$message .= $trace['function'];
+						$response->body .= "<p>$message</p>";
+					}
+
+					$response->body .= "</body></html>";
+				} else {
+					// show a bland server error message
+					$response->body = "<!doctype html><html><head><title>Server Error</title></head>"
+						. "<body>Server Exception Occurred</body></html>";
+				}
 			}
 		}
 
@@ -151,6 +204,8 @@ class HTTPRequestExecutor {
 			if ($response->body instanceof \PaleWhite\FileDirectoryFile) {
 				error_log("[PaleWhite] sending file: '" . $response->body->filepath . "'");
 				readfile($response->body->filepath);
+			} elseif (is_array($response->body)) {
+				echo(json_encode($response->body));
 			} else {
 				echo($response->body);
 			}

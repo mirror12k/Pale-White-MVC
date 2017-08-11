@@ -47,6 +47,7 @@ sub compile_controller {
 	$parent = $self->map_class_name($parent);
 
 	push @code, $self->compile_controller_route($controller);
+	push @code, $self->compile_controller_route_ajax($controller);
 	push @code, $self->compile_controller_validate($controller);
 	push @code, $self->compile_controller_action($controller);
 	
@@ -90,6 +91,44 @@ sub compile_controller_route {
 	@code = map "\t$_", @code;
 
 	@code = ("public function route (\\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_controller_route_ajax {
+	my ($self, $controller) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$req->args';
+
+	my @paths;
+	@paths = (@paths, @{$controller->{global_ajax_paths}}) if exists $controller->{global_ajax_paths};
+	@paths = (@paths, @{$controller->{ajax_paths}}) if exists $controller->{ajax_paths};
+	return @code unless @paths;
+
+	push @code, "parent::route_ajax(\$req, \$res);\n";
+	push @code, "\n";
+	my $first = 1;
+	foreach my $path (@paths) {
+		push @code, $self->compile_path($path, $first);
+		push @code, "\n";
+		$first = 0 if $path->{type} eq 'match_path';
+	}
+
+	if (exists $controller->{default_ajax_path}) {
+		push @code, "} else {\n";
+		push @code, map "\t$_", $self->compile_path($controller->{default_ajax_path});
+	}
+	push @code, "}\n";
+
+	if (exists $controller->{error_ajax_path}) {
+		@code = map "\t$_", @code;
+		my @exception_code = map "\t$_", $self->compile_path($controller->{error_ajax_path});
+		@code = ("try {\n", @code, "} catch (\\Exception \$e) {\n", @exception_code, "}\n");
+	}
+	@code = map "\t$_", @code;
+
+	@code = ("public function route_ajax (\\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -281,6 +320,10 @@ sub compile_action {
 	} elsif ($action->{type} eq 'render_file') {
 		my $expression = $self->compile_expression($action->{expression});
 		return "\$res->body = $expression;\n"
+
+	} elsif ($action->{type} eq 'render_json') {
+		my $arguments = $self->compile_arguments_array($action->{arguments});
+		return "\$res->body = $arguments;\n"
 
 	} elsif ($action->{type} eq 'assign_status') {
 		my $expression = $self->compile_expression($action->{expression});
