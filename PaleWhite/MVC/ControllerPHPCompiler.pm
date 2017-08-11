@@ -335,7 +335,8 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'assign_header') {
 		my $expression = $self->compile_expression($action->{expression});
-		return "\$res->headers['$action->{header_string}'] = $expression;\n"
+		my $header = lc $action->{header_string};
+		return "\$res->headers['$header'] = $expression;\n"
 
 	} elsif ($action->{type} eq 'controller_action') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
@@ -463,6 +464,9 @@ sub compile_expression {
 		
 	} elsif ($expression->{type} eq 'integer_expression') {
 		return "$expression->{value}"
+		
+	} elsif ($expression->{type} eq 'object_expression') {
+		return $self->compile_arguments_array($expression->{value})
 		
 	} elsif ($expression->{type} eq 'session_variable_expression') {
 		return "\$_SESSION['$expression->{identifier}']";

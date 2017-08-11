@@ -681,6 +681,8 @@ sub context_path_action_block_list {
 
 sub context_action_arguments {
 	my ($self, $context_object) = @_;
+
+	while ($self->more_tokens) {
 	my @tokens;
 
 			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=') {
@@ -688,14 +690,34 @@ sub context_action_arguments {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object->{$tokens[0][1]} = $self->context_action_expression;
-			while ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq '=') {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
-			@tokens = (@tokens, $self->step_tokens(3));
-			$context_object->{$tokens[3][1]} = $self->context_action_expression;
+			@tokens = (@tokens, $self->step_tokens(1));
 			}
-			}
+			else {
 			return $context_object;
+			}
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object->{$self->context_format_string($tokens[0][1])} = $self->context_action_expression;
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			else {
+			return $context_object;
+			}
+			}
+			else {
+			return $context_object;
+			}
+	}
+	return $context_object;
 }
 
 sub context_branch_action_expression {
@@ -799,6 +821,16 @@ sub context_action_expression {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = { type => 'integer_expression', line_number => $tokens[0][2], value => $tokens[0][1], };
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'object_expression', line_number => $tokens[0][2], value => $self->context_action_arguments({}), };
+			$self->confess_at_current_offset('expected \']\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ']';
+			@tokens = (@tokens, $self->step_tokens(1));
 			return $context_object;
 			}
 			else {

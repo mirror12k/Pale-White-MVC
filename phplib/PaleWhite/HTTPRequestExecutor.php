@@ -59,7 +59,8 @@ class HTTPRequestExecutor {
 				// get json input from ajax request
 				$input = file_get_contents('php://input');
 				$args = json_decode($input, true);
-				error_log("got ajax request: " . json_encode($args));
+				// error_log("[PaleWhite] got ajax request: " . json_encode($args));
+				
 			} else {
 				// process any post arguments
 				$args = array();
@@ -205,6 +206,8 @@ class HTTPRequestExecutor {
 				error_log("[PaleWhite] sending file: '" . $response->body->filepath . "'");
 				readfile($response->body->filepath);
 			} elseif (is_array($response->body)) {
+				if (!isset($response->headers['content-type']))
+					header("Content-Type: application/json");
 				echo(json_encode($response->body));
 			} else {
 				echo($response->body);

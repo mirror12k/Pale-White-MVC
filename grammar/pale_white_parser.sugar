@@ -598,14 +598,34 @@ object context path_action_block_list {
 
 
 object context action_arguments {
-	if $identifier_regex, '=' => {
-		$_{$0} = !action_expression
-
-		while ',', $identifier_regex, '=' => {
-			$_{$3} = !action_expression
+	switch {
+		$identifier_regex, '=' => {
+			$_{$0} = !action_expression
+			if ',' => {
+				# allow another argument to get parsed
+			} else {
+				return
+			}
+		}
+		$string_regex, '=' => {
+			$_{!format_string->$0} = !action_expression
+			if ',' => {
+				# allow another argument to get parsed
+			} else {
+				return
+			}
+		}
+		default {
+			return
 		}
 	}
-	return
+	# if $identifier_regex, '=' => {
+
+	# 	while ',', $identifier_regex, '=' => {
+	# 		$_{$3} = !action_expression
+	# 	}
+	# }
+	# return
 }
 
 
@@ -720,6 +740,15 @@ object context action_expression {
 				line_number => $0{line_number}
 				value => $0
 			}
+			return
+		}
+		'[' => {
+			$_ = {
+				type => 'object_expression'
+				line_number => $0{line_number}
+				value => !action_arguments->{}
+			}
+			match ']'
 			return
 		}
 		default {
