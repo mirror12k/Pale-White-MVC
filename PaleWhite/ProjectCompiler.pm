@@ -19,6 +19,48 @@ use PaleWhite::JS::Compiler;
 
 
 
+sub default_php_config_file {
+	return "<?php
+
+global \$config;
+
+\$config = array(
+	'site_base' => '',
+	'main_controller' => 'MainController',
+	'show_exception_trace' => true,
+
+	'database_config' => array(
+		'mysql_host' => 'localhost',
+		'mysql_username' => 'root',
+		'mysql_password' => '',
+		'mysql_database' => '',
+	),
+);
+
+"
+}
+
+sub default_htaccess_file {
+	return "
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteRule ^ index.php [L]
+</IfModule>
+"
+}
+
+sub default_php_index_file {
+	return "<?php
+
+require_once 'includes.php';
+require_once 'config.php';
+
+\$executor = new \\PaleWhite\\HTTPRequestExecutor();
+\$executor->execute();
+
+"
+}
 
 sub compile_includes {
 	my (@includes) = @_;
@@ -110,7 +152,7 @@ sub compile_project_directory {
 
 		my $compiler = PaleWhite::JS::Compiler->new;
 		my $compile_js = $compiler->compile_file($source_path);
-		
+
 		my $destination_file = Sugar::IO::File->new($destination_path);
 		$destination_file->dir->mk unless $destination_file->dir->exists;
 		$destination_file->write($compile_js);
@@ -156,24 +198,7 @@ sub compile_project_directory {
 	unless ($config_file->exists) {
 		say "\tconfig file: $config_file";
 
-		$config_file->write("<?php
-
-global \$config;
-
-\$config = array(
-	'site_base' => '',
-	'main_controller' => 'MainController',
-	'show_exception_trace' => true,
-
-	'database_config' => array(
-		'mysql_host' => 'localhost',
-		'mysql_username' => 'root',
-		'mysql_password' => '',
-		'mysql_database' => '',
-	),
-);
-
-");
+		$config_file->write(default_php_config_file);
 
 		say "\t\tdefault config written, please add your settings to properly setup your app";
 	}
@@ -181,32 +206,17 @@ global \$config;
 	unless ($htaccess_file->exists) {
 		say "\thtaccess file: $htaccess_file";
 
-		$htaccess_file->write("
-<IfModule mod_rewrite.c>
-	RewriteEngine On
-	RewriteCond %{REQUEST_FILENAME} !-f
-	RewriteRule ^ index.php [L]
-</IfModule>
-");
+		$htaccess_file->write(default_htaccess_file);
 
 		say "\t\tdefault htaccess written, please edit it if necessary";
 	}
 
 	unless ($index_file->exists) {
 		say "\tindex file: $index_file";
-		$index_file->write("<?php
-
-require_once 'includes.php';
-require_once 'config.php';
-
-\$executor = new \\PaleWhite\\HTTPRequestExecutor();
-\$executor->execute();
-
-");
+		$index_file->write(default_php_index_file);
 	}
 
 }
-
 
 
 sub main {

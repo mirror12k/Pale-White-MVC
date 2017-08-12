@@ -9,10 +9,10 @@ string_regex = /"([^\\"]|\\[\\"])*?"/s
 
 symbol_regex = /!|\.|\#|=>|=|,|\{|\}|-/
 
-comment_regex = /\s*+\#[^\n]*+\n/s
+# comment_regex = /\s*+\#[^\n]*+\n/s
 indent_regex = /\t++/
 whitespace_regex = /[\t \r]++/
-newline_regex = /\s*\n/s
+newline_regex = /\s*(\#[^\n]*+\s*)*\n/s
 
 escape_string_substitution = s/\\([\\"])/$1/gs
 format_string_substitution = s/\A"(.*)"\Z/$1/s
@@ -31,14 +31,14 @@ tokens {
 
 	symbol => $symbol_regex
 
-	comment => $comment_regex
+	# comment => $comment_regex
 	indent => $indent_regex
 	whitespace => $whitespace_regex
 	newline => $newline_regex
 }
 
 ignored_tokens {
-	comment
+	# comment
 	whitespace
 }
 
