@@ -20,6 +20,7 @@ our $var_string_interpolation_middle_regex = qr/\}\}([^\\"]|\\[\\"])*?\{\{/s;
 our $var_string_interpolation_end_regex = qr/\}\}([^\\"]|\\[\\"])*?"/s;
 our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
 our $var_symbol_regex = qr/!|\.|\#|=>|=|,|\{|\}|-/;
+our $var_comment_regex = qr/\s*+\#[^\n]*+\n/s;
 our $var_indent_regex = qr/\t++/;
 our $var_whitespace_regex = qr/[\t \r]++/;
 our $var_newline_regex = qr/\s*\n/s;
@@ -37,12 +38,14 @@ our $tokens = [
 	'string_interpolation_end' => $var_string_interpolation_end_regex,
 	'string' => $var_string_regex,
 	'symbol' => $var_symbol_regex,
+	'comment' => $var_comment_regex,
 	'indent' => $var_indent_regex,
 	'whitespace' => $var_whitespace_regex,
 	'newline' => $var_newline_regex,
 ];
 
 our $ignored_tokens = [
+	'comment',
 	'whitespace',
 ];
 
@@ -182,6 +185,39 @@ sub context_glass_item {
 			else {
 			$context_object->{value_identifier} = '_';
 			}
+			$self->confess_at_current_offset('expected qr/\\s*\\n/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_newline_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_block($context_object);
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '!' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'if') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => $tokens[1][1], expression => $self->context_glass_argument_expression, indent => $context_object, };
+			$self->confess_at_current_offset('expected qr/\\s*\\n/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_newline_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_block($context_object);
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '!' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'elseif') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => $tokens[1][1], expression => $self->context_glass_argument_expression, indent => $context_object, };
+			$self->confess_at_current_offset('expected qr/\\s*\\n/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_newline_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_block($context_object);
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '!' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'else') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => $tokens[1][1], indent => $context_object, };
 			$self->confess_at_current_offset('expected qr/\\s*\\n/s')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_newline_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));

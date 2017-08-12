@@ -60,11 +60,24 @@
 				div.title
 					h1 "{{video_model.video_name}}"
 				div.video_block
-					video controls=""
-						source src={video_model.video_file.url} type={video_model.video_file.mime_type}
+					!template VideoWidgetTemplate video_model=video_model
+					# video controls=""
+					# 	source src={video_model.video_file.url} type={video_model.video_file.mime_type}
 				div.delete_button
 					form method="POST" action="/delete_video"
 						!_csrf_token_input
 						input type="hidden" name="video_id" value={video_model.id}
 						button "delete this video"
+
+
+!template VideoWidgetTemplate
+	div.asdf
+	!if video_model.video_file
+		video controls=""
+			source src={video_model.video_file.url} type={video_model.video_file.mime_type}
+	!else
+		div.text
+			"missing video file!"
+	div.qwer
+
 

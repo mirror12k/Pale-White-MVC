@@ -54,14 +54,14 @@ controller MainController {
 		
 		video_model = model? VideoFileModel id=video_id;
 		if (video_model) {
-			if (video_model.video_file) {
-				render VideoPageTemplate video_model=video_model;
-				# header "Content-Type" = video.video_file.mime_type;
-				# render_file video.video_file;
-			} else {
-				status "404 Not Found";
-				render ErrorTemplate error="file is missing";
-			}
+			render VideoPageTemplate video_model=video_model;
+			# if (video_model.video_file) {
+			# 	# header "Content-Type" = video.video_file.mime_type;
+			# 	# render_file video.video_file;
+			# } else {
+			# 	status "404 Not Found";
+			# 	render ErrorTemplate error="file is missing";
+			# }
 		} else {
 			status "404 Not Found";
 			render ErrorTemplate error="no such video!";

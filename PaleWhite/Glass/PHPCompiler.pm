@@ -76,15 +76,16 @@ sub compile_template_render {
 
 	my @tags;
 	if (exists $template->{block}) {
-		@tags = grep $_->{type} eq 'html_tag', @{$template->{block}};
+		@tags = grep {
+			$_->{type} eq 'html_tag'
+			or ($_->{type} eq 'glass_helper' and $_->{identifier} ne 'block')
+		} @{$template->{block}};
 	}
 	return @code unless @tags;
 
 	push @code, "\$text = parent::render(\$args);\n";
 	push @code, "\n";
-	foreach my $item (@tags) {
-		push @code, $self->compile_item($item);
-	}
+	push @code, $self->compile_block(\@tags);
 	# say "debug: $self->{text_accumulator}";
 	push @code, $self->flush_accumulator;
 	push @code, "\n";
@@ -135,8 +136,24 @@ sub compile_block {
 	my ($self, $block) = @_;
 
 	my @code;
+	my $prev;
 	foreach my $item (@$block) {
+		if ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'elseif') {
+			die "elseif block without previous if"
+				unless defined $prev and $prev->{type} eq 'glass_helper'
+					and ($prev->{identifier} eq 'elseif' or $prev->{identifier} eq 'if');
+
+			pop @code; # remove closing bracket to format better
+		}
+		if ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'else') {
+			die "else block without previous if"
+				unless defined $prev and $prev->{type} eq 'glass_helper'
+					and ($prev->{identifier} eq 'elseif' or $prev->{identifier} eq 'if');
+
+			pop @code; # remove closing bracket to format better
+		}
 		push @code, $self->compile_item($item);
+		$prev = $item;
 	}
 
 	return @code
@@ -164,6 +181,7 @@ sub compile_item {
 				value => { type => 'variable_expression', identifier => "_csrf_token", },
 			},
 		})
+
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq '_csrf_token_meta') {
 		# equivalent to 'input name="_csrf_token", type="hidden", value={_csrf_token}'
 		return $self->compile_html_tag({
@@ -174,6 +192,7 @@ sub compile_item {
 				content => { type => 'variable_expression', identifier => "_csrf_token", },
 			},
 		})
+
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
 		my @code;
 		push @code, $self->flush_accumulator;
@@ -186,6 +205,42 @@ sub compile_item {
 		$self->{local_variable_scope} = { %$prev_scope };
 		$self->{local_variable_scope}{$item->{value_identifier}} = 1;
 		$self->{local_variable_scope}{$item->{key_identifier}} = 1 if exists $item->{key_identifier};
+		push @code, map "\t$_", $self->compile_block($item->{block});
+		push @code, map "\t$_", $self->flush_accumulator;
+		$self->{local_variable_scope} = $prev_scope;
+		push @code, "}\n";
+		return @code
+
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'if') {
+		my @code;
+		push @code, $self->flush_accumulator;
+		push @code, "if (" . $self->compile_value_expression($item->{expression}) . ") {\n";
+		my $prev_scope = $self->{local_variable_scope};
+		$self->{local_variable_scope} = { %$prev_scope };
+		push @code, map "\t$_", $self->compile_block($item->{block});
+		push @code, map "\t$_", $self->flush_accumulator;
+		$self->{local_variable_scope} = $prev_scope;
+		push @code, "}\n";
+		return @code
+
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'elseif') {
+		my @code;
+		push @code, $self->flush_accumulator;
+		push @code, "} elseif (" . $self->compile_value_expression($item->{expression}) . ") {\n";
+		my $prev_scope = $self->{local_variable_scope};
+		$self->{local_variable_scope} = { %$prev_scope };
+		push @code, map "\t$_", $self->compile_block($item->{block});
+		push @code, map "\t$_", $self->flush_accumulator;
+		$self->{local_variable_scope} = $prev_scope;
+		push @code, "}\n";
+		return @code
+
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'else') {
+		my @code;
+		push @code, $self->flush_accumulator;
+		push @code, "} else {\n";
+		my $prev_scope = $self->{local_variable_scope};
+		$self->{local_variable_scope} = { %$prev_scope };
 		push @code, map "\t$_", $self->compile_block($item->{block});
 		push @code, map "\t$_", $self->flush_accumulator;
 		$self->{local_variable_scope} = $prev_scope;

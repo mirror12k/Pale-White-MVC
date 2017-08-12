@@ -9,6 +9,7 @@ string_regex = /"([^\\"]|\\[\\"])*?"/s
 
 symbol_regex = /!|\.|\#|=>|=|,|\{|\}|-/
 
+comment_regex = /\s*+\#[^\n]*+\n/s
 indent_regex = /\t++/
 whitespace_regex = /[\t \r]++/
 newline_regex = /\s*\n/s
@@ -30,12 +31,14 @@ tokens {
 
 	symbol => $symbol_regex
 
+	comment => $comment_regex
 	indent => $indent_regex
 	whitespace => $whitespace_regex
 	newline => $newline_regex
 }
 
 ignored_tokens {
+	comment
 	whitespace
 }
 
@@ -96,6 +99,41 @@ object context glass_item {
 				$_{value_identifier} = $3
 			} else {
 				$_{value_identifier} = '_'
+			}
+			match $newline_regex
+			$_ = !glass_block->$_
+			return
+		}
+		'!', 'if' => {
+			$_ = {
+				type => 'glass_helper'
+				line_number => $0{line_number}
+				identifier => $1
+				expression => !glass_argument_expression
+				indent => $_
+			}
+			match $newline_regex
+			$_ = !glass_block->$_
+			return
+		}
+		'!', 'elseif' => {
+			$_ = {
+				type => 'glass_helper'
+				line_number => $0{line_number}
+				identifier => $1
+				expression => !glass_argument_expression
+				indent => $_
+			}
+			match $newline_regex
+			$_ = !glass_block->$_
+			return
+		}
+		'!', 'else' => {
+			$_ = {
+				type => 'glass_helper'
+				line_number => $0{line_number}
+				identifier => $1
+				indent => $_
 			}
 			match $newline_regex
 			$_ = !glass_block->$_
