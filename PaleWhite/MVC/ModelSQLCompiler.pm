@@ -44,6 +44,7 @@ sub compile_property {
 
 	$suffix .= " DEFAULT $property->{modifiers}{default}" if exists $property->{modifiers}{default};
 	$suffix .= " NOT NULL auto_increment" if exists $property->{modifiers}{auto_increment};
+	$suffix .= ", UNIQUE (`$identifier`)" if exists $property->{modifiers}{unique};
 	$suffix .= ", UNIQUE KEY `$identifier` (`$identifier`)" if exists $property->{modifiers}{unique_key};
 
 	return "$identifier $type$suffix"
