@@ -406,6 +406,14 @@ sub compile_action {
 		my $expression = $self->compile_expression($action->{expression});
 		return "\$_SESSION['$action->{identifier}'] = $expression;\n"
 
+	} elsif ($action->{type} eq 'expression_statement') {
+		if ($action->{expression}{type} ne 'method_call_expression') {
+			die "expression statement cannot be of type '$action->{expression}{type}'";
+		}
+
+		my $expression = $self->compile_expression($action->{expression});
+		return "$expression;\n"
+
 	} else {
 		die "invalid action: $action->{type}";
 	}
@@ -421,6 +429,13 @@ sub compile_arguments_array {
 	}
 
 	return 'array(' . join (', ', @expressions) . ')'
+}
+
+
+sub compile_expression_list {
+	my ($self, $expression_list) = @_;
+
+	return join ', ', map $self->compile_expression($_), @$expression_list
 }
 
 
@@ -478,6 +493,12 @@ sub compile_expression {
 		} else {
 			return "\$$expression->{identifier}";
 		}
+
+	} elsif ($expression->{type} eq 'method_call_expression') {
+		my $sub_expression = $self->compile_expression($expression->{expression});
+		my $arguments_list = $self->compile_expression_list($expression->{arguments_list});
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return "$sub_expression->$expression->{identifier}($arguments_list)";
 
 	} elsif ($expression->{type} eq 'access_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});

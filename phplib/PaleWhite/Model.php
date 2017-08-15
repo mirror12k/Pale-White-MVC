@@ -44,6 +44,9 @@ abstract class Model {
 	}
 
 	public function add($array_name, $value) {
+		if (!isset(static::$model_array_properties[$array_name]))
+			throw new \Exception("attempted to add() undefined model property '$array_name' in model class: " . get_called_class());
+
 		global $database;
 		$query = $database->insert()
 				->table(static::$table_name . '__array_property__' . $array_name)
@@ -59,6 +62,9 @@ abstract class Model {
 	}
 
 	public function remove($array_name, $value, $limit=null) {
+		if (!isset(static::$model_array_properties[$array_name]))
+			throw new \Exception("attempted to remove() undefined model property '$array_name' in model class: " . get_called_class());
+
 		global $database;
 		$query = $database->delete()
 				->table(static::$table_name . '__array_property__' . $array_name)
@@ -71,6 +77,20 @@ abstract class Model {
 		return $result;
 	}
 
+	public function contains($array_name, $value) {
+		if (!isset(static::$model_array_properties[$array_name]))
+			throw new \Exception("attempted to contains() undefined model property '$array_name' in model class: " . get_called_class());
+
+		global $database;
+		$query = $database->select()
+				->fields(array('id'))
+				->table(static::$table_name . '__array_property__' . $array_name)
+				->where(array('parent_id' => $this->_data['id'], 'value' => static::cast_to_store($array_name, $value)));
+
+		$result = $query->fetch();
+		return count($result) > 0;
+	}
+
 	public function delete() {
 		$this->on_delete();
 
@@ -78,10 +98,19 @@ abstract class Model {
 		$query = $database->delete()
 				->table(static::$table_name)
 				->where(array('id' => $this->_data['id']));
+		$result = $query->fetch();
 
 		unset(static::$_model_cache['id'][$this->_data['id']]);
 
-		$result = $query->fetch();
+		foreach (static::$model_array_properties as $field => $field_type) {
+			$loaded[$field] = static::load_array_data($data['id'], $field);
+
+			$query = $database->delete()
+					->table(static::$table_name . '__array_property__' . $field)
+					->where(array('parent_id' => $this->_data['id']));
+			$query->fetch();
+		}
+
 		return $result;
 	}
 

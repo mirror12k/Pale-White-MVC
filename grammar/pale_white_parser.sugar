@@ -425,7 +425,6 @@ list context arguments_list_item {
 object context path_action_block {
 	match '{'
 	$_ = !path_action_block_list->$_
-	match '}'
 	return
 }
 
@@ -593,8 +592,15 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
-		default {
+		'}' => {
 			return
+		}
+		default {
+			$_{block}[] = {
+				type => 'expression_statement'
+				expression => !action_expression
+			}
+			match ';'
 		}
 	}
 }
@@ -622,6 +628,15 @@ object context action_arguments {
 			return
 		}
 	}
+}
+
+
+list context action_expression_list {
+	push !action_expression
+	while ',' => {
+		push !action_expression
+	}
+	return
 }
 
 
@@ -756,6 +771,25 @@ object context action_expression {
 
 object context more_action_expression {
 	switch {
+		'.', $identifier_regex, '(', ')' => {
+			$_ = {
+				type => 'method_call_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				expression => $_
+				arguments_list => []
+			}
+		}
+		'.', $identifier_regex, '(' => {
+			$_ = {
+				type => 'method_call_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				expression => $_
+				arguments_list => !action_expression_list->[]
+			}
+			match ')'
+		}
 		'.', $identifier_regex => {
 			$_ = {
 				type => 'access_expression'

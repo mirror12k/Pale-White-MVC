@@ -54,6 +54,7 @@ our $ignored_tokens = [
 our $contexts = {
 	action_arguments => 'context_action_arguments',
 	action_expression => 'context_action_expression',
+	action_expression_list => 'context_action_expression_list',
 	arguments_list => 'context_arguments_list',
 	arguments_list_item => 'context_arguments_list_item',
 	branch_action_expression => 'context_branch_action_expression',
@@ -503,9 +504,6 @@ sub context_path_action_block {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{';
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = $self->context_path_action_block_list($context_object);
-			$self->confess_at_current_offset('expected \'}\'')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
-			@tokens = (@tokens, $self->step_tokens(1));
 			return $context_object;
 }
 
@@ -678,8 +676,17 @@ sub context_path_action_block_list {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));
 			}
-			else {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
 			return $context_object;
+			}
+			else {
+			push @{$context_object->{block}}, { type => 'expression_statement', expression => $self->context_action_expression, };
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
 			}
 	}
 	return $context_object;
@@ -724,6 +731,20 @@ sub context_action_arguments {
 			}
 	}
 	return $context_object;
+}
+
+sub context_action_expression_list {
+	my ($self, $context_list) = @_;
+	my @tokens;
+
+			push @$context_list, $self->context_action_expression;
+			while ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @$context_list, $self->context_action_expression;
+			}
+			return $context_list;
 }
 
 sub context_branch_action_expression {
@@ -852,7 +873,22 @@ sub context_more_action_expression {
 	while ($self->more_tokens) {
 	my @tokens;
 
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq '(' and $self->{tokens}[$self->{tokens_index} + 3][1] eq ')') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			$context_object = { type => 'method_call_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], expression => $context_object, arguments_list => [], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq '(') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(3));
+			$context_object = { type => 'method_call_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], expression => $context_object, arguments_list => $self->context_action_expression_list([]), };
+			$self->confess_at_current_offset('expected \')\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
