@@ -687,6 +687,15 @@ object context action_expression {
 			}
 			return
 		}
+		'create', '?', $identifier_regex => {
+			$_ = {
+				type => 'create_optional_model_expression'
+				line_number => $0{line_number}
+				identifier => $2
+				arguments => !action_arguments->{}
+			}
+			return
+		}
 		'create', $identifier_regex => {
 			$_ = {
 				type => 'create_model_expression'

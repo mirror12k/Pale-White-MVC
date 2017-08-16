@@ -458,9 +458,13 @@ sub compile_expression {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "$expression->{identifier}::get_list($arguments)"
 		
-	} elsif ($expression->{type} eq 'create_model_expression') {
+	} elsif ($expression->{type} eq 'create_optional_model_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
 		return "$expression->{identifier}::create($arguments)"
+		
+	} elsif ($expression->{type} eq 'create_model_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "\$this->create_model('$expression->{identifier}', $arguments)"
 		
 	} elsif ($expression->{type} eq 'render_template_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});

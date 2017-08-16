@@ -36,6 +36,15 @@ abstract class Controller {
 		return $object;
 	}
 
+	public function create_model($model_class, array $args) {
+		$object = $model_class::create($args);
+
+		if ($object === null)
+			throw new \Exception("failed to create '$model_class'!");
+		
+		return $object;
+	}
+
 	public function load_file($file_directory, array $args) {
 		$file = $file_directory::file($args);
 
