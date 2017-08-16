@@ -30,9 +30,11 @@ class DatabaseDriver {
 	}
 
 	public function connect() {
-		$this->mysql_connection = new \mysqli($this->mysql_host, $this->mysql_username, $this->mysql_password, $this->mysql_database);
+		$this->mysql_connection = new \mysqli($this->mysql_host, $this->mysql_username,
+				$this->mysql_password, $this->mysql_database);
 		if ($this->mysql_connection->connect_error) {
-			throw new \Exception('Database Connect Error: (' . $this->mysql_connection->connect_errno . ') ' . $this->mysql_connection->connect_error);
+			throw new \PaleWhite\DatabaseException('Database Connect Error: ('
+					. $this->mysql_connection->connect_errno . ') ' . $this->mysql_connection->connect_error);
 		}
 		$this->connected = true;
 	}
@@ -69,7 +71,7 @@ class DatabaseDriver {
 		error_log("[PaleWhite] executing mysql query: '$query_string'");
 		$result = $this->mysql_connection->query($query_string);
 		if ($this->mysql_connection->error) {
-			throw new \Exception('Database query error: ' . $this->mysql_connection->error);
+			throw new \PaleWhite\DatabaseException('Database query error: ' . $this->mysql_connection->error);
 		}
 		return $result;
 	}

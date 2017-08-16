@@ -10,11 +10,11 @@ abstract class Controller {
 	public function route_ajax (Request $req, Response $res) {}
 	
 	public function validate ($type, $value) {
-		throw new \Exception("undefined validator requested: '$type'");
+		throw new \PaleWhite\InvalidException("undefined validator requested: '$type'");
 	}
 
 	public function action ($action, array $args) {
-		throw new \Exception("undefined action requested: '$action'");
+		throw new \PaleWhite\InvalidException("undefined action requested: '$action'");
 	}
 
 	public function render_template($template_class, array $args) {
@@ -31,7 +31,7 @@ abstract class Controller {
 		$object = $model_class::get_by($args);
 
 		if ($object === null)
-			throw new \Exception("invalid '$model_class'!");
+			throw new \PaleWhite\ValidationException("invalid '$model_class'!");
 		
 		return $object;
 	}
@@ -40,7 +40,7 @@ abstract class Controller {
 		$object = $model_class::create($args);
 
 		if ($object === null)
-			throw new \Exception("failed to create '$model_class'!");
+			throw new \PaleWhite\ValidationException("failed to create '$model_class'!");
 		
 		return $object;
 	}
@@ -49,14 +49,14 @@ abstract class Controller {
 		$file = $file_directory::file($args);
 
 		if ($file === null)
-			throw new \Exception("invalid file!");
+			throw new \PaleWhite\ValidationException("invalid file!");
 		
 		return $file;
 	}
 
 	public function validate_csrf_token($token) {
 		if (!hash_equals($_SESSION['pale_white_csrf_token'], $token))
-			throw new \Exception("incorrect csrf token");
+			throw new \PaleWhite\ValidationException("incorrect csrf token");
 	}
 }
 

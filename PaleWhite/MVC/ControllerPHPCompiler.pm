@@ -141,7 +141,8 @@ sub compile_path {
 		my $args_var = $self->{context_args_variable};
 		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$path->{arguments}}) {
 			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
-			push @code, "\tthrow new \\Exception('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
+			push @code, "\tthrow new \\PaleWhite\\ValidationException"
+					. "('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
 		}
 		push @code, "\n";
 		push @code, $self->compile_action_block($path->{arguments});
@@ -286,7 +287,8 @@ sub compile_controller_action_call {
 		my $args_var = $self->{context_args_variable};
 		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$action->{arguments}}) {
 			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
-			push @code, "\tthrow new \\Exception('missing argument \"$arg->{identifier}\" to action \"$action->{identifier}\"');\n";
+			push @code, "\tthrow new \\PaleWhite\\ValidationException"
+					. "('missing argument \"$arg->{identifier}\" to action \"$action->{identifier}\"');\n";
 		}
 		push @code, "\n";
 		push @code, $self->compile_action_block($action->{arguments});
@@ -361,12 +363,12 @@ sub compile_action {
 			push @code, "\$$action->{identifier} = (string)\$$action->{identifier};\n";
 			if (exists $action->{validator_max_size}) {
 				push @code, "if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
-					"\tthrow new \\Exception('argument \"$action->{identifier}\" "
+					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
 							. "exceeded max length of $action->{validator_max_size}');\n"
 			}
 			if (exists $action->{validator_min_size}) {
 				push @code, "if (strlen(\$$action->{identifier}) < $action->{validator_min_size})\n",
-					"\tthrow new \\Exception('argument \"$action->{identifier}\" "
+					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
 							. "doesnt reach min length of $action->{validator_min_size}');\n"
 			}
 			return @code
@@ -376,11 +378,12 @@ sub compile_action {
 			$model_class =~ s/\Amodel::/\\/s;
 			$model_class =~ s/::/\\/s;
 			return "if (! (\$$action->{identifier} instanceof \\PaleWhite\\Model && \$$action->{identifier} instanceof $model_class))\n",
-				"\tthrow new \\Exception('argument \"$action->{identifier}\" not an instance of \"$model_class\" model');\n"
+				"\tthrow new \\PaleWhite\\ValidationException"
+					. "('argument \"$action->{identifier}\" not an instance of \"$model_class\" model');\n"
 
 		} elsif ($action->{validator_identifier} eq '_file_upload') {
 			return "if (! \$$action->{identifier} instanceof \\PaleWhite\\FileUpload)\n",
-				"\tthrow new \\Exception('argument \"$action->{identifier}\" not a file upload');\n"
+				"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" not a file upload');\n"
 
 		} elsif ($action->{validator_identifier} eq '_csrf_token') {
 			return "\$this->validate_csrf_token(\$$action->{identifier});\n"

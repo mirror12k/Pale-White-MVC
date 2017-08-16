@@ -1,6 +1,7 @@
 <?php
 
 
+require_once 'Exceptions.php';
 require_once 'Request.php';
 require_once 'Response.php';
 require_once 'FileUpload.php';

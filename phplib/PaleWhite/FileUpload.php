@@ -20,7 +20,7 @@ class FileUpload {
 			return $this->cached_mime_type;
 
 		} else {
-			throw new \Exception("attempt to get unknown field $name");
+			throw new \PaleWhite\InvalidException("attempt to get unknown field $name");
 		}
 	}
 }
@@ -33,16 +33,16 @@ abstract class FileDirectory {
 		$filepath = static::$directory . '/' . $file_hash;
 
 		if (file_exists($filepath))
-			throw new \Exception("file $filepath already exists");
+			throw new \PaleWhite\FileException(get_called_class(), "file $filepath already exists");
 		if (!move_uploaded_file($file_upload->temp_filepath, $filepath))
-			throw new \Exception("failed to move uploaded file: " . $file_upload->temp_filepath);
+			throw new \PaleWhite\FileException(get_called_class(), "failed to move uploaded file: " . $file_upload->temp_filepath);
 
 		return static::load_file($file_hash);
 	}
 
 	public static function load_file($filename) {
 		if ($filename === '.' ||$filename === '..' || strpos($filename, '/') !== false)
-			throw new \Exception("invalid filename");
+			throw new \PaleWhite\ValidationException("invalid filename");
 
 		$filepath = static::$directory . '/' . $filename;
 		if (file_exists($filepath)) {
@@ -56,17 +56,17 @@ abstract class FileDirectory {
 		if (isset($args['accept_upload'])) {
 			$file_upload = $args['accept_upload'];
 			if (!$file_upload instanceof \PaleWhite\FileUpload)
-				throw new \Exception('argument "accept_upload" not a file upload');
+				throw new \PaleWhite\ValidationException('argument "accept_upload" not a file upload');
 
 			return static::accept_file_upload($file_upload);
 		} elseif (isset($args['path'])) {
 			$path = $args['path'];
 			if (!is_string($path))
-				throw new \Exception('argument "path" not a string');
+				throw new \PaleWhite\ValidationException('argument "path" not a string');
 
 			return static::load_file($path);
 		} else {
-			throw new \Exception('invalid arguments to file');
+			throw new \PaleWhite\InvalidException('invalid arguments to file');
 		}
 	}
 }
@@ -96,13 +96,13 @@ class FileDirectoryFile {
 
 		} elseif ($name === 'url') {
 			if (strpos($this->filepath, "./") !== 0)
-				throw new \Exception("file directory path isnt relative for a url path");
+				throw new \PaleWhite\InvalidException("file directory path isnt relative for a url path");
 			global $config;
 
 			return $config['site_base'] . substr($this->filepath, 1);
 
 		} else {
-			throw new \Exception("attempt to get unknown field $name");
+			throw new \PaleWhite\InvalidException("attempt to get unknown field $name");
 		}
 	}
 }

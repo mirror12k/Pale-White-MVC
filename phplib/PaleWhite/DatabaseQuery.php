@@ -92,7 +92,7 @@ class DatabaseQuery {
 					} elseif (is_numeric($value)) {
 						$value = "$value";
 					} else {
-						throw new \Exception("invalid value type for where field $field: " . gettype($value));
+						throw new \PaleWhite\InvalidException("invalid value type for where field $field: " . gettype($value));
 					}
 					$values[] = $value;
 				}
@@ -117,7 +117,7 @@ class DatabaseQuery {
 					} elseif (is_numeric($value)) {
 						$value = "$value";
 					} else {
-						throw new \Exception("invalid value type for where field $field: " . gettype($value));
+						throw new \PaleWhite\InvalidException("invalid value type for where field $field: " . gettype($value));
 					}
 					$values[] = "$field = $value";
 				}
@@ -152,7 +152,7 @@ class DatabaseQuery {
 			return $query;
 
 		} else {
-			throw new \Exception("invalid query_type: " . $this->query_type);
+			throw new \PaleWhite\InvalidException("invalid query_type: " . $this->query_type);
 		}
 	}
 
@@ -169,11 +169,11 @@ class DatabaseQuery {
 					} elseif (is_numeric($subvalue)) {
 						$escaped_values[] = "$subvalue";
 					} else {
-						throw new \Exception("invalid value type for where field $field: " . gettype($value));
+						throw new \PaleWhite\InvalidException("invalid value type for where field $field: " . gettype($value));
 					}
 				}
 				if (count($escaped_values) < 1)
-					throw new \Exception("empty value list for where field $field!");
+					throw new \PaleWhite\InvalidException("empty value list for where field $field!");
 
 				$escaped_values = implode(",", $escaped_values);
 				$fields[] = "$field IN ($escaped_values)";
@@ -183,7 +183,7 @@ class DatabaseQuery {
 				} elseif (is_numeric($value)) {
 					$value = "$value";
 				} else {
-					throw new \Exception("invalid value type for where field $field: " . gettype($value));
+					throw new \PaleWhite\InvalidException("invalid value type for where field $field: " . gettype($value));
 				}
 				$fields[] = "$field = $value";
 			}

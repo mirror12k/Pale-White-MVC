@@ -51,7 +51,7 @@ class HTTPRequestExecutor {
 			{
 				$seed = openssl_random_pseudo_bytes(32);
 				if ($seed === false)
-					throw new \Exception("failed to generate csrf token, not enough entropy");
+					throw new \PaleWhite\PaleWhiteException("failed to generate csrf token, not enough entropy");
 				$_SESSION['pale_white_csrf_token'] = bin2hex($seed);
 			}
 
@@ -72,24 +72,24 @@ class HTTPRequestExecutor {
 				{
 					// error_log("[PaleWhite] \$_FILES[$field]: " . json_encode($file_upload));
 					if (!isset($file_upload['error']) || is_array($file_upload['error']))
-						throw new \Exception("invalid file upload");
+						throw new \PaleWhite\PaleWhiteException("invalid file upload");
 					if ($file_upload['error'] === UPLOAD_ERR_INI_SIZE)
-						throw new \Exception("file upload failed: size exceeded");
+						throw new \PaleWhite\PaleWhiteException("file upload failed: size exceeded");
 						// may need to increase upload limits in your php.ini
 						// under post_max_size and upload_max_filesize
 					if ($file_upload['error'] === UPLOAD_ERR_PARTIAL)
-						throw new \Exception("file upload failed: failed to upload whole file");
+						throw new \PaleWhite\PaleWhiteException("file upload failed: failed to upload whole file");
 					if ($file_upload['error'] === UPLOAD_ERR_NO_TMP_DIR)
-						throw new \Exception("file upload failed: no tmp directory");
+						throw new \PaleWhite\PaleWhiteException("file upload failed: no tmp directory");
 					if ($file_upload['error'] === UPLOAD_ERR_CANT_WRITE)
-						throw new \Exception("file upload failed: cant write directory");
+						throw new \PaleWhite\PaleWhiteException("file upload failed: cant write directory");
 					if ($file_upload['error'] === UPLOAD_ERR_OK) {
 						$file_container = new \PaleWhite\FileUpload($file_upload['tmp_name'], $file_upload['size']);
 						$args[$field] = $file_container;
 					} elseif ($file_upload['error'] === UPLOAD_ERR_NO_FILE) {
 						$args[$field] = null;
 					} else {
-						throw new \Exception("file upload failed");
+						throw new \PaleWhite\PaleWhiteException("file upload failed");
 					}
 				}
 				// error_log("[PaleWhite] got post request data: " . json_encode($args));

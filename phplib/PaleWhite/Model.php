@@ -29,23 +29,27 @@ abstract class Model {
 			return $this->_data[$name];
 
 		} else
-			throw new \Exception("attempted to get undefined model property '$name' in model class: " . get_called_class());
+			throw new \PaleWhite\InvalidException(
+					"attempted to get undefined model property '$name' in model class: " . get_called_class());
 	}
 
 	public function __set($name, $value) {
 		if ($name === 'id') {
-			throw new \Exception("attempted to set model property 'id' in model class: " . get_called_class());
+			throw new \PaleWhite\InvalidException(
+					"attempted to set model property 'id' in model class: " . get_called_class());
 		} elseif (isset($this->_data[$name])) {
 			$this->_data[$name] = $value;
 			$this->update_fields(array($name => $value));
 		} else {
-			throw new \Exception("attempted to set undefined model property '$name' in model class: " . get_called_class());
+			throw new \PaleWhite\InvalidException(
+					"attempted to set undefined model property '$name' in model class: " . get_called_class());
 		}
 	}
 
 	public function add($array_name, $value) {
 		if (!isset(static::$model_array_properties[$array_name]))
-			throw new \Exception("attempted to add() undefined model property '$array_name' in model class: " . get_called_class());
+			throw new \PaleWhite\InvalidException(
+					"attempted to add() undefined model property '$array_name' in model class: " . get_called_class());
 
 		global $database;
 		$query = $database->insert()
@@ -63,7 +67,8 @@ abstract class Model {
 
 	public function remove($array_name, $value, $limit=null) {
 		if (!isset(static::$model_array_properties[$array_name]))
-			throw new \Exception("attempted to remove() undefined model property '$array_name' in model class: " . get_called_class());
+			throw new \PaleWhite\InvalidException(
+					"attempted to remove() undefined model property '$array_name' in model class: " . get_called_class());
 
 		global $database;
 		$query = $database->delete()
@@ -79,7 +84,8 @@ abstract class Model {
 
 	public function contains($array_name, $value) {
 		if (!isset(static::$model_array_properties[$array_name]))
-			throw new \Exception("attempted to contains() undefined model property '$array_name' in model class: " . get_called_class());
+			throw new \PaleWhite\InvalidException(
+					"attempted to contains() undefined model property '$array_name' in model class: " . get_called_class());
 
 		global $database;
 		$query = $database->select()
@@ -202,7 +208,8 @@ abstract class Model {
 			elseif (isset(static::$model_array_properties[$field]))
 				$array_fields[$field] = $value;
 			else
-				throw new \Exception("attempted to create undefined model property '$field' in model class: " . get_called_class());
+				throw new \PaleWhite\InvalidException(
+						"attempted to create undefined model property '$field' in model class: " . get_called_class());
 		}
 
 		global $database;
@@ -211,23 +218,24 @@ abstract class Model {
 				->values($item_fields);
 		$result = $query->fetch();
 
-		if ($result === TRUE) {
-			$obj_id = $database->insert_id;
-			$obj = static::get_by_id($obj_id);
-			if ($obj === null)
-				throw new \Exception("fatal error creating object (id $obj_id): " . get_called_class());
+		if ($result !== TRUE)
+			throw new \PaleWhite\ModelException(get_called_class(),
+					"database failed to create object");
 
-			// have the object update the array fields itself
-			foreach ($array_fields as $field => $value) {
-				$obj->$field = $value;
-			}
+		$obj_id = $database->insert_id;
+		$obj = static::get_by_id($obj_id);
+		if ($obj === null)
+			throw new \PaleWhite\ModelException(get_called_class(),
+					"fatal error creating object (id $obj_id)");
 
-			$obj->on_create();
-
-			return $obj;
-		} else {
-			return null;
+		// have the object update the array fields itself
+		foreach ($array_fields as $field => $value) {
+			$obj->$field = $value;
 		}
+
+		$obj->on_create();
+
+		return $obj;
 	}
 
 	private static function load_data(array $data) {
@@ -265,7 +273,8 @@ abstract class Model {
 			elseif (isset(static::$model_array_properties[$field]))
 				$stored[$field] = static::store_array_data($field, $value);
 			else
-				throw new \Exception("attempted to cast undefined model property '$field' in model class: " . get_called_class());
+				throw new \PaleWhite\InvalidException(
+						"attempted to cast undefined model property '$field' in model class: " . get_called_class());
 		}
 		return $stored;
 	}
@@ -307,7 +316,8 @@ abstract class Model {
 
 	// public static function cast_model_from_store($name, $value) {
 	// 	if (!isset(static::$model_submodel_properties[$name]))
-	// 		throw new \Exception("attempt to cast model from store on non-model property '$name' in model class: "
+	// 		throw new \PaleWhite\InvalidException(
+	// 	"attempt to cast model from store on non-model property '$name' in model class: "
 	// 				. get_called_class());
 
 	// 	$class = static::$model_submodel_properties[$name];
@@ -318,7 +328,8 @@ abstract class Model {
 
 	private static function get_lazy_loaded_model($name, $value) {
 		if (!isset(static::$model_submodel_properties[$name]))
-			throw new \Exception("attempt to lazy load non-model property '$name' in model class: " . get_called_class());
+			throw new \PaleWhite\InvalidException(
+					"attempt to lazy load non-model property '$name' in model class: " . get_called_class());
 
 		$class = static::$model_submodel_properties[$name];
 		$value = (int)$value;
@@ -331,7 +342,8 @@ abstract class Model {
 
 	private static function get_lazy_loaded_model_array($name, $value) {
 		if (!isset(static::$model_submodel_properties[$name]))
-			throw new \Exception("attempt to lazy load non-model property '$name' in model class: " . get_called_class());
+			throw new \PaleWhite\InvalidException(
+					"attempt to lazy load non-model property '$name' in model class: " . get_called_class());
 		
 		if (count($value) === 0)
 			return array();
@@ -341,7 +353,8 @@ abstract class Model {
 
 	// private static function get_lazy_loaded_file($name, $value) {
 	// 	if (!isset(static::$model_file_properties[$name]))
-	// 		throw new \Exception("attempt to lazy load non-file property '$name' in model class: " . get_called_class());
+	// 		throw new \PaleWhite\InvalidException(
+	// 	"attempt to lazy load non-file property '$name' in model class: " . get_called_class());
 
 	// 	$class = static::$model_file_properties[$name];
 	// 	$value = (string)$value;
@@ -350,7 +363,8 @@ abstract class Model {
 
 	// private static function get_lazy_loaded_file_array($name, $value) {
 	// 	if (!isset(static::$model_file_properties[$name]))
-	// 		throw new \Exception("attempt to lazy load non-file property '$name' in model class: " . get_called_class());
+	// 		throw new \PaleWhite\InvalidException(
+	// "attempt to lazy load non-file property '$name' in model class: " . get_called_class());
 		
 	// 	$class = static::$model_file_properties[$name];
 
@@ -371,7 +385,8 @@ abstract class Model {
 			elseif (isset(static::$model_array_properties[$field]))
 				$array_fields[$field] = $value;
 			else
-				throw new \Exception("attempted to update undefined model property '$field' in model class: " . get_called_class());
+				throw new \PaleWhite\InvalidException(
+						"attempted to update undefined model property '$field' in model class: " . get_called_class());
 		}
 
 
