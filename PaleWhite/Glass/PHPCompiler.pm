@@ -328,7 +328,11 @@ sub compile_argument_expression {
 	my ($self, $expression, $context) = @_;
 	$context //= 'none';
 
-	if ($expression->{type} eq 'string_expression') {
+	if ($expression->{type} eq 'integer_expression') {
+		$self->{text_accumulator} .= "$expression->{value}";
+		return
+
+	} elsif ($expression->{type} eq 'string_expression') {
 		if ($context eq 'html_attribute' or $context eq 'text') {
 			$self->{text_accumulator} .= encode_entities($expression->{string}, '<>&"\'');
 		} else {
@@ -336,22 +340,22 @@ sub compile_argument_expression {
 		}
 		return
 		
-	} elsif ($expression->{type} eq 'variable_expression') {
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		# return $self->flush_accumulator, "\$text .= \$args[\"$expression->{identifier}\"];\n";
+	} elsif ($expression->{type} eq 'variable_expression'
+			or $expression->{type} eq 'access_expression'
+			or $expression->{type} eq 'length_expression'
+			or $expression->{type} eq 'method_call_expression') {
 		if ($context eq 'html_attribute' or $context eq 'text') {
 			return $self->flush_accumulator, "\$text .= htmlspecialchars(" . $self->compile_value_expression($expression) . ");\n";
 		} else {
 			return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
 		}
 
-	} elsif ($expression->{type} eq 'access_expression') {
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		if ($context eq 'html_attribute' or $context eq 'text') {
-			return $self->flush_accumulator, "\$text .= htmlspecialchars(" . $self->compile_value_expression($expression) . ");\n";
-		} else {
-			return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
-		}
+	} elsif ($expression->{type} eq 'less_than_expression'
+			or $expression->{type} eq 'greather_than_expression'
+			or $expression->{type} eq 'less_than_or_equal_expression'
+			or $expression->{type} eq 'greather_than_or_equal_expression'
+			or $expression->{type} eq 'equals_expression') {
+		die "error on line $expression->{line_number}: cannot use $expression->{type} directly in html";
 
 	} elsif ($expression->{type} eq 'interpolation_expression') {
 		return map $self->compile_argument_expression($_, $context), @{$expression->{expressions}}
@@ -363,10 +367,18 @@ sub compile_argument_expression {
 	}
 }
 
+sub compile_value_expression_list {
+	my ($self, $expression_list) = @_;
+	return join ', ', map $self->compile_value_expression($_), @$expression_list
+}
+
 sub compile_value_expression {
 	my ($self, $expression) = @_;
 
-	if ($expression->{type} eq 'string_expression') {
+	if ($expression->{type} eq 'integer_expression') {
+		return "$expression->{value}"
+
+	} elsif ($expression->{type} eq 'string_expression') {
 		return "\"$expression->{string}\""
 		
 	} elsif ($expression->{type} eq 'variable_expression') {
@@ -385,6 +397,42 @@ sub compile_value_expression {
 		my $sub_expression = $self->compile_value_expression($expression->{expression});
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "$sub_expression->$expression->{identifier}";
+
+	} elsif ($expression->{type} eq 'method_call_expression') {
+		my $sub_expression = $self->compile_value_expression($expression->{expression});
+		my $arguments_list = $self->compile_value_expression_list($expression->{arguments_list});
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return "$sub_expression->$expression->{identifier}($arguments_list)";
+
+	} elsif ($expression->{type} eq 'length_expression') {
+		my $sub_expression = $self->compile_value_expression($expression->{expression});
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return "count($sub_expression)";
+
+	} elsif ($expression->{type} eq 'less_than_expression') {
+		my $left_expression = $self->compile_value_expression($expression->{left_expression});
+		my $right_expression = $self->compile_value_expression($expression->{right_expression});
+		return "( $left_expression < $right_expression )";
+
+	} elsif ($expression->{type} eq 'greather_than_expression') {
+		my $left_expression = $self->compile_value_expression($expression->{left_expression});
+		my $right_expression = $self->compile_value_expression($expression->{right_expression});
+		return "( $left_expression > $right_expression )";
+
+	} elsif ($expression->{type} eq 'less_than_or_equal_expression') {
+		my $left_expression = $self->compile_value_expression($expression->{left_expression});
+		my $right_expression = $self->compile_value_expression($expression->{right_expression});
+		return "( $left_expression <= $right_expression )";
+
+	} elsif ($expression->{type} eq 'greather_than_or_equal_expression') {
+		my $left_expression = $self->compile_value_expression($expression->{left_expression});
+		my $right_expression = $self->compile_value_expression($expression->{right_expression});
+		return "( $left_expression >= $right_expression )";
+
+	} elsif ($expression->{type} eq 'equals_expression') {
+		my $left_expression = $self->compile_value_expression($expression->{left_expression});
+		my $right_expression = $self->compile_value_expression($expression->{right_expression});
+		return "( $left_expression === $right_expression )";
 
 	} else {
 		die "unknown expression: $expression->{type}";

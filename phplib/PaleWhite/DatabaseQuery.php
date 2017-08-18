@@ -97,6 +97,36 @@ class DatabaseQuery {
 
 			return $query;
 
+		} elseif ($this->query_type === 'count') {
+			$query = 'SELECT';
+
+			$fields = array('COUNT(*)');
+			$query .= ' ' . implode(', ', $fields);
+
+			if (isset($this->query_args['table'])) {
+				$query .= ' FROM `' . $this->db->escape_string($this->query_args['table']) . '`';
+			}
+
+			if (isset($this->query_args['where'])) {
+				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
+			}
+
+			if (isset($this->query_args['order'])) {
+				if ($this->query_args['order'] === 'ascending')
+					$query .= ' ORDER BY id ASC';
+				else
+					$query .= ' ORDER BY id DESC';
+			}
+
+			if (isset($this->query_args['limit'])) {
+				if (isset($this->query_args['offset']))
+					$query .= ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'];
+				else
+					$query .= ' LIMIT ' . $this->query_args['limit'];
+			}
+
+			return $query;
+
 		} elseif ($this->query_type === 'insert') {
 			$query = 'INSERT';
 
@@ -249,6 +279,10 @@ class DatabaseQuery {
 			for ($i = 0; $i < $result->num_rows; $i++) {
 				$data[] = $result->fetch_assoc();
 			}
+			$result->free();
+		} elseif ($this->query_type === 'count') {
+			$data = $result->fetch_array();
+			$data = (int)$data[0];
 			$result->free();
 		} else {
 			$data = $result;

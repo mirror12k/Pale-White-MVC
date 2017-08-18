@@ -738,6 +738,16 @@ object context action_expression {
 			}
 			return
 		}
+		'len', '(' => {
+			$_ = {
+				type => 'length_expression'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
+			match ')'
+			$_ = !more_action_expression->$_
+			return
+		}
 		$identifier_regex => {
 			$_ = !more_action_expression->{
 				type => 'variable_expression'
@@ -805,6 +815,51 @@ object context more_action_expression {
 				line_number => $0{line_number}
 				identifier => $1
 				expression => $_
+			}
+		}
+		'<' => {
+			$_ = {
+				type => 'less_than_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'>' => {
+			$_ = {
+				type => 'greather_than_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'<=' => {
+			$_ = {
+				type => 'less_than_or_equal_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'>=' => {
+			$_ = {
+				type => 'greather_than_or_equal_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'==' => {
+			$_ = {
+				type => 'equals_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !action_expression
 			}
 		}
 		default {

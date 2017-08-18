@@ -5,9 +5,10 @@ identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
 string_interpolation_start_regex = /"([^\\"]|\\[\\"])*?\{\{/s
 string_interpolation_middle_regex = /\}\}([^\\"]|\\[\\"])*?\{\{/s
 string_interpolation_end_regex = /\}\}([^\\"]|\\[\\"])*?"/s
+integer_regex = /-?\d++/
 string_regex = /"([^\\"]|\\[\\"])*?"/s
 
-symbol_regex = /!|\.|\#|=>|=|,|\{|\}|-/
+symbol_regex = /!|\.|\#|=>|=|,|\{|\}|\(|\)|\[|\]|-/
 
 # comment_regex = /\s*+\#[^\n]*+\n/s
 indent_regex = /\t++/
@@ -27,6 +28,7 @@ tokens {
 	string_interpolation_start => $string_interpolation_start_regex
 	string_interpolation_middle => $string_interpolation_middle_regex
 	string_interpolation_end => $string_interpolation_end_regex
+	integer => $integer_regex
 	string => $string_regex
 
 	symbol => $symbol_regex
@@ -365,11 +367,27 @@ object context glass_tag_text {
 
 object context glass_argument_expression {
 	switch {
+		$integer_regex => {
+			$_ = {
+				type => 'integer_expression'
+				value => $0
+			}
+			return
+		}
 		$string_regex => {
 			$_ = {
 				type => 'string_expression'
 				string => !format_string->$0
 			}
+			return
+		}
+		'len', '(' => {
+			$_ = {
+				type => 'length_expression'
+				expression => !glass_argument_expression
+			}
+			match ')'
+			$_ = !glass_more_expression->$_
 			return
 		}
 		$identifier_regex => {
@@ -385,14 +403,82 @@ object context glass_argument_expression {
 	}
 }
 
+list context glass_expression_list {
+	push !glass_argument_expression
+	while ',' => {
+		push !glass_argument_expression
+	}
+	return
+}
+
 object context glass_more_expression {
 	switch {
+		'.', $identifier_regex, '(' => {
+			$_ = {
+				type => 'method_call_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				expression => $_
+			}
+			if ')' => {
+				$_{arguments_list} = []
+			} else {
+				$_{arguments_list} = !glass_expression_list->[]
+				match ')'
+			}
+		}
 		'.' => {
 			match $identifier_regex
 			$_ = {
 				type => 'access_expression'
+				line_number => $0{line_number}
 				identifier => $1
 				expression => $_
+			}
+		}
+		'<' => {
+			$_ = {
+				type => 'less_than_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !glass_argument_expression
+			}
+		}
+		'>' => {
+			$_ = {
+				type => 'greather_than_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !glass_argument_expression
+			}
+		}
+		'<=' => {
+			$_ = {
+				type => 'less_than_or_equal_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !glass_argument_expression
+			}
+		}
+		'>=' => {
+			$_ = {
+				type => 'greather_than_or_equal_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !glass_argument_expression
+			}
+		}
+		'==' => {
+			$_ = {
+				type => 'equals_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !glass_argument_expression
 			}
 		}
 		default {

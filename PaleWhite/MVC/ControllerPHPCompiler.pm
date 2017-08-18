@@ -474,8 +474,8 @@ sub compile_expression {
 		return "((new $expression->{identifier}())->render($arguments))"
 		
 	} elsif ($expression->{type} eq 'render_file_expression') {
-		my $subexpression = $self->compile_expression($expression->{expression});
-		return "file_get_contents(${subexpression}->filepath)"
+		my $sub_expression = $self->compile_expression($expression->{expression});
+		return "file_get_contents(${sub_expression}->filepath)"
 
 	} elsif ($expression->{type} eq 'controller_action_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
@@ -493,6 +493,10 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'session_variable_expression') {
 		return "\$_SESSION['$expression->{identifier}']";
 
+	} elsif ($expression->{type} eq 'length_expression') {
+		my $sub_expression = $self->compile_expression($expression->{expression});
+		return "count($sub_expression)"
+
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		if ($expression->{identifier} eq '_csrf_token') {
@@ -509,8 +513,32 @@ sub compile_expression {
 
 	} elsif ($expression->{type} eq 'access_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "$sub_expression->$expression->{identifier}";
+
+	} elsif ($expression->{type} eq 'less_than_expression') {
+		my $left_expression = $self->compile_expression($expression->{left_expression});
+		my $right_expression = $self->compile_expression($expression->{right_expression});
+		return "( $left_expression < $right_expression )";
+
+	} elsif ($expression->{type} eq 'greather_than_expression') {
+		my $left_expression = $self->compile_expression($expression->{left_expression});
+		my $right_expression = $self->compile_expression($expression->{right_expression});
+		return "( $left_expression > $right_expression )";
+
+	} elsif ($expression->{type} eq 'less_than_or_equal_expression') {
+		my $left_expression = $self->compile_expression($expression->{left_expression});
+		my $right_expression = $self->compile_expression($expression->{right_expression});
+		return "( $left_expression <= $right_expression )";
+
+	} elsif ($expression->{type} eq 'greather_than_or_equal_expression') {
+		my $left_expression = $self->compile_expression($expression->{left_expression});
+		my $right_expression = $self->compile_expression($expression->{right_expression});
+		return "( $left_expression >= $right_expression )";
+
+	} elsif ($expression->{type} eq 'equals_expression') {
+		my $left_expression = $self->compile_expression($expression->{left_expression});
+		my $right_expression = $self->compile_expression($expression->{right_expression});
+		return "( $left_expression === $right_expression )";
 
 	} else {
 		die "unknown expression: $expression->{type}";

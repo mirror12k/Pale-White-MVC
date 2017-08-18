@@ -97,10 +97,10 @@ abstract class Model {
 		return count($result) > 0;
 	}
 
-	public function list_array($array_name, $args) {
+	public function list_array($array_name, $args = array()) {
 		if (!isset(static::$model_array_properties[$array_name]))
 			throw new \PaleWhite\InvalidException(
-					"attempted to list() undefined model property '$array_name' in model class: " . get_called_class());
+					"attempted to list_array() undefined model property '$array_name' in model class: " . get_called_class());
 
 		// parse args
 		$list_array_args = array();
@@ -120,6 +120,41 @@ abstract class Model {
 			$result_array = static::get_lazy_loaded_model_array($array_name, $result_array);
 
 		return $result_array;
+	}
+
+	public function count_array($array_name, $args = array()) {
+		if (!isset(static::$model_array_properties[$array_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to count_array() undefined model property '$array_name' in model class: " . get_called_class());
+
+		// parse args
+		$count_array_args = array();
+		foreach ($args as $name => $value) {
+			if ($name === '_limit')
+				$count_array_args['limit'] = $value;
+			elseif ($name === '_offset')
+				$count_array_args['offset'] = $value;
+			elseif ($name === '_order')
+				$count_array_args['order'] = $value;
+			else
+				throw new \PaleWhite\InvalidException("invalid list argument: '$name', in model class: " . get_called_class());
+		}
+
+		global $database;
+		$query = $database->count()
+				->table(static::$table_name . '__array_property__' . $array_name)
+				->where(array('parent_id' => $this->_data['id']));
+
+		if (isset($count_array_args['limit']))
+			$query->limit($count_array_args['limit']);
+		if (isset($count_array_args['offset']))
+			$query->offset($count_array_args['offset']);
+		if (isset($count_array_args['order']))
+			$query->order($count_array_args['order']);
+
+		$result = $query->fetch();
+
+		return $result;
 	}
 
 	public function delete() {
@@ -195,6 +230,41 @@ abstract class Model {
 	}
 
 	public static function get_list(array $values) {
+		// parse out any special values
+		$where_values = array();
+		foreach ($values as $name => $value) {
+			if ($name === '_limit')
+				$limit = $value;
+			elseif ($name === '_offset')
+				$offset = $value;
+			elseif ($name === '_order')
+				$order = $value;
+			else
+				$where_values[$name] = $value;
+		}
+
+		// convert to database-safe format
+		$where_values = static::store_data($where_values);
+
+		// build the query
+		global $database;
+		$query = $database->select()
+				->table(static::$table_name)
+				->where($where_values);
+
+		if (isset($limit))
+			$query->limit($limit);
+		if (isset($offset))
+			$query->offset($offset);
+		if (isset($order))
+			$query->order($order);
+
+		$result = static::get_by_query($query);
+
+		return $result;
+	}
+
+	public static function count(array $values) {
 		// parse out any special values
 		$where_values = array();
 		foreach ($values as $name => $value) {

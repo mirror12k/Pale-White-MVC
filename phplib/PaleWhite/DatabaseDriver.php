@@ -43,6 +43,10 @@ class DatabaseDriver {
 		return new DatabaseQuery($this, 'select');
 	}
 
+	public function count() {
+		return new DatabaseQuery($this, 'count');
+	}
+
 	public function insert() {
 		return new DatabaseQuery($this, 'insert');
 	}
