@@ -115,7 +115,11 @@ abstract class Model {
 				throw new \PaleWhite\InvalidException("invalid list argument: '$name', in model class: " . get_called_class());
 		}
 
-		return static::load_array_data($this->_data['id'], $array_name, $list_array_args);
+		$result_array = static::load_array_data($this->_data['id'], $array_name, $list_array_args);
+		if (isset(static::$model_submodel_properties[$array_name]))
+			$result_array = static::get_lazy_loaded_model_array($array_name, $result_array);
+
+		return $result_array;
 	}
 
 	public function delete() {
@@ -191,8 +195,6 @@ abstract class Model {
 	}
 
 	public static function get_list(array $values) {
-		$values = static::store_data($values);
-
 		// parse out any special values
 		$where_values = array();
 		foreach ($values as $name => $value) {
@@ -206,6 +208,10 @@ abstract class Model {
 				$where_values[$name] = $value;
 		}
 
+		// convert to database-safe format
+		$where_values = static::store_data($where_values);
+
+		// build the query
 		global $database;
 		$query = $database->select()
 				->table(static::$table_name)
