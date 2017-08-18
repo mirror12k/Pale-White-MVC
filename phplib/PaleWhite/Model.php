@@ -97,6 +97,27 @@ abstract class Model {
 		return count($result) > 0;
 	}
 
+	public function list_array($array_name, $args) {
+		if (!isset(static::$model_array_properties[$array_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to list() undefined model property '$array_name' in model class: " . get_called_class());
+
+		// parse args
+		$list_array_args = array();
+		foreach ($args as $name => $value) {
+			if ($name === '_limit')
+				$list_array_args['limit'] = $value;
+			elseif ($name === '_offset')
+				$list_array_args['offset'] = $value;
+			elseif ($name === '_order')
+				$list_array_args['order'] = $value;
+			else
+				throw new \PaleWhite\InvalidException("invalid list argument: '$name', in model class: " . get_called_class());
+		}
+
+		return static::load_array_data($this->_data['id'], $array_name, $list_array_args);
+	}
+
 	public function delete() {
 		$this->on_delete();
 
@@ -169,16 +190,33 @@ abstract class Model {
 			return $result[0];
 	}
 
-	public static function get_list(array $values, $limit=null) {
+	public static function get_list(array $values) {
 		$values = static::store_data($values);
+
+		// parse out any special values
+		$where_values = array();
+		foreach ($values as $name => $value) {
+			if ($name === '_limit')
+				$limit = $value;
+			elseif ($name === '_offset')
+				$offset = $value;
+			elseif ($name === '_order')
+				$order = $value;
+			else
+				$where_values[$name] = $value;
+		}
 
 		global $database;
 		$query = $database->select()
 				->table(static::$table_name)
-				->where($values);
+				->where($where_values);
 
 		if (isset($limit))
 			$query->limit($limit);
+		if (isset($offset))
+			$query->offset($offset);
+		if (isset($order))
+			$query->order($order);
 
 		$result = static::get_by_query($query);
 
@@ -250,12 +288,20 @@ abstract class Model {
 		return $loaded;
 	}
 
-	private static function load_array_data($id, $field) {
+	private static function load_array_data($id, $field, $args=array()) {
 		global $database;
 		$query = $database->select()
 				->table(static::$table_name . '__array_property__' . $field)
 				->fields(array('value'))
 				->where(array('parent_id' => $id));
+
+		if (isset($args['limit']))
+			$query->limit($args['limit']);
+		if (isset($args['offset']))
+			$query->offset($args['offset']);
+		if (isset($args['order']))
+			$query->order($args['order']);
+
 		$result = $query->fetch();
 
 		$array = array();

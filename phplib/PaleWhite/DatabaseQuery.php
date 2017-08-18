@@ -43,6 +43,22 @@ class DatabaseQuery {
 		return $this;
 	}
 
+	public function offset($offset) {
+		$this->query_args['offset'] = (int)$offset;
+		return $this;
+	}
+
+	public function order($order) {
+		$order = (string)$order;
+
+		if ($order === 'ascending' || $order === 'descending')
+			$this->query_args['order'] = $order;
+		else
+			throw new \PaleWhite\InvalidException('invalid row order: "$order"');
+
+		return $this;
+	}
+
 	public function compile() {
 		if ($this->query_type === 'select') {
 			$query = 'SELECT';
@@ -65,8 +81,18 @@ class DatabaseQuery {
 				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
 			}
 
+			if (isset($this->query_args['order'])) {
+				if ($this->query_args['order'] === 'ascending')
+					$query .= ' ORDER BY id ASC';
+				else
+					$query .= ' ORDER BY id DESC';
+			}
+
 			if (isset($this->query_args['limit'])) {
-				$query .= ' LIMIT ' . $this->query_args['limit'];
+				if (isset($this->query_args['offset']))
+					$query .= ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'];
+				else
+					$query .= ' LIMIT ' . $this->query_args['limit'];
 			}
 
 			return $query;
@@ -128,8 +154,18 @@ class DatabaseQuery {
 				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
 			}
 
+			if (isset($this->query_args['order'])) {
+				if ($this->query_args['order'] === 'ascending')
+					$query .= ' ORDER BY id ASC';
+				else
+					$query .= ' ORDER BY id DESC';
+			}
+
 			if (isset($this->query_args['limit'])) {
-				$query .= ' LIMIT ' . $this->query_args['limit'];
+				if (isset($this->query_args['offset']))
+					$query .= ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'];
+				else
+					$query .= ' LIMIT ' . $this->query_args['limit'];
 			}
 
 			return $query;
@@ -145,8 +181,18 @@ class DatabaseQuery {
 				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
 			}
 
+			if (isset($this->query_args['order'])) {
+				if ($this->query_args['order'] === 'ascending')
+					$query .= ' ORDER BY id ASC';
+				else
+					$query .= ' ORDER BY id DESC';
+			}
+
 			if (isset($this->query_args['limit'])) {
-				$query .= ' LIMIT ' . $this->query_args['limit'];
+				if (isset($this->query_args['offset']))
+					$query .= ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'];
+				else
+					$query .= ' LIMIT ' . $this->query_args['limit'];
 			}
 
 			return $query;
