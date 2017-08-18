@@ -20,7 +20,7 @@ our $var_string_interpolation_middle_regex = qr/\}\}([^\\"]|\\[\\"])*?\{\{/s;
 our $var_string_interpolation_end_regex = qr/\}\}([^\\"]|\\[\\"])*?"/s;
 our $var_integer_regex = qr/-?\d++/;
 our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
-our $var_symbol_regex = qr/!|\.|\#|=>|=|,|\{|\}|\(|\)|\[|\]|-/;
+our $var_symbol_regex = qr/!|\.|\#|=>|<|>|<=|>=|==|=|,|\{|\}|\(|\)|\[|\]|-/;
 our $var_indent_regex = qr/\t++/;
 our $var_whitespace_regex = qr/[\t \r]++/;
 our $var_newline_regex = qr/\s*(\#[^\n]*+\s*)*\n/s;

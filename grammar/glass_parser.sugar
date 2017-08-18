@@ -8,7 +8,7 @@ string_interpolation_end_regex = /\}\}([^\\"]|\\[\\"])*?"/s
 integer_regex = /-?\d++/
 string_regex = /"([^\\"]|\\[\\"])*?"/s
 
-symbol_regex = /!|\.|\#|=>|=|,|\{|\}|\(|\)|\[|\]|-/
+symbol_regex = /!|\.|\#|=>|<|>|<=|>=|==|=|,|\{|\}|\(|\)|\[|\]|-/
 
 # comment_regex = /\s*+\#[^\n]*+\n/s
 indent_regex = /\t++/

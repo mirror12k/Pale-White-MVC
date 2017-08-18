@@ -15,7 +15,7 @@ use feature 'say';
 ##############################
 
 our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
-our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=|,|\.|\?|!/;
+our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|<|>|<=|>=|==|=|,|\.|\?|!/;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_keyword_regex = qr/\b(model|int|string|getter|setter|cast|to|from|static|function)\b/;
