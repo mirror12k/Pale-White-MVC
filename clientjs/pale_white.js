@@ -20,31 +20,52 @@ pale_white = {
 			callback: callback,
 		});
 	},
-	send_ajax_trigger: function (url, args) {
+	get_csrf_token: function () {
+		var token = document.head.querySelector("meta#_csrf_token");
+
+		if (token === undefined)
+			throw "CSRF Token meta-tag required on the page!";
+
+		return token.getAttribute("content");
+	},
+	ajax: function (url, args, callback) {
 		var xhr = new XMLHttpRequest();
 		xhr.open("POST", url, true);
 		xhr.setRequestHeader("X-Requested-With", "pale_white/ajax");
 		xhr.addEventListener('readystatechange', function () {
 			if (xhr.readyState == 4) {
-				pale_white.on_ajax_trigger_response(JSON.parse(xhr.response));
+				if (xhr.response === "") {
+					console.log("[PaleWhite] empty response!");
+					response = {};
+				} else {
+					response = JSON.parse(xhr.response);
+				}
+				pale_white.on_ajax_trigger_response(response);
+
+				if (callback)
+					callback(response);
 			}
 		});
 		
 		if (args instanceof FormData) {
 			// xhr.setRequestHeader("Content-Type", "multipart/form-data");
+			args.append("_csrf_token", pale_white.get_csrf_token());
 			xhr.send(args);
-						
+
 		} else {
 			xhr.setRequestHeader("Content-Type", "application/json");
+			args._csrf_token = pale_white.get_csrf_token();
 			xhr.send(JSON.stringify(args));
 		}
 	},
 	on_ajax_trigger_response: function (data) {
 		console.log("[PaleWhite] got response: ", data);
+
 		if (data.status === 'success') {
 			if (data.dom_content !== undefined) {
 				pale_white.substitute_dom_content(data.dom_content);
 			}
+
 		} else if (data.status === 'error') {
 			console.log("[PaleWhite] Server Error: ", data.error);
 			if (data.exception_trace !== undefined) {
@@ -53,6 +74,9 @@ pale_white = {
 					console.log("\t" + data.exception_trace.stacktrace[i]);
 				}
 			}
+
+		} else {
+			console.log("[PaleWhite] unknown ajax response: ", data);
 		}
 	},
 	substitute_dom_content: function (dom_content) {
@@ -60,9 +84,14 @@ pale_white = {
 			var nodes = document.querySelectorAll(selector);
 			for (var i = 0; i < nodes.length; i++) {
 				var node = nodes[i];
+
+				// create the new dom and add javascript hooks
 				var newdom = document.createElement('div');
 				newdom.innerHTML = dom_content[selector];
 				newdom = newdom.firstChild;
+				pale_white.add_hooks(newdom);
+
+				// replace the target with it
 				node.parentNode.replaceChild(newdom, node);
 			}
 		});
@@ -90,6 +119,6 @@ pale_white = {
 window.addEventListener('load', function () { pale_white.onload(); });
 pale_white.register_hook('form.ajax_trigger', 'submit', function (event) {
 	event.preventDefault();
-	pale_white.send_ajax_trigger(this.getAttribute('action'), pale_white.parse_form_input(this));
+	pale_white.ajax(this.getAttribute('action'), pale_white.parse_form_input(this));
 });
 

@@ -103,9 +103,14 @@ class HTTPRequestExecutor {
 			$controller_class = $config['main_controller'];
 			$controller = new $controller_class();
 
-			// // validate a csrf token if it exists
-			// if (isset($_POST['_csrf_token']))
-			// 	$controller->validate_csrf_token((string)$_POST['_csrf_token']);
+			// validate a csrf token if the request is ajax
+			if ($is_ajax) {
+				if (isset($args['_csrf_token']))
+					$controller->validate_csrf_token((string)$args['_csrf_token']);
+				else
+					throw new \PaleWhite\ValidationException("all ajax actions require a valid _csrf_token");
+			}
+
 
 			if ($is_ajax) {
 				$controller->route_ajax($request, $response);

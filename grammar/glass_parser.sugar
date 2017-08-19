@@ -277,15 +277,17 @@ object context glass_tag {
 }
 
 object context parse_attribute_arguments {
-	if $identifier_regex => {
-		match '='
-		$_{attributes}{$0} = !glass_tag_attribute
-
-		while $identifier_regex, '=' => {
-			$_{attributes}{$2} = !glass_tag_attribute
+	switch {
+		$identifier_regex, '=' => {
+			$_{attributes}{$0} = !glass_tag_attribute
+		}
+		/"[a-zA-Z_][a-zA-Z0-9_\-]*+"/, '=' => {
+			$_{attributes}{!format_string->$0} = !glass_tag_attribute
+		}
+		default {
+			return
 		}
 	}
-	return
 }
 
 object context glass_tag_attribute {
