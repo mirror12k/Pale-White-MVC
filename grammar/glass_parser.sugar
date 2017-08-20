@@ -249,31 +249,6 @@ object context glass_item {
 }
 
 
-object context glass_arguments {
-	switch {
-		$identifier_regex, '=' => {
-			$_{$0} = !glass_argument_expression
-			if ',' => {
-				# good to continue
-			} else {
-				return
-			}
-		}
-		$string_regex, '=' => {
-			$_{!format_string->$0} = !glass_argument_expression
-			if ',' => {
-				# good to continue
-			} else {
-				return
-			}
-		}
-		default {
-			return
-		}
-	}
-}
-
-
 object context glass_tag {
 	switch {
 		'.', $identifier_regex => {
@@ -419,34 +394,91 @@ object context glass_argument_expression {
 			}
 			return
 		}
-		'[', ']' => {
-			$_ = !glass_more_expression->{
-				type => 'array_expression'
-				line_number => $0{line_number}
-				expression_list => []
-			}
-			return
-		}
 		'[' => {
 			$_ = !glass_more_expression->{
 				type => 'array_expression'
 				line_number => $0{line_number}
-				expression_list => !glass_expression_list->[]
+				expression_list => !glass_array_expression_list->[]
 			}
-			match ']'
 			return
 		}
 		'{' => {
 			$_ = !glass_more_expression->{
 				type => 'object_expression'
 				line_number => $0{line_number}
-				object_fields => !glass_arguments->{}
+				object_fields => !glass_object_arguments->{}
 			}
-			match '}'
 			return
 		}
 		default {
 			die 'expression expected'
+		}
+	}
+}
+
+object context glass_arguments {
+	switch {
+		$identifier_regex, '=' => {
+			$_{$0} = !glass_argument_expression
+			if ',' => {
+				# good to continue
+			} else {
+				return
+			}
+		}
+		$string_regex, '=' => {
+			$_{!format_string->$0} = !glass_argument_expression
+			if ',' => {
+				# good to continue
+			} else {
+				return
+			}
+		}
+		default {
+			return
+		}
+	}
+}
+
+object context glass_object_arguments {
+	switch {
+		'}' => {
+			return
+		}
+		$newline_regex => {
+			# skip whitespace
+		}
+		$indent_regex => {
+			# skip whitespace
+		}
+		$identifier_regex => {
+			match '='
+
+			$_{$0} = !glass_argument_expression
+			if ',' => {
+				# good to continue
+			} else {
+				if $newline_regex => {}
+				if $indent_regex => {}
+				match '}'
+				return
+			}
+		}
+		$string_regex => {
+			match '='
+
+			$_{!format_string->$0} = !glass_argument_expression
+			if ',' => {
+				# good to continue
+			} else {
+				if $newline_regex => {}
+				if $indent_regex => {}
+				match '}'
+				return
+			}
+		}
+		default {
+			die 'expected object key-value pair'
 		}
 	}
 }
@@ -457,6 +489,31 @@ list context glass_expression_list {
 		push !glass_argument_expression
 	}
 	return
+}
+
+list context glass_array_expression_list {
+	switch {
+		']' => {
+			return
+		}
+		$newline_regex => {
+			# skip whitespace
+		}
+		$indent_regex => {
+			# skip whitespace
+		}
+		default {
+			push !glass_argument_expression
+			if ',' => {
+				# good to continue
+			} else {
+				if $newline_regex => {}
+				if $indent_regex => {}
+				match ']'
+				return
+			}
+		}
+	}
 }
 
 object context glass_more_expression {
