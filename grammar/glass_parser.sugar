@@ -250,15 +250,27 @@ object context glass_item {
 
 
 object context glass_arguments {
-	while $identifier_regex, '=' => {
-		$_{$0} = !glass_argument_expression
-		if ',' => {
-			# good to continue
-		} else {
+	switch {
+		$identifier_regex, '=' => {
+			$_{$0} = !glass_argument_expression
+			if ',' => {
+				# good to continue
+			} else {
+				return
+			}
+		}
+		$string_regex, '=' => {
+			$_{!format_string->$0} = !glass_argument_expression
+			if ',' => {
+				# good to continue
+			} else {
+				return
+			}
+		}
+		default {
 			return
 		}
 	}
-	return
 }
 
 
@@ -372,6 +384,7 @@ object context glass_argument_expression {
 		$integer_regex => {
 			$_ = {
 				type => 'integer_expression'
+				line_number => $0{line_number}
 				value => $0
 			}
 			return
@@ -379,13 +392,19 @@ object context glass_argument_expression {
 		$string_regex => {
 			$_ = {
 				type => 'string_expression'
+				line_number => $0{line_number}
 				string => !format_string->$0
 			}
+			return
+		}
+		$string_interpolation_start_regex => {
+			$_ = !glass_interpolation_expression->$0
 			return
 		}
 		'len', '(' => {
 			$_ = {
 				type => 'length_expression'
+				line_number => $0{line_number}
 				expression => !glass_argument_expression
 			}
 			match ')'
@@ -395,8 +414,35 @@ object context glass_argument_expression {
 		$identifier_regex => {
 			$_ = !glass_more_expression->{
 				type => 'variable_expression'
+				line_number => $0{line_number}
 				identifier => $0
 			}
+			return
+		}
+		'[', ']' => {
+			$_ = !glass_more_expression->{
+				type => 'array_expression'
+				line_number => $0{line_number}
+				expression_list => []
+			}
+			return
+		}
+		'[' => {
+			$_ = !glass_more_expression->{
+				type => 'array_expression'
+				line_number => $0{line_number}
+				expression_list => !glass_expression_list->[]
+			}
+			match ']'
+			return
+		}
+		'{' => {
+			$_ = !glass_more_expression->{
+				type => 'object_expression'
+				line_number => $0{line_number}
+				object_fields => !glass_arguments->{}
+			}
+			match '}'
 			return
 		}
 		default {

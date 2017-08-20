@@ -354,7 +354,9 @@ sub compile_argument_expression {
 			or $expression->{type} eq 'greather_than_expression'
 			or $expression->{type} eq 'less_than_or_equal_expression'
 			or $expression->{type} eq 'greather_than_or_equal_expression'
-			or $expression->{type} eq 'equals_expression') {
+			or $expression->{type} eq 'equals_expression'
+			or $expression->{type} eq 'array_expression'
+			or $expression->{type} eq 'object_expression') {
 		die "error on line $expression->{line_number}: cannot use $expression->{type} directly in html";
 
 	} elsif ($expression->{type} eq 'interpolation_expression') {
@@ -380,6 +382,9 @@ sub compile_value_expression {
 
 	} elsif ($expression->{type} eq 'string_expression') {
 		return "\"$expression->{string}\""
+
+	} elsif ($expression->{type} eq 'interpolation_expression') {
+		return join ' . ', map $self->compile_value_expression($_), @{$expression->{expressions}}
 		
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
@@ -403,6 +408,16 @@ sub compile_value_expression {
 		my $arguments_list = $self->compile_value_expression_list($expression->{arguments_list});
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "$sub_expression->$expression->{identifier}($arguments_list)";
+
+	} elsif ($expression->{type} eq 'array_expression') {
+		my $expression_list = $self->compile_value_expression_list($expression->{expression_list});
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return "array($expression_list)";
+
+	} elsif ($expression->{type} eq 'object_expression') {
+		my $object = $self->compile_arguments($expression->{object_fields});
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return "(object)$object";
 
 	} elsif ($expression->{type} eq 'length_expression') {
 		my $sub_expression = $self->compile_value_expression($expression->{expression});
