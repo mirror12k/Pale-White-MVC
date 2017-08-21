@@ -15,7 +15,7 @@ use feature 'say';
 ##############################
 
 our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
-our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|<|>|<=|>=|==|=|,|\.|\?|!/;
+our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|=|,|\.|\?|!/;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_native_identifier_regex = qr/native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
@@ -29,6 +29,7 @@ our $var_event_identifier_regex = qr/create|delete/;
 our $var_format_native_code_substitution = sub { $_[0] =~ s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/sr };
 our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
 our $var_format_file_identifier_substitution = sub { $_[0] =~ s/\Afile:://sr };
+our $var_format_native_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
 our $var_escape_string_substitution = sub { $_[0] =~ s/\\([\\"])/$1/gsr };
 our $var_format_string_substitution = sub { $_[0] =~ s/\A"(.*)"\Z/$1/sr };
 our $var_format_event_identifier_substitution = sub { $_[0] =~ s/\A/on_/sr };
@@ -151,6 +152,15 @@ sub context_root {
 			$self->confess_at_current_offset('expected \'}\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
 			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'native_library') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/, \'=>\', qr/"([^\\\\"]|\\\\[\\\\"])*?"/s, \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_class_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=>' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_string_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @$context_list, { type => 'native_library_declaration', line_number => $tokens[0][2], identifier => $tokens[1][1], include_file => $self->context_format_string($tokens[3][1]), };
 			}
 			else {
 			$self->confess_at_current_offset('block statement expected');
@@ -882,6 +892,13 @@ sub context_action_expression {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = $self->context_more_action_expression({ type => 'model_class_expression', line_number => $tokens[0][2], identifier => $var_format_model_identifier_substitution->($tokens[0][1]), });
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_native_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_more_action_expression({ type => 'native_library_expression', line_number => $tokens[0][2], identifier => $var_format_native_identifier_substitution->($tokens[0][1]), });
 			return $context_object;
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {

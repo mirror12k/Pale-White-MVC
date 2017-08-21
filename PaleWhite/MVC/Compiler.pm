@@ -21,6 +21,8 @@ sub new {
 	my ($class, %args) = @_;
 	my $self = bless {}, $class;
 
+	$self->{native_library_includes} = [];
+
 	return $self
 }
 
@@ -34,6 +36,16 @@ sub parse_file {
 	$parser->{filepath} = $filepath;
 	$self->{syntax_tree} = $parser->parse;
 	# say Dumper $self->{syntax_tree};
+}
+
+sub compile_references {
+	my ($self) = @_;
+
+	foreach my $item (@{$self->{syntax_tree}}) {
+		if ($item->{type} eq 'native_library_declaration') {
+			push @{$self->{native_library_includes}}, $item->{include_file};
+		}
+	}
 }
 
 sub compile_sql {
@@ -66,6 +78,8 @@ sub compile_php {
 		} elsif ($item->{type} eq 'file_directory_definition') {
 			my $compiler = PaleWhite::MVC::FileDirectoryPHPCompiler->new;
 			push @code, $compiler->compile_file_directory($item);
+		} elsif ($item->{type} eq 'native_library_declaration') {
+			# ignored
 		} else {
 			die "unimplemented mvc syntax item: $item->{type}";
 		}

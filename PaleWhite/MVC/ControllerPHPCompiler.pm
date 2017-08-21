@@ -524,10 +524,12 @@ sub compile_expression {
 		}
 
 	} elsif ($expression->{type} eq 'model_class_expression') {
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		my $model_class = "\\$expression->{identifier}";
-		$model_class =~ s/::/\\/s;
-		return $model_class;
+		my $class = $self->format_classname($expression->{identifier});
+		return $class
+
+	} elsif ($expression->{type} eq 'native_library_expression') {
+		my $class = $self->format_classname($expression->{identifier});
+		return $class
 
 	} elsif ($expression->{type} eq 'method_call_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});
@@ -536,6 +538,8 @@ sub compile_expression {
 		if ($expression->{expression}{type} eq 'variable_expression') {
 			return "$sub_expression->$expression->{identifier}($arguments_list)";
 		} elsif ($expression->{expression}{type} eq 'model_class_expression') {
+			return "$sub_expression\::$expression->{identifier}($arguments_list)";
+		} elsif ($expression->{expression}{type} eq 'native_library_expression') {
 			return "$sub_expression\::$expression->{identifier}($arguments_list)";
 		} else {
 			die "invalid method call on a '$expression->{expression}{type}' on line $expression->{line_number}";
@@ -548,6 +552,8 @@ sub compile_expression {
 		if ($expression->{expression}{type} eq 'variable_expression') {
 			return "$sub_expression->$expression->{identifier}";
 		} elsif ($expression->{expression}{type} eq 'model_class_expression') {
+			return "$sub_expression\::\$$expression->{identifier}";
+		} elsif ($expression->{expression}{type} eq 'native_library_expression') {
 			return "$sub_expression\::\$$expression->{identifier}";
 		} else {
 			die "invalid access on a '$expression->{expression}{type}' on line $expression->{line_number}";

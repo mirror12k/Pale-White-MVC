@@ -130,6 +130,7 @@ sub compile_project_directory {
 
 		my $compiler = PaleWhite::MVC::Compiler->new;
 		$compiler->parse_file($source_path);
+		$compiler->compile_references;
 
 		my $compiled_php = $compiler->compile_php;
 		my $destination_file = Sugar::IO::File->new($destination_path);
@@ -139,6 +140,8 @@ sub compile_project_directory {
 		my $compiled_sql = $compiler->compile_sql;
 		$setup_sql_file->append($compiled_sql);
 
+
+		push @includes, @{$compiler->{native_library_includes}};
 		push @includes, $relative_path;
 	}
 

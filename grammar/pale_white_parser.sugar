@@ -2,7 +2,7 @@ package PaleWhite::MVC::Parser
 
 native_code_block_regex = /\{\{.*?\}\}/s
 
-symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|<|>|<=|>=|==|=|,|\.|\?|!/
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|=|,|\.|\?|!/
 # symbol_regex = /\{|\}|\[|\]|\(|\)|;/
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 file_identifier_regex = /file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
@@ -24,6 +24,7 @@ event_identifier_regex = /create|delete/
 format_native_code_substitution = s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/s
 format_model_identifier_substitution = s/\Amodel:://s
 format_file_identifier_substitution = s/\Afile:://s
+format_native_identifier_substitution = s/\Amodel:://s
 escape_string_substitution = s/\\([\\"])/$1/gs
 format_string_substitution = s/\A"(.*)"\Z/$1/s
 format_event_identifier_substitution = s/\A/on_/s
@@ -84,6 +85,15 @@ list context root {
 				directory => !format_string->$2
 			}
 			match '}'
+		}
+		'native_library' => {
+			match $class_identifier_regex, '=>', $string_regex, ';'
+			push {
+				type => 'native_library_declaration'
+				line_number => $0{line_number}
+				identifier => $1
+				include_file => !format_string->$3
+			}
 		}
 		default {
 			die 'block statement expected'
@@ -776,6 +786,14 @@ object context action_expression {
 				type => 'model_class_expression'
 				line_number => $0{line_number}
 				identifier => $format_model_identifier_substitution->$0
+			}
+			return
+		}
+		$native_identifier_regex => {
+			$_ = !more_action_expression->{
+				type => 'native_library_expression'
+				line_number => $0{line_number}
+				identifier => $format_native_identifier_substitution->$0
 			}
 			return
 		}
