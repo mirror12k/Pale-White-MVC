@@ -488,7 +488,10 @@ sub compile_expression {
 		return "$expression->{value}"
 		
 	} elsif ($expression->{type} eq 'object_expression') {
-		return $self->compile_arguments_array($expression->{value})
+		return '(object)' . $self->compile_arguments_array($expression->{value})
+		
+	} elsif ($expression->{type} eq 'array_expression') {
+		return 'array(' . $self->compile_expression_list($expression->{value}) . ')'
 		
 	} elsif ($expression->{type} eq 'session_variable_expression') {
 		return "\$_SESSION['$expression->{identifier}']";

@@ -639,6 +639,22 @@ list context action_expression_list {
 	return
 }
 
+list context action_array_expression_list {
+	switch {
+		']' => {
+			return
+		}
+		default {
+			push !action_expression
+			if ',' => {
+				# allow another argument to get parsed
+			} else {
+				return
+			}
+		}
+	}
+}
+
 
 item context branch_action_expression {
 	match '('
@@ -772,13 +788,21 @@ object context action_expression {
 			}
 			return
 		}
-		'[' => {
+		'{' => {
 			$_ = {
 				type => 'object_expression'
 				line_number => $0{line_number}
 				value => !action_arguments->{}
 			}
-			match ']'
+			match '}'
+			return
+		}
+		'[' => {
+			$_ = {
+				type => 'array_expression'
+				line_number => $0{line_number}
+				value => !action_array_expression_list->[]
+			}
 			return
 		}
 		default {
