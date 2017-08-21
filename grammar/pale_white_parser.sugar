@@ -764,6 +764,14 @@ object context action_expression {
 			$_ = !more_action_expression->$_
 			return
 		}
+		$model_identifier_regex => {
+			$_ = !more_action_expression->{
+				type => 'model_class_expression'
+				line_number => $0{line_number}
+				identifier => $format_model_identifier_substitution->$0
+			}
+			return
+		}
 		$identifier_regex => {
 			$_ = !more_action_expression->{
 				type => 'variable_expression'

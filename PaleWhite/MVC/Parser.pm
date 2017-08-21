@@ -875,6 +875,13 @@ sub context_action_expression {
 			$context_object = $self->context_more_action_expression($context_object);
 			return $context_object;
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_model_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_more_action_expression({ type => 'model_class_expression', line_number => $tokens[0][2], identifier => $var_format_model_identifier_substitution->($tokens[0][1]), });
+			return $context_object;
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;

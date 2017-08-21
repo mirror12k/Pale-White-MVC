@@ -411,7 +411,8 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'expression_statement') {
 		if ($action->{expression}{type} ne 'method_call_expression') {
-			die "expression statement cannot be of type '$action->{expression}{type}'";
+			die "expression statement cannot be of type '$action->{expression}{type}'"
+				. " on line $action->{expression}{line_number}";
 		}
 
 		my $expression = $self->compile_expression($action->{expression});
@@ -508,15 +509,35 @@ sub compile_expression {
 			return "\$$expression->{identifier}";
 		}
 
+	} elsif ($expression->{type} eq 'model_class_expression') {
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		my $model_class = "\\$expression->{identifier}";
+		$model_class =~ s/::/\\/s;
+		return $model_class;
+
 	} elsif ($expression->{type} eq 'method_call_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});
 		my $arguments_list = $self->compile_expression_list($expression->{arguments_list});
+
+		if ($expression->{expression}{type} eq 'variable_expression') {
+			return "$sub_expression->$expression->{identifier}($arguments_list)";
+		} elsif ($expression->{expression}{type} eq 'model_class_expression') {
+			return "$sub_expression\::$expression->{identifier}($arguments_list)";
+		} else {
+			die "invalid method call on a '$expression->{expression}{type}' on line $expression->{line_number}";
+		}
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return "$sub_expression->$expression->{identifier}($arguments_list)";
 
 	} elsif ($expression->{type} eq 'access_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});
-		return "$sub_expression->$expression->{identifier}";
+
+		if ($expression->{expression}{type} eq 'variable_expression') {
+			return "$sub_expression->$expression->{identifier}";
+		} elsif ($expression->{expression}{type} eq 'model_class_expression') {
+			return "$sub_expression\::\$$expression->{identifier}";
+		} else {
+			die "invalid access on a '$expression->{expression}{type}' on line $expression->{line_number}";
+		}
 
 	} elsif ($expression->{type} eq 'less_than_expression') {
 		my $left_expression = $self->compile_expression($expression->{left_expression});
