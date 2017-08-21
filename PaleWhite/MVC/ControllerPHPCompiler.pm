@@ -30,10 +30,15 @@ sub new {
 # 	return $code
 # }
 
-sub map_class_name {
-	my ($self, $classname) = @_;
+# sub map_class_name {
+# 	my ($self, $classname) = @_;
 
-	return "/$classname" =~ s/\//\\/gr;
+# 	return "/$classname" =~ s/\//\\/gr;
+# }
+
+sub format_classname {
+	my ($self, $classname) = @_;
+	return "\\$classname" =~ s/::/\\/gr
 }
 
 sub compile_controller {
@@ -43,8 +48,8 @@ sub compile_controller {
 	my $identifier = $controller->{identifier};
 	my @code;
 
-	my $parent = 'PaleWhite/Controller'; # $template->{arguments}[2] // 
-	$parent = $self->map_class_name($parent);
+	my $parent = 'PaleWhite::Controller'; # $template->{arguments}[2] // 
+	$parent = $self->format_classname($parent);
 
 	push @code, $self->compile_controller_route($controller);
 	push @code, $self->compile_controller_route_ajax($controller);
@@ -316,8 +321,9 @@ sub compile_action {
 	my ($self, $action) = @_;
 
 	if ($action->{type} eq 'render_template') {
+		my $class = $self->format_classname($action->{identifier});
 		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$res->body = \$this->render_template('$action->{identifier}', $arguments);\n"
+		return "\$res->body = \$this->render_template('$class', $arguments);\n"
 
 	} elsif ($action->{type} eq 'render_file') {
 		my $expression = $self->compile_expression($action->{expression});
@@ -345,10 +351,11 @@ sub compile_action {
 		return "\$this->action('$action->{identifier}', $arguments);\n"
 
 	} elsif ($action->{type} eq 'route_controller') {
+		my $class = $self->format_classname($action->{identifier});
 		my $path_argument = exists $action->{arguments}{path} ? $self->compile_expression($action->{arguments}{path}) : '$path';
 		my $args_argument = exists $action->{arguments}{args} ? $self->compile_expression($action->{arguments}{args}) : '$args';
 		# my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$this->route_subcontroller('$action->{identifier}', \$res, $path_argument, $args_argument);\n"
+		return "\$this->route_subcontroller('$class', \$res, $path_argument, $args_argument);\n"
 
 	} elsif ($action->{type} eq 'argument_specifier') {
 		my $args_var = $self->{context_args_variable};
@@ -447,32 +454,39 @@ sub compile_expression {
 	my ($self, $expression) = @_;
 
 	if ($expression->{type} eq 'load_optional_model_expression') {
+		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "$expression->{identifier}::get_by($arguments)"
+		return "$class\::get_by($arguments)"
 		
 	} elsif ($expression->{type} eq 'load_model_expression') {
+		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "\$this->load_model('$expression->{identifier}', $arguments)"
+		return "\$this->load_model('$class', $arguments)"
 		
 	} elsif ($expression->{type} eq 'load_file_expression') {
+		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "\$this->load_file('$expression->{identifier}', $arguments)"
+		return "\$this->load_file('$class', $arguments)"
 		
 	} elsif ($expression->{type} eq 'load_model_list_expression') {
+		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "$expression->{identifier}::get_list($arguments)"
+		return "$class\::get_list($arguments)"
 		
 	} elsif ($expression->{type} eq 'create_optional_model_expression') {
+		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "$expression->{identifier}::create($arguments)"
+		return "$class\::create($arguments)"
 		
 	} elsif ($expression->{type} eq 'create_model_expression') {
+		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "\$this->create_model('$expression->{identifier}', $arguments)"
+		return "\$this->create_model('$class', $arguments)"
 		
 	} elsif ($expression->{type} eq 'render_template_expression') {
+		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "((new $expression->{identifier}())->render($arguments))"
+		return "((new $class())->render($arguments))"
 		
 	} elsif ($expression->{type} eq 'render_file_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});

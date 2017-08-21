@@ -18,13 +18,14 @@ our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
 our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|<|>|<=|>=|==|=|,|\.|\?|!/;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
-our $var_keyword_regex = qr/\b(model|int|string|getter|setter|cast|to|from|static|function)\b/;
-our $var_event_identifier_regex = qr/create|delete/;
+our $var_native_identifier_regex = qr/native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
+our $var_class_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
 our $var_integer_regex = qr/-?\d++/;
 our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
 our $var_comment_regex = qr/#[^\n]*+\n/s;
 our $var_whitespace_regex = qr/\s++/s;
+our $var_event_identifier_regex = qr/create|delete/;
 our $var_format_native_code_substitution = sub { $_[0] =~ s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/sr };
 our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
 our $var_format_file_identifier_substitution = sub { $_[0] =~ s/\Afile:://sr };
@@ -38,7 +39,8 @@ our $tokens = [
 	'symbol' => $var_symbol_regex,
 	'model_identifier' => $var_model_identifier_regex,
 	'file_identifier' => $var_file_identifier_regex,
-	'keyword' => $var_keyword_regex,
+	'native_identifier' => $var_native_identifier_regex,
+	'class_identifier' => $var_class_identifier_regex,
 	'identifier' => $var_identifier_regex,
 	'integer' => $var_integer_regex,
 	'string' => $var_string_regex,
@@ -518,8 +520,8 @@ sub context_path_action_block_list {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_class_identifier_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{block}}, { type => 'render_template', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			$self->confess_at_current_offset('expected \';\'')
@@ -590,8 +592,8 @@ sub context_path_action_block_list {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_class_identifier_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{block}}, { type => 'route_controller', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			$self->confess_at_current_offset('expected \';\'')
@@ -795,49 +797,49 @@ sub context_action_expression {
 	while ($self->more_tokens) {
 	my @tokens;
 
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'model' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '?' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_identifier_regex)\Z/) {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'model' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '?' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_class_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(3));
 			$context_object = { type => 'load_optional_model_expression', line_number => $tokens[0][2], identifier => $tokens[2][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'model' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'model' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_class_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object = { type => 'load_model_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'file' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'file' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_class_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object = { type => 'load_file_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'list' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'list' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_class_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object = { type => 'load_model_list_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'create' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '?' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_identifier_regex)\Z/) {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'create' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '?' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_class_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(3));
 			$context_object = { type => 'create_optional_model_expression', line_number => $tokens[0][2], identifier => $tokens[2][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'create' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'create' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_class_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object = { type => 'create_model_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'render' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'render' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_class_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));

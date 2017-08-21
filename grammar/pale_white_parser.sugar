@@ -6,8 +6,9 @@ symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|<|>|<=|>=|==|=|,|\.|\?|!/
 # symbol_regex = /\{|\}|\[|\]|\(|\)|;/
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 file_identifier_regex = /file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
-keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
-event_identifier_regex = /create|delete/
+native_identifier_regex = /native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
+# keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
+class_identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
 
 integer_regex = /-?\d++/
@@ -15,6 +16,10 @@ string_regex = /"([^\\"]|\\[\\"])*?"/s
 
 comment_regex = /#[^\n]*+\n/s
 whitespace_regex = /\s++/s
+
+
+event_identifier_regex = /create|delete/
+
 
 format_native_code_substitution = s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/s
 format_model_identifier_substitution = s/\Amodel:://s
@@ -31,7 +36,9 @@ tokens {
 	symbol => $symbol_regex
 	model_identifier => $model_identifier_regex
 	file_identifier => $file_identifier_regex
-	keyword => $keyword_regex
+	native_identifier => $native_identifier_regex
+	# keyword => $keyword_regex
+	class_identifier => $class_identifier_regex
 	identifier => $identifier_regex
 	
 	integer => $integer_regex
@@ -431,7 +438,7 @@ object context path_action_block {
 object context path_action_block_list {
 	switch {
 		'render' => {
-			match $identifier_regex
+			match $class_identifier_regex
 			$_{block}[] = {
 				type => 'render_template'
 				line_number => $0{line_number}
@@ -493,7 +500,7 @@ object context path_action_block_list {
 			match ';'
 		}
 		'route' => {
-			match $identifier_regex
+			match $class_identifier_regex
 			$_{block}[] = {
 				type => 'route_controller'
 				line_number => $0{line_number}
@@ -667,7 +674,7 @@ item context branch_action_expression {
 
 object context action_expression {
 	switch {
-		'model', '?', $identifier_regex => {
+		'model', '?', $class_identifier_regex => {
 			$_ = {
 				type => 'load_optional_model_expression'
 				line_number => $0{line_number}
@@ -676,7 +683,7 @@ object context action_expression {
 			}
 			return
 		}
-		'model', $identifier_regex => {
+		'model', $class_identifier_regex => {
 			$_ = {
 				type => 'load_model_expression'
 				line_number => $0{line_number}
@@ -685,7 +692,7 @@ object context action_expression {
 			}
 			return
 		}
-		'file', $identifier_regex => {
+		'file', $class_identifier_regex => {
 			$_ = {
 				type => 'load_file_expression'
 				line_number => $0{line_number}
@@ -694,7 +701,7 @@ object context action_expression {
 			}
 			return
 		}
-		'list', $identifier_regex => {
+		'list', $class_identifier_regex => {
 			$_ = {
 				type => 'load_model_list_expression'
 				line_number => $0{line_number}
@@ -703,7 +710,7 @@ object context action_expression {
 			}
 			return
 		}
-		'create', '?', $identifier_regex => {
+		'create', '?', $class_identifier_regex => {
 			$_ = {
 				type => 'create_optional_model_expression'
 				line_number => $0{line_number}
@@ -712,7 +719,7 @@ object context action_expression {
 			}
 			return
 		}
-		'create', $identifier_regex => {
+		'create', $class_identifier_regex => {
 			$_ = {
 				type => 'create_model_expression'
 				line_number => $0{line_number}
@@ -721,7 +728,7 @@ object context action_expression {
 			}
 			return
 		}
-		'render', $identifier_regex => {
+		'render', $class_identifier_regex => {
 			$_ = {
 				type => 'render_template_expression'
 				line_number => $0{line_number}
