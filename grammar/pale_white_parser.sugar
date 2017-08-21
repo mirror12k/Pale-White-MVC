@@ -447,6 +447,22 @@ object context path_action_block {
 
 object context path_action_block_list {
 	switch {
+		'log' => {
+			$_{block}[] = {
+				type => 'log_message'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
+			match ';'
+		}
+		'log_exception' => {
+			$_{block}[] = {
+				type => 'log_exception'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
+			match ';'
+		}
 		'render' => {
 			match $class_identifier_regex
 			$_{block}[] = {

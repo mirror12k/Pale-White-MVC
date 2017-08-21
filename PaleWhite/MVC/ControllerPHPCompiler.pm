@@ -91,6 +91,8 @@ sub compile_controller_route {
 	if (exists $controller->{error_path}) {
 		@code = map "\t$_", @code;
 		my @exception_code = map "\t$_", $self->compile_path($controller->{error_path});
+		unshift @exception_code, "\t\$this->log_exception(\$e);\n";
+		
 		@code = ("try {\n", @code, "} catch (\\Exception \$e) {\n", @exception_code, "}\n");
 	}
 	@code = map "\t$_", @code;
@@ -320,7 +322,15 @@ sub compile_action_block {
 sub compile_action {
 	my ($self, $action) = @_;
 
-	if ($action->{type} eq 'render_template') {
+	if ($action->{type} eq 'log_message') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$this->log_message($expression);\n"
+
+	} elsif ($action->{type} eq 'log_exception') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$this->log_exception($expression);\n"
+
+	} elsif ($action->{type} eq 'render_template') {
 		my $class = $self->format_classname($action->{identifier});
 		my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "\$res->body = \$this->render_template('$class', $arguments);\n"

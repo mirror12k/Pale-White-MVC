@@ -28,6 +28,7 @@ global \$config;
 	'site_base' => '',
 	'main_controller' => 'MainController',
 	'show_exception_trace' => true,
+	'log_file' => '',
 
 	'database_config' => array(
 		'mysql_host' => 'localhost',

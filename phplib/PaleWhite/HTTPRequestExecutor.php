@@ -20,6 +20,36 @@ if(!function_exists('hash_equals')) {
 }
 
 class HTTPRequestExecutor {
+
+	public function log_message($message) {
+		$message = (string)$message;
+		$message = "[". get_called_class() . "] " . $message;
+
+		global $config;
+
+		error_log($message);
+		if ($config['log_file'] !== '')
+			error_log(date("[Y-m-d H:i:s]") . " [" . $_SERVER['REMOTE_ADDR'] . "] $message\n", 3, $config['log_file']);
+	}
+
+	public function log_exception($exception) {
+		if (! $exception instanceof \Exception)
+			throw new \PaleWhite\InvalidException("attempt to log_exception non-exception object");
+		
+		$this->log_message("an uncaught '" . get_class($exception) . "' exception occurred:");
+		$this->log_message($exception->getMessage());
+		$this->log_message("at " . $exception->getFile() . ":" . $exception->getLine());
+		
+		foreach ($exception->getTrace() as $trace) {
+			$message = $trace['file'] . "(" . $trace['line'] . "): ";
+			if (isset($trace['class'])) {
+				$message .= $trace['class'] . $trace['type'];
+			}
+			$message .= $trace['function'];
+			$this->log_message(" > $message");
+		}
+	}
+
 	public function execute () {
 		global $config;
 
@@ -31,10 +61,10 @@ class HTTPRequestExecutor {
 
 		if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && (string)$_SERVER['HTTP_X_REQUESTED_WITH'] === 'pale_white/ajax') {
 			$is_ajax = true;
-			error_log("[PaleWhite] routing ajax '$path'");
+			$this->log_message("routing ajax '$path'");
 		} else {
 			$is_ajax = false;
-			error_log("[PaleWhite] routing '$path'");
+			$this->log_message("routing '$path'");
 		}
 
 
@@ -46,7 +76,7 @@ class HTTPRequestExecutor {
 
 			// enable the session
 			session_start();
-			// error_log("[PaleWhite] _SESSION: " . json_encode($_SESSION));
+			// $this->log_message("_SESSION: " . json_encode($_SESSION));
 			if (!isset($_SESSION['pale_white_csrf_token']))
 			{
 				$seed = openssl_random_pseudo_bytes(32);
@@ -59,7 +89,7 @@ class HTTPRequestExecutor {
 				// get json input from ajax request
 				$input = file_get_contents('php://input');
 				$args = json_decode($input, true);
-				// error_log("[PaleWhite] got json request data: " . json_encode($args));
+				// $this->log_message("got json request data: " . json_encode($args));
 
 			} else {
 				// process any post arguments
@@ -70,7 +100,7 @@ class HTTPRequestExecutor {
 				// process any file uploads into args
 				foreach ($_FILES as $field => $file_upload)
 				{
-					// error_log("[PaleWhite] \$_FILES[$field]: " . json_encode($file_upload));
+					// $this->log_message("\$_FILES[$field]: " . json_encode($file_upload));
 					if (!isset($file_upload['error']) || is_array($file_upload['error']))
 						throw new \PaleWhite\PaleWhiteException("invalid file upload");
 					if ($file_upload['error'] === UPLOAD_ERR_INI_SIZE)
@@ -92,7 +122,7 @@ class HTTPRequestExecutor {
 						throw new \PaleWhite\PaleWhiteException("file upload failed");
 					}
 				}
-				// error_log("[PaleWhite] got post request data: " . json_encode($args));
+				// $this->log_message("got post request data: " . json_encode($args));
 			}
 
 			// set up api objects
@@ -119,6 +149,8 @@ class HTTPRequestExecutor {
 			}
 
 		} catch (\Exception $e) {
+			$this->log_exception($e);
+
 			// last-chance exception catch
 			$response = new \PaleWhite\Response();
 			$response->status = "500 Server Error";
@@ -143,7 +175,6 @@ class HTTPRequestExecutor {
 						$exception_trace['stacktrace'][] = $message;
 					}
 
-					$response->body .= "</body></html>";
 					$response->body = array(
 						'status' => 'error',
 						'error' => 'a "' . get_class($e) . '" exception occurred: ' . $e->getMessage(),
@@ -209,7 +240,7 @@ class HTTPRequestExecutor {
 		// send the body
 		if ($response->body !== null) {
 			if ($response->body instanceof \PaleWhite\FileDirectoryFile) {
-				error_log("[PaleWhite] sending file: '" . $response->body->filepath . "'");
+				$this->log_message("sending file: '" . $response->body->filepath . "'");
 				readfile($response->body->filepath);
 			} elseif (is_array($response->body)) {
 				if (!isset($response->headers['content-type']))

@@ -526,7 +526,25 @@ sub context_path_action_block_list {
 	while ($self->more_tokens) {
 	my @tokens;
 
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'render') {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'log') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{block}}, { type => 'log_message', line_number => $tokens[0][2], expression => $self->context_action_expression, };
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'log_exception') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{block}}, { type => 'log_exception', line_number => $tokens[0][2], expression => $self->context_action_expression, };
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'render') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
