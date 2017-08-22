@@ -513,6 +513,9 @@ sub compile_expression {
 
 	} elsif ($expression->{type} eq 'string_expression') {
 		return "\"$expression->{value}\""
+
+	} elsif ($expression->{type} eq 'localized_string_expression') {
+		return "\$this->get_localized_string(\'$expression->{namespace_identifier}\', \'$expression->{identifier}\')"
 		
 	} elsif ($expression->{type} eq 'integer_expression') {
 		return "$expression->{value}"

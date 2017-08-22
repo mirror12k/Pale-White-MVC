@@ -15,7 +15,7 @@ use feature 'say';
 ##############################
 
 our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
-our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|=|,|\.|\?|!|\@/;
+our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|=|,|\.|\?|!|\@|\//;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_native_identifier_regex = qr/native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
@@ -940,6 +940,13 @@ sub context_action_expression {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = { type => 'string_expression', line_number => $tokens[0][2], value => $self->context_format_string($tokens[0][1]), };
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '@' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq '/' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			$context_object = { type => 'localized_string_expression', line_number => $tokens[0][2], identifier => $tokens[3][1], namespace_identifier => $tokens[1][1], };
 			return $context_object;
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_integer_regex)\Z/) {

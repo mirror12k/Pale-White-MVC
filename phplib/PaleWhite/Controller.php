@@ -84,8 +84,25 @@ abstract class Controller {
 	}
 
 	public function set_localization($localization) {
+		$localization = (string)$localization;
+		if (!preg_match('/\A[a-zA-Z_][a-zA-Z_0-9]*\Z/', $localization))
+			throw new \PaleWhite\ValidationException("invalid localization: '$localization'!");
+
 		global $runtime;
-		$runtime['current_localization'] = (string)$localization;
+		$runtime['current_localization'] = $localization;
+	}
+
+	public function get_localized_string($localization_namespace, $field) {
+		global $runtime;
+		$current_localization = (string)$runtime['current_localization'];
+		if ($current_localization === '')
+			throw new \PaleWhite\InvalidException("no current localization set!");
+
+		$class = "\\Localization\\$current_localization\\$localization_namespace";
+		if (!class_exists($class))
+			throw new \PaleWhite\InvalidException("no localization definition found for $localization_namespace:$current_localization");
+
+		return $class::$$field;
 	}
 
 	public function validate_csrf_token($token) {
