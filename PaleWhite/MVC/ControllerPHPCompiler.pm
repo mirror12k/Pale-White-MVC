@@ -343,6 +343,10 @@ sub compile_action {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "\$res->body = $arguments;\n"
 
+	} elsif ($action->{type} eq 'set_localization') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$this->set_localization($expression);\n"
+
 	} elsif ($action->{type} eq 'assign_status') {
 		my $expression = $self->compile_expression($action->{expression});
 		return "\$res->status = $expression;\n"

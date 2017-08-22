@@ -83,6 +83,11 @@ abstract class Controller {
 		return $file;
 	}
 
+	public function set_localization($localization) {
+		global $runtime;
+		$runtime['current_localization'] = (string)$localization;
+	}
+
 	public function validate_csrf_token($token) {
 		if (!hash_equals($_SESSION['pale_white_csrf_token'], $token))
 			throw new \PaleWhite\ValidationException("incorrect csrf token");

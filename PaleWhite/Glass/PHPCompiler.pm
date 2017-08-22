@@ -343,7 +343,8 @@ sub compile_argument_expression {
 	} elsif ($expression->{type} eq 'variable_expression'
 			or $expression->{type} eq 'access_expression'
 			or $expression->{type} eq 'length_expression'
-			or $expression->{type} eq 'method_call_expression') {
+			or $expression->{type} eq 'method_call_expression'
+			or $expression->{type} eq 'localized_string_expression') {
 		if ($context eq 'html_attribute' or $context eq 'text') {
 			return $self->flush_accumulator, "\$text .= htmlspecialchars(" . $self->compile_value_expression($expression) . ");\n";
 		} else {
@@ -382,6 +383,9 @@ sub compile_value_expression {
 
 	} elsif ($expression->{type} eq 'string_expression') {
 		return "\"$expression->{string}\""
+
+	} elsif ($expression->{type} eq 'localized_string_expression') {
+		return "\$this->get_localized_string(\'$expression->{namespace_identifier}\', \'$expression->{identifier}\')"
 
 	} elsif ($expression->{type} eq 'interpolation_expression') {
 		return join ' . ', map $self->compile_value_expression($_), @{$expression->{expressions}}

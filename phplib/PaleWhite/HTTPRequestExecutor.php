@@ -53,6 +53,12 @@ class HTTPRequestExecutor {
 	public function execute () {
 		global $config;
 
+		// setup runtime
+		global $runtime;
+		$runtime = array(
+			'current_localization' => (string)$config['default_localization'],
+		);
+
 		// process the path
 		$url = parse_url(urldecode($_SERVER['REQUEST_URI']));
 		$path = $url['path'];

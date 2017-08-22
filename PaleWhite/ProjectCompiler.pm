@@ -42,6 +42,10 @@ global \$config;
 	// DefaultMaintenanceController is a simple controller displaying a maintenance message
 	'maintenance_mode_controller' => '\\\\PaleWhite\\\\DefaultMaintenanceController',
 
+	// initial localization setting set at the start of each request
+	// leave empty for no default
+	'default_localization' => '',
+
 	// database configuration
 	// only used if database access is performed using models
 	// dies if access is requested and information is incorrect

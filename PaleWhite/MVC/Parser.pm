@@ -15,7 +15,7 @@ use feature 'say';
 ##############################
 
 our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
-our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|=|,|\.|\?|!/;
+our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|=|,|\.|\?|!|\@/;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_native_identifier_regex = qr/native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
@@ -570,6 +570,15 @@ sub context_path_action_block_list {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{block}}, { type => 'render_json', line_number => $tokens[0][2], arguments => $self->context_action_arguments({}), };
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'set_localization') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{block}}, { type => 'set_localization', line_number => $tokens[0][2], expression => $self->context_action_expression, };
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));

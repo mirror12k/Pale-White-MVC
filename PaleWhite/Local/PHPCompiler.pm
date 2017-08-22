@@ -51,7 +51,7 @@ sub compile_localization {
 		push @code, $self->compile_data_field($def, $field);
 	}
 	@code = map "\t$_", @code;
-	@code = ("class $def->{identifier} extends \\PaleWhite\\LocalizationDefinition {\n", @code, "}\n\n");
+	@code = ("class $def->{identifier} implements \\PaleWhite\\LocalizationDefinition {\n", @code, "}\n\n");
 
 	return @prefix_code, @code
 }

@@ -8,7 +8,7 @@ string_interpolation_end_regex = /\}\}([^\\"]|\\[\\"])*?"/s
 integer_regex = /-?\d++/
 string_regex = /"([^\\"]|\\[\\"])*?"/s
 
-symbol_regex = /!|\.|\#|=>|<|>|<=|>=|==|=|,|\{|\}|\(|\)|\[|\]|-/
+symbol_regex = /!|\.|\#|=>|<|>|<=|>=|==|=|,|\{|\}|\(|\)|\[|\]|-|\@|\//
 
 # comment_regex = /\s*+\#[^\n]*+\n/s
 indent_regex = /\t++/
@@ -295,6 +295,15 @@ object context glass_tag_attribute {
 			match '}'
 			return
 		}
+		'@', $identifier_regex, '/', $identifier_regex => {
+			$_ = {
+				type => 'localized_string_expression'
+				line_number => $0{line_number}
+				identifier => $3
+				namespace_identifier => $1
+			}
+			return
+		}
 		default {
 			die 'attribute expression expected'
 		}
@@ -346,6 +355,15 @@ object context glass_tag_text {
 		'{' => {
 			$_{text_expression} = !glass_argument_expression
 			match '}'
+			return
+		}
+		'@', $identifier_regex, '/', $identifier_regex => {
+			$_{text_expression} = {
+				type => 'localized_string_expression'
+				line_number => $0{line_number}
+				identifier => $3
+				namespace_identifier => $1
+			}
 			return
 		}
 		default {
@@ -407,6 +425,15 @@ object context glass_argument_expression {
 				type => 'object_expression'
 				line_number => $0{line_number}
 				object_fields => !glass_object_arguments->{}
+			}
+			return
+		}
+		'@', $identifier_regex, '/', $identifier_regex => {
+			$_ = {
+				type => 'localized_string_expression'
+				line_number => $0{line_number}
+				identifier => $3
+				namespace_identifier => $1
 			}
 			return
 		}
