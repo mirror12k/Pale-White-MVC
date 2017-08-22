@@ -17,6 +17,7 @@ use PaleWhite::Glass::PHPCompiler;
 use PaleWhite::MVC::Compiler;
 use PaleWhite::JS::Compiler;
 use PaleWhite::Delta::DeltaSQLCompiler;
+use PaleWhite::Local::PHPCompiler;
 
 
 
@@ -121,6 +122,7 @@ sub compile_project_directory {
 	my @template_files;
 	my @js_files;
 	my @delta_files;
+	my @local_files;
 	my @user_files;
 
 	foreach my $file (@all_files) {
@@ -132,6 +134,8 @@ sub compile_project_directory {
 			push @js_files, $file;
 		} elsif ($file =~ /\.delta\Z/) {
 			push @delta_files, $file;
+		} elsif ($file =~ /\.local\Z/) {
+			push @local_files, $file;
 		} else {
 			push @user_files, $file;
 		}
@@ -209,6 +213,23 @@ sub compile_project_directory {
 		my $destination_file = Sugar::IO::File->new($destination_path);
 		$destination_file->dir->mk unless $destination_file->dir->exists;
 		$destination_file->write($compiled_sql);
+	}
+
+	foreach my $source_path (@local_files) {
+
+		my $relative_path = $source_path =~ s/\A$src_dir\/*//r;
+		$relative_path =~ s/\.local\Z/\.php/;
+		my $destination_path = "$bin_dir/$relative_path";
+		my $destination_directory = $destination_path =~ s#/[^/]+\Z##r;
+		# say "\tmodel: $source_path ($relative_path => $destination_path ($destination_directory))";
+		say "\tlocal: $source_path => $destination_path";
+
+		my $compiled_php = PaleWhite::Local::PHPCompiler::compile_file($source_path);
+		my $destination_file = Sugar::IO::File->new($destination_path);
+		$destination_file->dir->mk unless $destination_file->dir->exists;
+		$destination_file->write($compiled_php);
+		
+		push @includes, $relative_path;
 	}
 
 	foreach my $source_path (@user_files) {
