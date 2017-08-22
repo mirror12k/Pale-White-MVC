@@ -92,7 +92,7 @@ sub compile_controller_route {
 		@code = map "\t$_", @code;
 		my @exception_code = map "\t$_", $self->compile_path($controller->{error_path});
 		unshift @exception_code, "\t\$this->log_exception(\$e);\n";
-		
+
 		@code = ("try {\n", @code, "} catch (\\Exception \$e) {\n", @exception_code, "}\n");
 	}
 	@code = map "\t$_", @code;
@@ -394,7 +394,8 @@ sub compile_action {
 			my $model_class = $action->{validator_identifier};
 			$model_class =~ s/\Amodel::/\\/s;
 			$model_class =~ s/::/\\/s;
-			return "if (! (\$$action->{identifier} instanceof \\PaleWhite\\Model && \$$action->{identifier} instanceof $model_class))\n",
+			return "if (! (\$$action->{identifier} instanceof \\PaleWhite\\Model "
+					. "&& \$$action->{identifier} instanceof $model_class))\n",
 				"\tthrow new \\PaleWhite\\ValidationException"
 					. "('argument \"$action->{identifier}\" not an instance of \"$model_class\" model');\n"
 

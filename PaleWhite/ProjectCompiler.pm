@@ -26,11 +26,24 @@ sub default_php_config_file {
 global \$config;
 
 \$config = array(
+	// set site base if the website isnt located at the root of the webserver
 	'site_base' => '',
+	// main controller launched to start the application
 	'main_controller' => 'MainController',
-	'show_exception_trace' => true,
-	'log_file' => '',
 
+	// whether a fatal exception's stack trace will be shown in browser
+	'show_exception_trace' => true,
+	// additional logfile used by controllers
+	'log_file' => '',
+	// set maintenance_mode to true to switch the site into maintenance mode
+	'maintenance_mode' => false,
+	// during maintenance_mode, the maintenance_mode_controller will be launched instead of the main_controller
+	// DefaultMaintenanceController is a simple controller displaying a maintenance message
+	'maintenance_mode_controller' => '\\\\PaleWhite\\\\DefaultMaintenanceController',
+
+	// database configuration
+	// only used if database access is performed using models
+	// dies if access is requested and information is incorrect
 	'database_config' => array(
 		'mysql_host' => 'localhost',
 		'mysql_username' => 'root',

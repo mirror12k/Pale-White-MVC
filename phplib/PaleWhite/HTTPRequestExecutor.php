@@ -129,8 +129,16 @@ class HTTPRequestExecutor {
 			$request = new \PaleWhite\Request($path, $args);
 			$response = new \PaleWhite\Response();
 
-			// call the main controller and try to route through it
-			$controller_class = $config['main_controller'];
+
+
+			if ($config['maintenance_mode']) {
+				// call the maintenance controller
+				$controller_class = $config['maintenance_mode_controller'];
+			} else {
+				// call the main controller and try to route through it
+				$controller_class = $config['main_controller'];
+			}
+
 			$controller = new $controller_class();
 
 			// validate a csrf token if the request is ajax
@@ -140,18 +148,22 @@ class HTTPRequestExecutor {
 				else
 					throw new \PaleWhite\ValidationException("all ajax actions require a valid _csrf_token");
 			}
-
-
+			
+			// route the request
 			if ($is_ajax) {
 				$controller->route_ajax($request, $response);
 			} else {
 				$controller->route($request, $response);
 			}
 
+			// if an exception didnt occur, we now got to processing the response and sending it
+
 		} catch (\Exception $e) {
 			$this->log_exception($e);
 
 			// last-chance exception catch
+			// since an exception occured, we trash the previous response object,
+			// and create our own response to describe the error
 			$response = new \PaleWhite\Response();
 			$response->status = "500 Server Error";
 			if ($is_ajax) {

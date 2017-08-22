@@ -102,38 +102,6 @@ sub compile_modeldelta_action {
 	return @code
 }
 
-# sub compile_property {
-# 	my ($self, $property) = @_;
-
-# 	my $identifier = $property->{identifier};
-# 	my $type;
-# 	my $suffix = '';
-
-# 	# say Dumper $property;
-# 	if ($property->{type} eq 'model_pointer_property' or $property->{property_type} eq 'int') {
-# 		warn "superfluous property size in int property" if exists $property->{modifiers}{property_size};
-# 		$type = 'INT';
-# 	} elsif ($property->{type} eq 'file_pointer_property') {
-# 		warn "superfluous property size in file pointer property" if exists $property->{modifiers}{property_size};
-# 		$type = 'VARCHAR(256)';
-# 	} elsif ($property->{property_type} eq 'string') {
-# 		if (exists $property->{modifiers}{property_size}) {
-# 			$type = "VARCHAR($property->{modifiers}{property_size})";
-# 		} else {
-# 			$type = "TEXT";
-# 		}
-# 	} else {
-# 		die "undefined property type: $property->{property_type}";
-# 	}
-
-# 	$suffix .= " DEFAULT $property->{modifiers}{default}" if exists $property->{modifiers}{default};
-# 	$suffix .= " NOT NULL auto_increment" if exists $property->{modifiers}{auto_increment};
-# 	$suffix .= ", UNIQUE (`$identifier`)" if exists $property->{modifiers}{unique};
-# 	$suffix .= ", UNIQUE KEY `$identifier` (`$identifier`)" if exists $property->{modifiers}{unique_key};
-
-# 	return "$identifier $type$suffix"
-# }
-
 
 
 sub compile_file {
