@@ -29,7 +29,7 @@ our $var_event_identifier_regex = qr/create|delete/;
 our $var_format_native_code_substitution = sub { $_[0] =~ s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/sr };
 our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
 our $var_format_file_identifier_substitution = sub { $_[0] =~ s/\Afile:://sr };
-our $var_format_native_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
+our $var_format_native_identifier_substitution = sub { $_[0] =~ s/\Anative:://sr };
 our $var_escape_string_substitution = sub { $_[0] =~ s/\\([\\"])/$1/gsr };
 our $var_format_string_substitution = sub { $_[0] =~ s/\A"(.*)"\Z/$1/sr };
 our $var_format_event_identifier_substitution = sub { $_[0] =~ s/\A/on_/sr };

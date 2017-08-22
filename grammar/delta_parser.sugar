@@ -1,0 +1,198 @@
+package PaleWhite::Delta::Parser
+
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=>|->|<|>|<=|>=|==|=|,|\.|\*|\?|!|\-|\+/
+model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
+file_identifier_regex = /file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
+class_identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
+identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
+
+integer_regex = /-?\d++/
+string_regex = /"([^\\"]|\\[\\"])*?"/s
+
+comment_regex = /#[^\n]*+\n/s
+whitespace_regex = /\s++/s
+
+
+
+
+format_model_identifier_substitution = s/\Amodel:://s
+format_file_identifier_substitution = s/\Afile:://s
+
+
+tokens {
+	symbol => $symbol_regex
+	model_identifier => $model_identifier_regex
+	file_identifier => $file_identifier_regex
+	class_identifier => $class_identifier_regex
+	identifier => $identifier_regex
+	
+	integer => $integer_regex
+	string => $string_regex
+
+	comment => $comment_regex
+	whitespace => $whitespace_regex
+}
+
+ignored_tokens {
+	whitespace
+	comment
+}
+
+list context root {
+	switch {
+		'modeldelta', $class_identifier_regex, '{' => {
+			push !modeldelta_block->{
+				type => 'modeldelta_definition'
+				line_number => $0{line_number}
+				identifier => $1
+			}
+			match '}'
+		}
+		default {
+			die 'block statement expected'
+		}
+	}
+}
+
+
+object context modeldelta_block {
+	switch {
+		'-' => {
+			$_{actions}[] = {
+				type => 'delete_field'
+				line_number => $0{line_number}
+				property => !model_property
+			}
+			match ';'
+		}
+		'+' => {
+			$_{actions}[] = !optional_copy_column->{
+				type => 'add_field'
+				line_number => $0{line_number}
+				property => !model_property
+			}
+			match ';'
+		}
+		'*' => {
+			$_{actions}[] = !modify_field_action->{
+				type => 'modify_field'
+				line_number => $0{line_number}
+			}
+			match ';'
+		}
+		default {
+			return
+		}
+	}
+}
+
+object context optional_copy_column {
+	if '=', $identifier_regex => {
+		$_{copy_column} = $1
+	}
+	return
+}
+
+object context modify_field_action {
+	$_{old_property} = !model_property
+	match '->'
+	$_{new_property} = !model_property
+	return
+}
+
+object context model_property {
+	switch {
+		$model_identifier_regex => {
+			$_ = !model_property_identifier->{
+				type => 'model_pointer_property'
+				line_number => $0{line_number}
+				property_type => $format_model_identifier_substitution->$0
+				modifiers => {
+					default => '0'
+				}
+				modifiers => !model_property_type_modifiers->{}
+			}
+			# match ';'
+		}
+		$file_identifier_regex => {
+			$_ = !model_property_identifier->{
+				type => 'file_pointer_property'
+				line_number => $0{line_number}
+				property_type => $format_file_identifier_substitution->$0
+				modifiers => {
+					default => '""'
+				}
+				modifiers => !model_property_type_modifiers->{}
+			}
+			# match ';'
+		}
+		$identifier_regex => {
+			$_ = !model_property_identifier->{
+				type => 'model_property'
+				line_number => $0{line_number}
+				property_type => $0
+				modifiers => !model_property_type_modifiers->{}
+			}
+			# match ';'
+		}
+		default {
+			die 'expected model property!'
+		}
+	}
+
+	return
+}
+
+object context model_property_type_modifiers {
+	switch {
+		'[', $integer_regex, ']' => {
+			$_{property_size} = $1
+		}
+		'[', ']' => {
+			$_{array_property} = 'enabled'
+		}
+		default {
+			return
+		}
+	}
+}
+
+object context model_property_identifier {
+	match $identifier_regex
+	$_{identifier} = $0
+	$_{modifiers} = !model_property_identifier_modifiers->$_{modifiers}
+	return
+}
+
+object context model_property_identifier_modifiers {
+	switch {
+		'unique_key' => {
+			$_{$0} = 'enabled'
+		}
+		'unique' => {
+			$_{$0} = 'enabled'
+		}
+		'auto_increment' => {
+			$_{$0} = 'enabled'
+		}
+		default {
+			return
+		}
+	}
+}
+
+
+
+sub main {{
+	use Data::Dumper;
+	use Sugar::IO::File;
+
+	my $parser = __PACKAGE__->new;
+	foreach my $file (@_) {
+		$parser->{filepath} = Sugar::IO::File->new($file);
+		my $tree = $parser->parse;
+		say Dumper $tree;
+	}
+}}
+
+
