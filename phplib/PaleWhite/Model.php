@@ -421,6 +421,14 @@ abstract class Model {
 			} elseif ($value === null) {
 				$value = '';
 			}
+		} elseif (isset(static::$model_json_properties[$name])) {
+			if (is_array($value) || is_object($value)) {
+				$value = json_encode($value);
+			} elseif ($value === null) {
+				$value = '';
+			} else {
+				$value = (string)$value;
+			}
 		}
 		return $value;
 	}
@@ -431,6 +439,12 @@ abstract class Model {
 			$class = static::$model_file_properties[$name];
 			$value = (string)$value;
 			$value = ($value === "" ? null : $class::load_file($value));
+		} elseif (isset(static::$model_json_properties[$name])) {
+			if ($value === '') {
+				$value = null;
+			} else {
+				$value = json_decode($value, true);
+			}
 		}
 
 		return $value;

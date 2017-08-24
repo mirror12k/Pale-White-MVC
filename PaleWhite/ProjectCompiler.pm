@@ -26,9 +26,9 @@ sub default_event_model {
 
 model _EventModel {
 	int trigger_time;
-	string[512] controller;
-	string[512] event;
-	string args;
+	string[512] controller_class;
+	string[512] controller_event;
+	json args;
 }
 
 "

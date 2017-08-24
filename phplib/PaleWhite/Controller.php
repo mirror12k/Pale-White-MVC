@@ -87,7 +87,7 @@ abstract class Controller {
 		return $file;
 	}
 
-	public function schedule_event($event_controller, $event, array $args) {
+	public function schedule_event($controller_class, $controller_event, array $args) {
 		global $config;
 		if (!$config['enable_events'])
 			throw new \PaleWhite\InvalidException("attempt to schedule event while events are disabled in config");
@@ -102,18 +102,18 @@ abstract class Controller {
 		else
 			$event_args = array();
 
-		$event_controller_events = $event_controller::$events;
-		if (!in_array($event, $event_controller_events))
-			throw new \PaleWhite\InvalidException("no event '$event' registered in controller '$event_controller'");
+		$event_controller_events = $controller_class::$events;
+		if (!in_array($controller_event, $event_controller_events))
+			throw new \PaleWhite\InvalidException("no event '$controller_event' registered in controller '$controller_class'");
 
 		$event_model = \_EventModel::create(array(
 			'trigger_time' => time() + $offset,
-			'controller' => $event_controller,
-			'event' => $event,
-			'args' => json_encode($event_args),
+			'controller_class' => $controller_class,
+			'controller_event' => $controller_event,
+			'args' => $event_args,
 		));
 
-		$this->log_message("registered event [$event_controller:$event]");
+		$this->log_message("registered event [$controller_class:$controller_event]");
 
 		return $event_model;
 	}

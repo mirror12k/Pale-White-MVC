@@ -282,12 +282,12 @@ class HTTPRequestExecutor {
 	public function process_event_queue() {
 		try {
 			$events = \_EventModel::get_list(array(
-				'trigger_time' => array('le' => time())
+				'trigger_time' => array('le' => time()),
 			));
 
 			foreach ($events as $event) {
-				$controller_class = $event->controller;
-				$controller_event = $event->event;
+				$controller_class = $event->controller_class;
+				$controller_event = $event->controller_event;
 				$args = $event->args;
 
 				$result = $event->delete();
@@ -295,7 +295,7 @@ class HTTPRequestExecutor {
 				if ($result > 0) {
 					$this->log_message("triggering event [$controller_class:$controller_event]");
 					$controller = new $controller_class();
-					$controller->route_event($controller_event, json_decode($args, true));
+					$controller->route_event($controller_event, $args);
 					
 				} else {
 					$this->log_message("notice: failed to lock event [$controller_class:$controller_event]");
