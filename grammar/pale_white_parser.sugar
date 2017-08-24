@@ -271,6 +271,15 @@ object context controller_block {
 				block => []
 			}
 		}
+		'event', $identifier_regex => {
+			$_{controller_events}[] = !path_action_block->{
+				type => 'event_block'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
 		'action' => {
 			match $identifier_regex
 
@@ -520,6 +529,17 @@ object context path_action_block_list {
 				line_number => $0{line_number}
 				header_string => !format_string->$1
 				expression => !action_expression
+			}
+			match ';'
+		}
+		'schedule_event' => {
+			match $identifier_regex, '.', $identifier_regex
+			$_{block}[] = {
+				type => 'schedule_event'
+				line_number => $0{line_number}
+				controller_identifier => $1
+				event_identifier => $3
+				arguments => !action_arguments->{}
 			}
 			match ';'
 		}

@@ -55,6 +55,7 @@ sub compile_controller {
 
 	push @code, $self->compile_controller_route($controller);
 	push @code, $self->compile_controller_route_ajax($controller);
+	push @code, $self->compile_controller_route_event($controller);
 	push @code, $self->compile_controller_validate($controller);
 	push @code, $self->compile_controller_action($controller);
 	
@@ -69,10 +70,10 @@ sub compile_controller_events_list {
 
 	my @code;
 
-	$controller->{events} //= [];
-	if (@{$controller->{events}}) {
+	$controller->{controller_events} //= [];
+	if (@{$controller->{controller_events}}) {
 		push @code, "public static \$events = array(\n";
-		foreach my $event (@{$controller->{events}}) {
+		foreach my $event (@{$controller->{controller_events}}) {
 			push @code, "\t'$event->{identifier}',\n";
 		}
 		push @code, ");\n";
@@ -163,6 +164,33 @@ sub compile_controller_route_ajax {
 	return @code
 }
 
+sub compile_controller_route_event {
+	my ($self, $controller) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+
+	my @events;
+	@events = (@events, @{$controller->{controller_events}}) if exists $controller->{controller_events};
+	return @code unless @events;
+
+	my $first = 1;
+	foreach my $event (@events) {
+		push @code, $self->compile_path($event, $first);
+		push @code, "\n";
+		$first = 0;
+	}
+
+	push @code, "} else {\n";
+	push @code, "\tparent::route_event(\$event, \$args);\n";
+	push @code, "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function route_event (\$event, array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
 sub compile_path {
 	my ($self, $path, $first) = @_;
 	my @code;
@@ -185,6 +213,14 @@ sub compile_path {
 		my ($condition_code, $match_code) = $self->compile_path_condition($path->{path});
 		@code = (@$match_code, @code);
 
+		@code = map "\t$_", @code;
+		if ($first) {
+			@code = ("if ($condition_code) {\n", @code);
+		} else {
+			@code = ("} elseif ($condition_code) {\n", @code);
+		}
+	} elsif ($path->{type} eq 'event_block') {
+		my $condition_code = "\$event === '$path->{identifier}'";
 		@code = map "\t$_", @code;
 		if ($first) {
 			@code = ("if ($condition_code) {\n", @code);
@@ -382,6 +418,10 @@ sub compile_action {
 		my $expression = $self->compile_expression($action->{expression});
 		my $header = lc $action->{header_string};
 		return "\$res->headers['$header'] = $expression;\n"
+
+	} elsif ($action->{type} eq 'schedule_event') {
+		my $arguments = $self->compile_arguments_array($action->{arguments});
+		return "\$this->schedule_event('$action->{controller_identifier}', '$action->{event_identifier}', $arguments);\n"
 
 	} elsif ($action->{type} eq 'controller_action') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});

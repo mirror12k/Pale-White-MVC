@@ -106,7 +106,7 @@ abstract class Controller {
 			'trigger_time' => time() + $offset,
 			'controller' => $event_controller,
 			'event' => $event,
-			'args' => json_encode($args),
+			'args' => json_encode($event_args),
 		));
 
 		$this->log_message("registered event [$event_controller:$event]");
