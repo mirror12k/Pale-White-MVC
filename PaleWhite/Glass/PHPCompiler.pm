@@ -248,7 +248,9 @@ sub compile_item {
 		return @code
 
 	} elsif ($item->{type} eq 'expression_node') {
-		return $self->compile_argument_expression($item->{expression}), map $self->compile_argument_expression($_), @{$item->{text}}
+		die "why is there text here" if exists $item->{text} and @{$item->{text}};
+		return $self->compile_argument_expression($item->{expression}, 'text')
+				# map $self->compile_argument_expression($_, 'text'), @{$item->{text}}
 	} else {
 		die "invalid item: $item->{type}";
 	}
@@ -279,7 +281,8 @@ sub compile_html_tag {
 				$expression = $expression->{expressions}[0] if $expression->{type} eq 'interpolation_expression';
 
 				if ($expression->{string} =~ /\A\//) {
-					push @code, $self->compile_argument_expression({ type => 'variable_expression', identifier => '_site_base' });
+					push @code, $self->compile_argument_expression(
+							{ type => 'variable_expression', identifier => '_site_base' }, 'html_attribute');
 				}
 			}
 			push @code, $self->compile_argument_expression($tag->{attributes}{$key}, 'html_attribute');

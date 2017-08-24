@@ -199,8 +199,13 @@ sub compile_path {
 		my $args_var = $self->{context_args_variable};
 		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$path->{arguments}}) {
 			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
-			push @code, "\tthrow new \\PaleWhite\\ValidationException"
-					. "('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
+			if ($path->{type} eq 'event_block') {
+				push @code, "\tthrow new \\PaleWhite\\ValidationException"
+						. "('missing argument \"$arg->{identifier}\" to event \"$path->{identifier}\"');\n";
+			} else {
+				push @code, "\tthrow new \\PaleWhite\\ValidationException"
+						. "('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
+			}
 		}
 		push @code, "\n";
 		push @code, $self->compile_action_block($path->{arguments});
