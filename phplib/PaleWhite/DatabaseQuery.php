@@ -237,7 +237,36 @@ class DatabaseQuery {
 		$fields = array();
 		foreach ($where_clause as $field => $value) {
 			$field = '`' . $this->db->escape_string($field) . '`';
-			if (is_array($value)) {
+			if (is_array($value) && (
+					isset($value['lt']) ||
+					isset($value['le']) ||
+					isset($value['gt']) ||
+					isset($value['ge'])
+					)) {
+				if (isset($value['lt'])) {
+					$comparison = '<';
+					$value = $value['lt'];
+				} elseif (isset($value['le'])) {
+					$comparison = '<=';
+					$value = $value['le'];
+				} elseif (isset($value['gt'])) {
+					$comparison = '>';
+					$value = $value['gt'];
+				} elseif (isset($value['ge'])) {
+					$comparison = '>=';
+					$value = $value['ge'];
+				}
+
+				if (is_string($value)) {
+					$value = '\'' . $this->db->escape_string($value) . '\'';
+				} elseif (is_numeric($value)) {
+					$value = "$value";
+				} else {
+					throw new \PaleWhite\InvalidException("invalid value type for where field $field: " . gettype($value));
+				}
+				$fields[] = "$field $comparison $value";
+
+			} elseif (is_array($value)) {
 				$escaped_values = array();
 				foreach ($value as $subvalue) {
 					if (is_string($subvalue)) {
@@ -253,6 +282,7 @@ class DatabaseQuery {
 
 				$escaped_values = implode(",", $escaped_values);
 				$fields[] = "$field IN ($escaped_values)";
+
 			} else {
 				if (is_string($value)) {
 					$value = '\'' . $this->db->escape_string($value) . '\'';

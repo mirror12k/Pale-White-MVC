@@ -230,6 +230,14 @@ class HTTPRequestExecutor {
 		}
 
 		// after the request has been process and a response has been generated
+		$this->send_http_response($response);
+
+		// after sending the response, we can process scheduled events in the queue
+		$this->process_event_queue();
+	}
+
+	public function send_http_response(Response $response) {
+		global $config;
 
 		// if the response has a status, send it
 		if ($response->status !== null) {
@@ -267,6 +275,35 @@ class HTTPRequestExecutor {
 			} else {
 				echo($response->body);
 			}
+		}
+	}
+
+	public function process_event_queue() {
+		try {
+			$events = \_EventModel::get_list(array(
+				'trigger_time' => array('le' => time())
+			));
+
+			foreach ($events as $event) {
+				$controller_class = $event->controller;
+				$controller_event = $event->event;
+				$args = $event->args;
+
+				$result = $event->delete();
+
+				if ($result > 0) {
+					$this->log_message("triggering event [$controller_class:$controller_event]");
+					$controller = new $controller_class();
+					$controller->route_event($controller_event, json_decode($args, true));
+					
+				} else {
+					$this->log_message("notice: failed to lock event [$controller_class:$controller_event]");
+				}
+			}
+
+		} catch (\Exception $e) {
+			$this->log_message("exception occured while processing event queue!");
+			$this->log_exception($e);
 		}
 	}
 }

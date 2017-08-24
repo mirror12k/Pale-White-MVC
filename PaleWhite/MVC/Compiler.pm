@@ -26,6 +26,15 @@ sub new {
 	return $self
 }
 
+sub parse_text {
+	my ($self, $text) = @_;
+
+	my $parser = PaleWhite::MVC::Parser->new;
+	$parser->{text} = $text;
+	$self->{syntax_tree} = $parser->parse;
+	# say Dumper $self->{syntax_tree};
+}
+
 sub parse_file {
 	my ($self, $file) = @_;
 

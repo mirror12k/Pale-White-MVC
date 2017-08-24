@@ -8,6 +8,10 @@ abstract class Controller {
 
 	public function route (Request $req, Response $res) {}
 	public function route_ajax (Request $req, Response $res) {}
+
+	public function route_event ($event, array $args) {
+		throw new \PaleWhite\InvalidException("undefined event requested: '$event'");
+	}
 	
 	public function validate ($type, $value) {
 		throw new \PaleWhite\InvalidException("undefined validator requested: '$type'");
@@ -81,6 +85,33 @@ abstract class Controller {
 			throw new \PaleWhite\ValidationException("invalid file!");
 		
 		return $file;
+	}
+
+	public function schedule_event($event_controller, $event, array $args) {
+		if (isset($args['offset']))
+			$offset = (int)$args['offset'];
+		else
+			$offset = 0;
+
+		if (isset($args['args']))
+			$event_args = $args['args'];
+		else
+			$event_args = array();
+
+		$event_controller_events = $event_controller::$events;
+		if (!in_array($event, $event_controller_events))
+			throw new \PaleWhite\InvalidException("no event '$event' registered in controller '$event_controller'");
+
+		$event_model = \_EventModel::create(array(
+			'trigger_time' => time() + $offset,
+			'controller' => $event_controller,
+			'event' => $event,
+			'args' => json_encode($args),
+		));
+
+		$this->log_message("registered event [$event_controller:$event]");
+
+		return $event_model;
 	}
 
 	public function set_localization($localization) {

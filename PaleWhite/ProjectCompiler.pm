@@ -21,6 +21,19 @@ use PaleWhite::Local::PHPCompiler;
 
 
 
+sub default_event_model {
+	return "
+
+model _EventModel {
+	int trigger_time;
+	string[512] controller;
+	string[512] event;
+	string args;
+}
+
+"
+}
+
 sub default_php_config_file {
 	return "<?php
 
@@ -144,6 +157,28 @@ sub compile_project_directory {
 			push @user_files, $file;
 		}
 	}
+
+	do {
+		# compile default event queue model
+		my $relative_path = "_EventModel.php";
+		my $destination_path = "$bin_dir/$relative_path";
+		
+		my $compiler = PaleWhite::MVC::Compiler->new;
+		$compiler->parse_text(default_event_model);
+		$compiler->compile_references;
+
+		my $compiled_php = $compiler->compile_php;
+		my $destination_file = Sugar::IO::File->new($destination_path);
+		$destination_file->dir->mk unless $destination_file->dir->exists;
+		$destination_file->write($compiled_php);
+
+		my $compiled_sql = $compiler->compile_sql;
+		$setup_sql_file->append($compiled_sql);
+
+
+		push @includes, @{$compiler->{native_library_includes}};
+		push @includes, $relative_path;
+	};
 
 	foreach my $source_path (@mvc_files) {
 

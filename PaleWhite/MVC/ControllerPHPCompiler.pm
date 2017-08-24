@@ -51,6 +51,8 @@ sub compile_controller {
 	my $parent = 'PaleWhite::Controller'; # $template->{arguments}[2] // 
 	$parent = $self->format_classname($parent);
 
+	push @code, $self->compile_controller_events_list($controller);
+
 	push @code, $self->compile_controller_route($controller);
 	push @code, $self->compile_controller_route_ajax($controller);
 	push @code, $self->compile_controller_validate($controller);
@@ -58,6 +60,27 @@ sub compile_controller {
 	
 	@code = map "\t$_", @code;
 	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_controller_events_list {
+	my ($self, $controller) = @_;
+
+	my @code;
+
+	$controller->{events} //= [];
+	if (@{$controller->{events}}) {
+		push @code, "public static \$events = array(\n";
+		foreach my $event (@{$controller->{events}}) {
+			push @code, "\t'$event->{identifier}',\n";
+		}
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$events = array();\n";
+	}
+
+	push @code, "\n";
 
 	return @code
 }
