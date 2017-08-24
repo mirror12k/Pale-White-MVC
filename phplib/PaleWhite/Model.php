@@ -1,6 +1,24 @@
 <?php
 
 namespace PaleWhite;
+
+// // php 5.5 doesn't support hash_equals
+// // taken from https://secure.php.net/hash_equals
+// if(!function_exists('hash_equals')) {
+// 	function hash_equals($str1, $str2) {
+// 		if(strlen($str1) != strlen($str2)) {
+// 			return FALSE;
+// 		} else {
+// 			$res = $str1 ^ $str2;
+// 			$ret = 0;
+// 			for($i = strlen($res) - 1; $i >= 0; $i--) {
+// 				$ret |= ord($res[$i]);
+// 			}
+// 			return !$ret;
+// 		}
+// 	}
+// }
+
 // base model class which provides a lot of magic methods for compiled models
 abstract class Model {
 	public $_data;
@@ -155,6 +173,18 @@ abstract class Model {
 		$result = $query->fetch();
 
 		return $result;
+	}
+
+	public function matches_hashed_field($name, $value) {
+		if (!isset(static::$model_properties[$name]) || static::$model_properties[$name] !== 'salted_sha256')
+			throw new \PaleWhite\InvalidException(
+					"attempt to match invalid hashed field on '$name' in model class: " . get_called_class());
+
+		$existing_hash = $this->_data[$name];
+		$salt = explode('/', $existing_hash)[0];
+		$compare_hash = static::salt_and_hash_string($value, $salt);
+
+		return hash_equals($existing_hash, $compare_hash);
 	}
 
 	public function delete() {
@@ -429,6 +459,9 @@ abstract class Model {
 			} else {
 				$value = (string)$value;
 			}
+		} elseif (isset(static::$model_properties[$name]) && static::$model_properties[$name] === 'salted_sha256') {
+			$value = (string)$value;
+			$value = static::salt_and_hash_string($value);
 		}
 		return $value;
 	}
@@ -448,6 +481,18 @@ abstract class Model {
 		}
 
 		return $value;
+	}
+
+	public static function salt_and_hash_string($str, $salt=null) {
+		$str = (string)$str;
+		if ($salt === null) {
+			$salt = openssl_random_pseudo_bytes(32);
+			if ($salt === false)
+				throw new \PaleWhite\PaleWhiteException("failed to generate salt, not enough entropy");
+			$salt = bin2hex($salt);
+		}
+		$hash = hash('sha256', "$salt$str");
+		return "$salt/$hash";
 	}
 
 	// public static function cast_model_from_store($name, $value) {

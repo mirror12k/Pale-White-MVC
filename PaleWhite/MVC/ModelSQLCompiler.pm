@@ -33,12 +33,14 @@ sub compile_property {
 		warn "superfluous property size in file pointer property" if exists $property->{modifiers}{property_size};
 		$type = 'VARCHAR(256)';
 	} elsif ($property->{property_type} eq 'json') {
-		$type = "TEXT";
+		$type = 'TEXT';
+	} elsif ($property->{property_type} eq 'salted_sha256') {
+		$type = 'VARCHAR(256)';
 	} elsif ($property->{property_type} eq 'string') {
 		if (exists $property->{modifiers}{property_size}) {
 			$type = "VARCHAR($property->{modifiers}{property_size})";
 		} else {
-			$type = "TEXT";
+			$type = 'TEXT';
 		}
 	} else {
 		die "undefined property type: $property->{property_type}";
