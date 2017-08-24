@@ -58,6 +58,9 @@ global \$config;
 	// initial localization setting set at the start of each request
 	// leave empty for no default
 	'default_localization' => '',
+	// whether to enable event processing queue (utilizes the database)
+	// dies if an event is scheduled while events are disabled
+	'enable_events' => false,
 
 	// database configuration
 	// only used if database access is performed using models

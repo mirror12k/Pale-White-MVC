@@ -233,7 +233,8 @@ class HTTPRequestExecutor {
 		$this->send_http_response($response);
 
 		// after sending the response, we can process scheduled events in the queue
-		$this->process_event_queue();
+		if ($config['enable_events'])
+			$this->process_event_queue();
 	}
 
 	public function send_http_response(Response $response) {

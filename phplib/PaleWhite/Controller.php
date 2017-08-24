@@ -88,6 +88,10 @@ abstract class Controller {
 	}
 
 	public function schedule_event($event_controller, $event, array $args) {
+		global $config;
+		if (!$config['enable_events'])
+			throw new \PaleWhite\InvalidException("attempt to schedule event while events are disabled in config");
+
 		if (isset($args['offset']))
 			$offset = (int)$args['offset'];
 		else
