@@ -30,14 +30,20 @@ abstract class FileDirectory {
 
 	public static function accept_file_upload(\PaleWhite\FileUpload $file_upload) {
 		$file_hash = hash_file('sha256', $file_upload->temp_filepath);
-		$filepath = static::$directory . '/' . $file_hash;
+		$filename = $file_hash;
+
+		if (static::$properties['suffix_timestamp']) {
+			$filename .= '_' . time();
+		}
+
+		$filepath = static::$directory . '/' . $filename;
 
 		if (file_exists($filepath))
 			throw new \PaleWhite\FileException(get_called_class(), "file $filepath already exists");
 		if (!move_uploaded_file($file_upload->temp_filepath, $filepath))
 			throw new \PaleWhite\FileException(get_called_class(), "failed to move uploaded file: " . $file_upload->temp_filepath);
 
-		return static::load_file($file_hash);
+		return static::load_file($filename);
 	}
 
 	public static function load_file($filename) {

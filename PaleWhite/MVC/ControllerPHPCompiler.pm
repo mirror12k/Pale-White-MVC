@@ -245,35 +245,25 @@ sub compile_path_condition {
 	my $condition_code;
 	my @match_code;
 
-	# warn "debug condition: $condition";
-	my @condition_vars = ($condition =~ 
-			/(?|\{\{($identifier_regex=\[\])\}\}|\{\{($identifier_regex)\}\}|\{\{((?:$identifier_regex=)?\.\.\.)\}\})/g);
+	if (ref $condition eq 'ARRAY') {
+		my $condition_regex = join '', map {
+			$_->{type} eq 'string_token'
+				? $_->{value} =~ s#/#\\/#gr
+				: '(' . ($_->{regex} =~ s#/#\\/#gr) . ')'
+		} @$condition;
 
-	if (@condition_vars) {
-		# warn "debug condition vars: " . join ',', @condition_vars;
+		$condition_code = "preg_match('/\\A$condition_regex\\Z/', \$req->path, \$_matches)";
 
-		$condition =~ s/\{\{($identifier_regex=\[\])\}\}/(.+?)/sg;
-		$condition =~ s/\{\{($identifier_regex)\}\}/([^\/]+?)/sg;
-		$condition =~ s/\{\{(($identifier_regex=)?\.\.\.)\}\}/(.+?)/sg;
-		$condition =~ s#/#\\/#g;
-
-		# warn "debug regex condition: $condition";
-
-		$condition_code = "preg_match('/\\A$condition\\Z/', \$req->path, \$_matches)";
-
-		foreach my $i (0 .. $#condition_vars) {
-			my $var = $condition_vars[$i];
+		my @match_conditions = grep $_->{type} ne 'string_token', @$condition;
+		foreach my $i (0 .. $#match_conditions) {
+			my $match = $match_conditions[$i];
 			my $index = $i + 1;
-			if ($var =~ /\A($identifier_regex)=\[\]\Z/) {
-				$var = $1;
-				push @match_code, "\$$var = explode('/', \$_matches[$index]);\n";
-			} elsif ($var =~ /\A($identifier_regex)=\.\.\.\Z/) {
-				$var = $1;
-				push @match_code, "\$$var = \$_matches[$index];\n";
-			} elsif ($var =~ /\A\.\.\.\Z/) {
-				# nothing
+			if ($match->{type} eq 'match_list_identifier') {
+				push @match_code, "\$$match->{identifier} = explode('$match->{seperator}', \$_matches[$index]);\n";
+			} elsif ($match->{type} eq 'match_identifier') {
+				push @match_code, "\$$match->{identifier} = \$_matches[$index];\n";
 			} else {
-				push @match_code, "\$$var = \$_matches[$index];\n";
+				# nothing
 			}
 		}
 

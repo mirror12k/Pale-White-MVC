@@ -78,6 +78,8 @@ our $contexts = {
 	format_string_interpolation_end => 'context_format_string_interpolation_end',
 	format_string_interpolation_middle => 'context_format_string_interpolation_middle',
 	format_string_interpolation_start => 'context_format_string_interpolation_start',
+	interpolated_string_path => 'context_interpolated_string_path',
+	interpolated_string_path_expression => 'context_interpolated_string_path_expression',
 	model_block => 'context_model_block',
 	model_property_identifier => 'context_model_property_identifier',
 	model_property_identifier_modifiers => 'context_model_property_identifier_modifiers',
@@ -161,7 +163,7 @@ sub context_root {
 			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, qr/"([^\\\\"]|\\\\[\\\\"])*?"/s, \'{\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_string_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq '{';
 			@tokens = (@tokens, $self->step_tokens(3));
-			push @$context_list, $self->context_file_directory_block({ type => 'file_directory_definition', line_number => $tokens[0][2], identifier => $tokens[1][1], directory => $self->context_format_string($tokens[2][1]), });
+			push @$context_list, $self->context_file_directory_block({ type => 'file_directory_definition', line_number => $tokens[0][2], identifier => $tokens[1][1], directory => $self->context_format_string($tokens[2][1]), properties => {}, });
 			$self->confess_at_current_offset('expected \'}\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
 			@tokens = (@tokens, $self->step_tokens(1));
@@ -353,6 +355,12 @@ sub context_controller_block {
 			@tokens = (@tokens, $self->step_tokens(2));
 			push @{$context_object->{paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_interpolated_string_path([]), arguments => $self->context_optional_arguments_list([]), block => [], });
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'ajax' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'global') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -417,6 +425,63 @@ sub context_native_code_block {
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_value = $self->context_format_native_code($tokens[0][1]);
 			return $context_value;
+}
+
+sub context_interpolated_string_path {
+	my ($self, $context_list) = @_;
+	my @tokens;
+
+			$self->confess_at_current_offset('expected qr/"([^\\\\"]|\\\\[\\\\"])*?\\{\\{/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_interpolation_start_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @$context_list, { type => 'string_token', value => $self->context_format_string_interpolation_start($tokens[0][1]), };
+			push @$context_list, $self->context_interpolated_string_path_expression;
+			while ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_interpolation_middle_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @$context_list, { type => 'string_token', value => $self->context_format_string_interpolation_middle($tokens[1][1]), };
+			push @$context_list, $self->context_interpolated_string_path_expression;
+			}
+			$self->confess_at_current_offset('expected qr/\\}\\}([^\\\\"]|\\\\[\\\\"])*?"/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_interpolation_end_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @$context_list, { type => 'string_token', value => $self->context_format_string_interpolation_end($tokens[1][1]), };
+			return $context_list;
+}
+
+sub context_interpolated_string_path_expression {
+	my ($self, $context_object) = @_;
+	my @tokens;
+
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=' and $self->{tokens}[$self->{tokens_index} + 2][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 3][1] eq ']') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			$context_object = { type => 'match_list_identifier', regex => '.+', seperator => '/', identifier => $tokens[0][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=' and $self->{tokens}[$self->{tokens_index} + 2][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 3][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 4][1] eq '.') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(5));
+			$context_object = { type => 'match_identifier', regex => '.+', identifier => $tokens[0][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'match_identifier', regex => '[^/]+', identifier => $tokens[0][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 2][1] eq '.') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(3));
+			$context_object = { type => 'match_any', regex => '.+', };
+			}
+			else {
+			$self->confess_at_current_offset('expected path expression');
+			}
+			return $context_object;
 }
 
 sub context_optional_arguments_list {
@@ -1128,9 +1193,24 @@ sub context_more_action_expression {
 
 sub context_file_directory_block {
 	my ($self, $context_object) = @_;
+
+	while ($self->more_tokens) {
 	my @tokens;
 
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'suffix_timestamp') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object->{properties}{$tokens[0][1]} = '1';
+			}
+			else {
 			return $context_object;
+			}
+	}
+	return $context_object;
 }
 
 sub context_format_string {

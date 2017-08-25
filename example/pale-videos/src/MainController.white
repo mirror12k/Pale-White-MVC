@@ -1,5 +1,7 @@
 
-file_directory VideoUploadsDirectory "./uploads" {}
+file_directory VideoUploadsDirectory "./uploads" {
+	suffix_timestamp;
+}
 
 
 model VideoFileModel {

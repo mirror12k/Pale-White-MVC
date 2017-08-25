@@ -52,7 +52,7 @@ tokens {
 	string_interpolation_middle => $string_interpolation_middle_regex
 	string_interpolation_end => $string_interpolation_end_regex
 	string => $string_regex
-	
+
 	symbol => $symbol_regex
 
 	comment => $comment_regex
@@ -93,6 +93,7 @@ list context root {
 				line_number => $0{line_number}
 				identifier => $1
 				directory => !format_string->$2
+				properties => {}
 			}
 			match '}'
 		}
@@ -248,6 +249,15 @@ object context controller_block {
 				block => []
 			}
 		}
+		'path' => {
+			$_{paths}[] = !path_action_block->{
+				type => 'match_path'
+				line_number => $0{line_number}
+				path => !interpolated_string_path->[]
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
 		'ajax', 'global' => {
 			$_{global_ajax_paths}[] = !path_action_block->{
 				type => 'global_path'
@@ -324,6 +334,69 @@ item context native_code_block {
 	return
 }
 
+
+list context interpolated_string_path {
+	match $string_interpolation_start_regex
+	push {
+		type => 'string_token'
+		value => !format_string_interpolation_start->$0
+	}
+	push !interpolated_string_path_expression
+
+	while $string_interpolation_middle_regex => {
+		push {
+			type => 'string_token'
+			value => !format_string_interpolation_middle->$1
+		}
+		push !interpolated_string_path_expression
+	}
+
+	match $string_interpolation_end_regex
+	push {
+		type => 'string_token'
+		value => !format_string_interpolation_end->$1
+	}
+
+	return
+}
+
+object context interpolated_string_path_expression {
+	switch {
+		$identifier_regex, '=', '[', ']' => {
+			$_ = {
+				type => 'match_list_identifier'
+				regex => '.+'
+				seperator => '/'
+				identifier => $0
+			}
+		}
+		$identifier_regex, '=', '.', '.', '.' => {
+			$_ = {
+				type => 'match_identifier'
+				regex => '.+'
+				identifier => $0
+			}
+		}
+		$identifier_regex => {
+			$_ = {
+				type => 'match_identifier'
+				regex => '[^/]+'
+				identifier => $0
+			}
+		}
+		'.', '.', '.' => {
+			$_ = {
+				type => 'match_any'
+				regex => '.+'
+			}
+		}
+		default {
+			die 'expected path expression'
+		}
+	}
+
+	return
+}
 
 list context optional_arguments_list {
 	if '[' => {
@@ -1042,7 +1115,16 @@ object context more_action_expression {
 
 
 object context file_directory_block {
-	return
+	switch {
+		'suffix_timestamp' => {
+			match ';'
+
+			$_{properties}{$0} = '1'
+		}
+		default {
+			return
+		}
+	}
 }
 
 
