@@ -580,10 +580,14 @@ sub compile_expression {
 		return "\$this->action('$expression->{identifier}', $arguments)"
 
 	} elsif ($expression->{type} eq 'string_expression') {
-		return "\"$expression->{value}\""
+		return "'$expression->{value}'"
 
 	} elsif ($expression->{type} eq 'localized_string_expression') {
-		return "\$this->get_localized_string(\'$expression->{namespace_identifier}\', \'$expression->{identifier}\')"
+		return "\$this->get_localized_string('$expression->{namespace_identifier}', '$expression->{identifier}')"
+
+	} elsif ($expression->{type} eq 'string_interpolation_expression') {
+		my $expression_list = $self->compile_expression_list($expression->{expression_list});
+		return "implode('', array($expression_list))"
 		
 	} elsif ($expression->{type} eq 'integer_expression') {
 		return "$expression->{value}"

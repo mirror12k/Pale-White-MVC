@@ -13,6 +13,9 @@ identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
 
 integer_regex = /-?\d++/
 string_regex = /"([^\\"]|\\[\\"])*?"/s
+string_interpolation_start_regex = /"([^\\"]|\\[\\"])*?\{\{/s
+string_interpolation_middle_regex = /\}\}([^\\"]|\\[\\"])*?\{\{/s
+string_interpolation_end_regex = /\}\}([^\\"]|\\[\\"])*?"/s
 
 comment_regex = /#[^\n]*+\n/s
 whitespace_regex = /\s++/s
@@ -27,6 +30,9 @@ format_file_identifier_substitution = s/\Afile:://s
 format_native_identifier_substitution = s/\Anative:://s
 escape_string_substitution = s/\\([\\"])/$1/gs
 format_string_substitution = s/\A"(.*)"\Z/$1/s
+format_string_interpolation_start_substitution = s/\A"(.*)\{\{\Z/$1/s
+format_string_interpolation_middle_substitution = s/\A\}\}(.*)\{\{\Z/$1/s
+format_string_interpolation_end_substitution = s/\A\}\}(.*)"\Z/$1/s
 format_event_identifier_substitution = s/\A/on_/s
 
 
@@ -34,7 +40,6 @@ format_event_identifier_substitution = s/\A/on_/s
 tokens {
 	native_code_block => $native_code_block_regex
 
-	symbol => $symbol_regex
 	model_identifier => $model_identifier_regex
 	file_identifier => $file_identifier_regex
 	native_identifier => $native_identifier_regex
@@ -43,7 +48,12 @@ tokens {
 	identifier => $identifier_regex
 	
 	integer => $integer_regex
+	string_interpolation_start => $string_interpolation_start_regex
+	string_interpolation_middle => $string_interpolation_middle_regex
+	string_interpolation_end => $string_interpolation_end_regex
 	string => $string_regex
+	
+	symbol => $symbol_regex
 
 	comment => $comment_regex
 	whitespace => $whitespace_regex
@@ -849,6 +859,15 @@ object context action_expression {
 			}
 			return
 		}
+		$string_interpolation_start_regex => {
+			$_ = !string_interpolation_expression_list->{
+				type => 'string_interpolation_expression'
+				line_number => $0{line_number}
+				start_text => $0
+				expression_list => []
+			}
+			return
+		}
 		$string_regex => {
 			$_ = {
 				type => 'string_expression'
@@ -895,6 +914,49 @@ object context action_expression {
 			die 'expression expected'
 		}
 	}
+}
+
+object context string_interpolation_expression_list {
+	$_{expression_list}[] = {
+		type => 'string_expression'
+		value => !format_string_interpolation_start->$_{start_text}
+	}
+
+	$_{expression_list}[] = !action_expression
+
+	while $string_interpolation_middle_regex => {
+		$_{expression_list}[] = {
+			type => 'string_expression'
+			value => !format_string_interpolation_middle->$0
+		}
+		$_{expression_list}[] = !action_expression
+	}
+
+	match $string_interpolation_end_regex
+	$_{expression_list}[] = {
+		type => 'string_expression'
+		value => !format_string_interpolation_end->$0
+	}
+
+	return
+}
+
+item context format_string_interpolation_start {
+	$_ = $escape_string_substitution->
+			$format_string_interpolation_start_substitution->$_
+	return
+}
+
+item context format_string_interpolation_middle {
+	$_ = $escape_string_substitution->
+			$format_string_interpolation_middle_substitution->$_
+	return
+}
+
+item context format_string_interpolation_end {
+	$_ = $escape_string_substitution->
+			$format_string_interpolation_end_substitution->$_
+	return
 }
 
 

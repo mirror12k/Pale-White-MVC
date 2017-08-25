@@ -23,6 +23,9 @@ our $var_class_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
 our $var_integer_regex = qr/-?\d++/;
 our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
+our $var_string_interpolation_start_regex = qr/"([^\\"]|\\[\\"])*?\{\{/s;
+our $var_string_interpolation_middle_regex = qr/\}\}([^\\"]|\\[\\"])*?\{\{/s;
+our $var_string_interpolation_end_regex = qr/\}\}([^\\"]|\\[\\"])*?"/s;
 our $var_comment_regex = qr/#[^\n]*+\n/s;
 our $var_whitespace_regex = qr/\s++/s;
 our $var_event_identifier_regex = qr/create|delete/;
@@ -32,19 +35,25 @@ our $var_format_file_identifier_substitution = sub { $_[0] =~ s/\Afile:://sr };
 our $var_format_native_identifier_substitution = sub { $_[0] =~ s/\Anative:://sr };
 our $var_escape_string_substitution = sub { $_[0] =~ s/\\([\\"])/$1/gsr };
 our $var_format_string_substitution = sub { $_[0] =~ s/\A"(.*)"\Z/$1/sr };
+our $var_format_string_interpolation_start_substitution = sub { $_[0] =~ s/\A"(.*)\{\{\Z/$1/sr };
+our $var_format_string_interpolation_middle_substitution = sub { $_[0] =~ s/\A\}\}(.*)\{\{\Z/$1/sr };
+our $var_format_string_interpolation_end_substitution = sub { $_[0] =~ s/\A\}\}(.*)"\Z/$1/sr };
 our $var_format_event_identifier_substitution = sub { $_[0] =~ s/\A/on_/sr };
 
 
 our $tokens = [
 	'native_code_block' => $var_native_code_block_regex,
-	'symbol' => $var_symbol_regex,
 	'model_identifier' => $var_model_identifier_regex,
 	'file_identifier' => $var_file_identifier_regex,
 	'native_identifier' => $var_native_identifier_regex,
 	'class_identifier' => $var_class_identifier_regex,
 	'identifier' => $var_identifier_regex,
 	'integer' => $var_integer_regex,
+	'string_interpolation_start' => $var_string_interpolation_start_regex,
+	'string_interpolation_middle' => $var_string_interpolation_middle_regex,
+	'string_interpolation_end' => $var_string_interpolation_end_regex,
 	'string' => $var_string_regex,
+	'symbol' => $var_symbol_regex,
 	'comment' => $var_comment_regex,
 	'whitespace' => $var_whitespace_regex,
 ];
@@ -66,6 +75,9 @@ our $contexts = {
 	file_directory_block => 'context_file_directory_block',
 	format_native_code => 'context_format_native_code',
 	format_string => 'context_format_string',
+	format_string_interpolation_end => 'context_format_string_interpolation_end',
+	format_string_interpolation_middle => 'context_format_string_interpolation_middle',
+	format_string_interpolation_start => 'context_format_string_interpolation_start',
 	model_block => 'context_model_block',
 	model_property_identifier => 'context_model_property_identifier',
 	model_property_identifier_modifiers => 'context_model_property_identifier_modifiers',
@@ -76,6 +88,7 @@ our $contexts = {
 	path_action_block => 'context_path_action_block',
 	path_action_block_list => 'context_path_action_block_list',
 	root => 'context_root',
+	string_interpolation_expression_list => 'context_string_interpolation_expression_list',
 };
 
 
@@ -953,6 +966,13 @@ sub context_action_expression {
 			$context_object = $self->context_more_action_expression({ type => 'variable_expression', line_number => $tokens[0][2], identifier => $tokens[0][1], });
 			return $context_object;
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_interpolation_start_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_string_interpolation_expression_list({ type => 'string_interpolation_expression', line_number => $tokens[0][2], start_text => $tokens[0][1], expression_list => [], });
+			return $context_object;
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -996,6 +1016,50 @@ sub context_action_expression {
 			}
 	}
 	return $context_object;
+}
+
+sub context_string_interpolation_expression_list {
+	my ($self, $context_object) = @_;
+	my @tokens;
+
+			push @{$context_object->{expression_list}}, { type => 'string_expression', value => $self->context_format_string_interpolation_start($context_object->{start_text}), };
+			push @{$context_object->{expression_list}}, $self->context_action_expression;
+			while ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_interpolation_middle_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{expression_list}}, { type => 'string_expression', value => $self->context_format_string_interpolation_middle($tokens[0][1]), };
+			push @{$context_object->{expression_list}}, $self->context_action_expression;
+			}
+			$self->confess_at_current_offset('expected qr/\\}\\}([^\\\\"]|\\\\[\\\\"])*?"/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_interpolation_end_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{expression_list}}, { type => 'string_expression', value => $self->context_format_string_interpolation_end($tokens[0][1]), };
+			return $context_object;
+}
+
+sub context_format_string_interpolation_start {
+	my ($self, $context_value) = @_;
+	my @tokens;
+
+			$context_value = $var_escape_string_substitution->($var_format_string_interpolation_start_substitution->($context_value));
+			return $context_value;
+}
+
+sub context_format_string_interpolation_middle {
+	my ($self, $context_value) = @_;
+	my @tokens;
+
+			$context_value = $var_escape_string_substitution->($var_format_string_interpolation_middle_substitution->($context_value));
+			return $context_value;
+}
+
+sub context_format_string_interpolation_end {
+	my ($self, $context_value) = @_;
+	my @tokens;
+
+			$context_value = $var_escape_string_substitution->($var_format_string_interpolation_end_substitution->($context_value));
+			return $context_value;
 }
 
 sub context_more_action_expression {

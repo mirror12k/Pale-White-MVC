@@ -248,9 +248,7 @@ sub compile_item {
 		return @code
 
 	} elsif ($item->{type} eq 'expression_node') {
-		die "why is there text here" if exists $item->{text} and @{$item->{text}};
 		return $self->compile_argument_expression($item->{expression}, 'text')
-				# map $self->compile_argument_expression($_, 'text'), @{$item->{text}}
 	} else {
 		die "invalid item: $item->{type}";
 	}
