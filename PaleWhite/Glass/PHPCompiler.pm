@@ -247,8 +247,12 @@ sub compile_item {
 		push @code, "}\n";
 		return @code
 
+	} elsif ($item->{type} eq 'raw_html_expression_node') {
+		return $self->compile_argument_expression($item->{expression}, 'html')
+
 	} elsif ($item->{type} eq 'expression_node') {
 		return $self->compile_argument_expression($item->{expression}, 'text')
+		
 	} else {
 		die "invalid item: $item->{type}";
 	}

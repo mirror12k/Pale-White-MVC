@@ -232,6 +232,16 @@ object context glass_item {
 			match $newline_regex
 			return
 		}
+		'{', '<' => {
+			$_ = {
+				type => 'raw_html_expression_node'
+				line_number => $0{line_number}
+				expression => !glass_argument_expression
+			}
+			match '>', '}'
+			match $newline_regex
+			return
+		}
 		'{' => {
 			$_ = {
 				type => 'expression_node'
