@@ -609,6 +609,8 @@ sub compile_expression {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		if ($expression->{identifier} eq '_csrf_token') {
 			return "\$_SESSION['pale_white_csrf_token']";
+		} elsif ($expression->{identifier} eq '_time') {
+			return "time()";
 		} else {
 			return "\$$expression->{identifier}";
 		}

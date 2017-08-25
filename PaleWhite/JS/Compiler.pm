@@ -41,7 +41,23 @@ sub compile_js {
 			my @block = $self->read_js_block(\@text);
 			push @code, "pale_white.register_hook('$selector', '$event', function (event) {\n";
 			push @code, @block;
-			push @code, "});\n";
+			push @code, "});\n\n";
+
+		} elsif ($line =~ /\A\s*on\s+load\s*\Z/s) {
+			# event hook on selector
+			my ($selector, $event) = ($1, $2);
+			my @block = $self->read_js_block(\@text);
+			push @code, "window.addEventListener('load', function (event) {\n";
+			push @code, @block;
+			push @code, "});\n\n";
+
+		} elsif ($line =~ /\A\s*function\s+([a-zA-Z_][a-zA-Z_0-9]*+)\s*\((.*?)\)\s*\Z/s) {
+			# event hook on selector
+			my ($selector, $event) = ($1, $2);
+			my @block = $self->read_js_block(\@text);
+			push @code, "function $1 ($2) {\n";
+			push @code, @block;
+			push @code, "};\n\n";
 
 		} elsif ($line =~ /\A\s*\Z/s) {
 			# empty line

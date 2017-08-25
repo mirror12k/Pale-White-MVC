@@ -397,6 +397,8 @@ sub compile_value_expression {
 			return "\$this->get_site_base()";
 		} elsif ($expression->{identifier} eq '_csrf_token') {
 			return "\$this->get_csrf_token()";
+		} elsif ($expression->{identifier} eq '_time') {
+			return "time()";
 		} elsif (exists $self->{local_variable_scope}{$expression->{identifier}}) {
 			return "\$$expression->{identifier}";
 		} else {
