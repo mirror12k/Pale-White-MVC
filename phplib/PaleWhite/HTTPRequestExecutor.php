@@ -120,7 +120,7 @@ class HTTPRequestExecutor {
 					if ($file_upload['error'] === UPLOAD_ERR_CANT_WRITE)
 						throw new \PaleWhite\PaleWhiteException("file upload failed: cant write directory");
 					if ($file_upload['error'] === UPLOAD_ERR_OK) {
-						$file_container = new \PaleWhite\FileUpload($file_upload['tmp_name'], $file_upload['size']);
+						$file_container = new \PaleWhite\FileUpload($file_upload['name'], $file_upload['tmp_name'], $file_upload['size']);
 						$args[$field] = $file_container;
 					} elseif ($file_upload['error'] === UPLOAD_ERR_NO_FILE) {
 						$args[$field] = null;

@@ -3,12 +3,14 @@
 namespace PaleWhite;
 
 class FileUpload {
+	public $original_filename;
 	public $temp_filepath;
 	public $file_size;
 
 	public $cached_mime_type;
 
-	public function __construct($temp_filepath, $file_size) {
+	public function __construct($original_filename, $temp_filepath, $file_size) {
+		$this->original_filename = $original_filename;
 		$this->temp_filepath = $temp_filepath;
 		$this->file_size = $file_size;
 	}
