@@ -75,12 +75,12 @@ controller MainController {
 		render ErrorTemplate error="Not Found";
 	}
 
-	action delete_video [ model::VideoFileModel video ] {{
-		$video->delete();
-	}}
+	action delete_video [ model::VideoFileModel video ] {
+		video.delete();
+	}
 
-	action view_video_url [ model::VideoFileModel video ] {{
-		return "view/" . $video->id;
-	}}
+	action view_video_url [ model::VideoFileModel video ] {
+		return "view/{{video.id}}";
+	}
 }
 
