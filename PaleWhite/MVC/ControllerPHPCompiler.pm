@@ -429,6 +429,13 @@ sub compile_action {
 		# my $arguments = $self->compile_arguments_array($action->{arguments});
 		return "\$this->route_subcontroller('$class', \$res, $path_argument, $args_argument);\n"
 
+	} elsif ($action->{type} eq 'return_statement') {
+		return "return;\n"
+
+	} elsif ($action->{type} eq 'return_value_statement') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "return $expression;\n"
+
 	} elsif ($action->{type} eq 'argument_specifier') {
 		my $args_var = $self->{context_args_variable};
 		return "\$$action->{identifier} = ${args_var}['$action->{identifier}'];\n"

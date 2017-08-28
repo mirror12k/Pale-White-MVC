@@ -646,6 +646,20 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
+		'return', ';' => {
+			$_{block}[] = {
+				type => 'return_statement'
+				line_number => $0{line_number}
+			}
+		}
+		'return' => {
+			$_{block}[] = {
+				type => 'return_value_statement'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
+			match ';'
+		}
 		'validate' => {
 			match $identifier_regex, 'as'
 			if $model_identifier_regex => {
