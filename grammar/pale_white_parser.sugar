@@ -291,7 +291,8 @@ object context controller_block {
 				block => []
 			}
 		}
-		'event', $identifier_regex => {
+		'event' => {
+			match $identifier_regex
 			$_{controller_events}[] = !path_action_block->{
 				type => 'event_block'
 				line_number => $0{line_number}
@@ -300,15 +301,26 @@ object context controller_block {
 				block => []
 			}
 		}
+		# 'action' => {
+		# 	match $identifier_regex
+
+		# 	$_{actions}[] = {
+		# 		type => 'action'
+		# 		line_number => $0{line_number}
+		# 		identifier => $1
+		# 		arguments => !optional_arguments_list->[]
+		# 		code => !native_code_block->$2
+		# 	}
+		# }
 		'action' => {
 			match $identifier_regex
 
-			$_{actions}[] = {
-				type => 'action'
+			$_{actions}[] = !path_action_block->{
+				type => 'action_block'
 				line_number => $0{line_number}
 				identifier => $1
 				arguments => !optional_arguments_list->[]
-				code => !native_code_block->$2
+				block => []
 			}
 		}
 		'validator' => {

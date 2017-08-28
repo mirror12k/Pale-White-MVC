@@ -202,6 +202,9 @@ sub compile_path {
 			if ($path->{type} eq 'event_block') {
 				push @code, "\tthrow new \\PaleWhite\\ValidationException"
 						. "('missing argument \"$arg->{identifier}\" to event \"$path->{identifier}\"');\n";
+			} elsif ($path->{type} eq 'action_block') {
+				push @code, "\tthrow new \\PaleWhite\\ValidationException"
+						. "('missing argument \"$arg->{identifier}\" to action \"$path->{identifier}\"');\n";
 			} else {
 				push @code, "\tthrow new \\PaleWhite\\ValidationException"
 						. "('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
@@ -226,6 +229,14 @@ sub compile_path {
 		}
 	} elsif ($path->{type} eq 'event_block') {
 		my $condition_code = "\$event === '$path->{identifier}'";
+		@code = map "\t$_", @code;
+		if ($first) {
+			@code = ("if ($condition_code) {\n", @code);
+		} else {
+			@code = ("} elseif ($condition_code) {\n", @code);
+		}
+	} elsif ($path->{type} eq 'action_block') {
+		my $condition_code = "\$action === '$path->{identifier}'";
 		@code = map "\t$_", @code;
 		if ($first) {
 			@code = ("if ($condition_code) {\n", @code);
@@ -329,7 +340,8 @@ sub compile_controller_action {
 
 	my $first = 1;
 	foreach my $action (@actions) {
-		push @code, $self->compile_controller_action_call($action, $first);
+		# push @code, $self->compile_controller_action_block($action, $first);
+		push @code, $self->compile_path($action, $first);
 		$first = 0;
 	}
 	push @code, "} else {\n", "\treturn parent::action(\$action, \$args);\n", "}\n";
@@ -340,33 +352,34 @@ sub compile_controller_action {
 	return @code
 }
 
-sub compile_controller_action_call {
-	my ($self, $action, $first) = @_;
-	my @code;
+# sub compile_controller_action_block {
+# 	my ($self, $action, $first) = @_;
+# 	my @code;
 
-	if (@{$action->{arguments}}) {
-		my $args_var = $self->{context_args_variable};
-		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$action->{arguments}}) {
-			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
-			push @code, "\tthrow new \\PaleWhite\\ValidationException"
-					. "('missing argument \"$arg->{identifier}\" to action \"$action->{identifier}\"');\n";
-		}
-		push @code, "\n";
-		push @code, $self->compile_action_block($action->{arguments});
-		push @code, "\n";
-	}
+# 	if (@{$action->{arguments}}) {
+# 		my $args_var = $self->{context_args_variable};
+# 		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$action->{arguments}}) {
+# 			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
+# 			push @code, "\tthrow new \\PaleWhite\\ValidationException"
+# 					. "('missing argument \"$arg->{identifier}\" to action \"$action->{identifier}\"');\n";
+# 		}
+# 		push @code, "\n";
+# 		push @code, $self->compile_action_block($action->{arguments});
+# 		push @code, "\n";
+# 	}
 
-	push @code, map "$_\n", map s/\A\t\t?//r, split "\n", $action->{code};
+# 	push @code, $self->compile_action_block($action->{block});
+# 	# push @code, map "$_\n", map s/\A\t\t?//r, split "\n", $action->{code};
 
-	@code = map "\t$_", @code;
-	if ($first) {
-		@code = ("if (\$action === '$action->{identifier}') {\n", @code);
-	} else {
-		@code = ("} elseif (\$action === '$action->{identifier}') {\n", @code);
-	}
+# 	@code = map "\t$_", @code;
+# 	if ($first) {
+# 		@code = ("if (\$action === '$action->{identifier}') {\n", @code);
+# 	} else {
+# 		@code = ("} elseif (\$action === '$action->{identifier}') {\n", @code);
+# 	}
 
-	return @code
-}
+# 	return @code
+# }
 
 sub compile_action_block {
 	my ($self, $block) = @_;

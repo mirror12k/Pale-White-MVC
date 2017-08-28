@@ -385,10 +385,13 @@ sub context_controller_block {
 			@tokens = (@tokens, $self->step_tokens(2));
 			push @{$context_object->{ajax_paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'event' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'event') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
-			@tokens = (@tokens, $self->step_tokens(2));
+			@tokens = (@tokens, $self->step_tokens(1));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{controller_events}}, $self->context_path_action_block({ type => 'event_block', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action') {
@@ -398,7 +401,7 @@ sub context_controller_block {
 			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{actions}}, { type => 'action', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_optional_arguments_list([]), code => $self->context_native_code_block($tokens[2][1]), };
+			push @{$context_object->{actions}}, $self->context_path_action_block({ type => 'action_block', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'validator') {
 			my @tokens_freeze = @tokens;
