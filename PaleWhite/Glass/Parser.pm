@@ -312,6 +312,16 @@ sub context_glass_item {
 			@tokens = (@tokens, $self->step_tokens(1));
 			return $context_object;
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '@' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq '/' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			$context_object = { type => 'expression_node', line_number => $tokens[0][2], expression => { type => 'localized_string_expression', line_number => $tokens[0][2], identifier => $tokens[3][1], namespace_identifier => $tokens[1][1], }, };
+			$self->confess_at_current_offset('expected qr/\\s*(\\#[^\\n]*+\\s*)*\\n/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_newline_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_object;
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '<') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;

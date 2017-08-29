@@ -252,9 +252,12 @@ sub compile_item {
 
 	} elsif ($item->{type} eq 'expression_node') {
 		return $self->compile_argument_expression($item->{expression}, 'text')
+
+	} elsif ($item->{type} eq 'glass_helper') {
+		die "invalid helper: $item->{identifier} on line $item->{line_number}";
 		
 	} else {
-		die "invalid item: $item->{type}";
+		die "invalid item: $item->{type} on line $item->{line_number}";
 	}
 }
 

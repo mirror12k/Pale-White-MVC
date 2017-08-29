@@ -232,6 +232,20 @@ object context glass_item {
 			match $newline_regex
 			return
 		}
+		'@', $identifier_regex, '/', $identifier_regex => {
+			$_ = {
+				type => 'expression_node'
+				line_number => $0{line_number}
+				expression => {
+					type => 'localized_string_expression'
+					line_number => $0{line_number}
+					identifier => $3
+					namespace_identifier => $1
+				}
+			}
+			match $newline_regex
+			return
+		}
 		'{', '<' => {
 			$_ = {
 				type => 'raw_html_expression_node'
