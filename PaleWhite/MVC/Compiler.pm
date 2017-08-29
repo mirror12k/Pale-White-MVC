@@ -13,7 +13,7 @@ use PaleWhite::MVC::Parser;
 use PaleWhite::MVC::ModelSQLCompiler;
 use PaleWhite::MVC::ControllerPHPCompiler;
 use PaleWhite::MVC::FileDirectoryPHPCompiler;
-use PaleWhite::MVC::ModelPHPCompiler;
+# use PaleWhite::MVC::ModelPHPCompiler;
 
 
 
@@ -80,7 +80,9 @@ sub compile_php {
 
 	foreach my $item (@{$self->{syntax_tree}}) {
 		if ($item->{type} eq 'model_definition') {
-			push @code, PaleWhite::MVC::ModelPHPCompiler::compile_model($item);
+			# push @code, PaleWhite::MVC::ModelPHPCompiler::compile_model($item);
+			my $compiler = PaleWhite::MVC::ControllerPHPCompiler->new;
+			push @code, $compiler->compile_model($item);
 		} elsif ($item->{type} eq 'controller_definition') {
 			my $compiler = PaleWhite::MVC::ControllerPHPCompiler->new;
 			push @code, $compiler->compile_controller($item);

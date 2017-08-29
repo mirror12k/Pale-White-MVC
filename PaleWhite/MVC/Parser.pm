@@ -194,40 +194,31 @@ sub context_model_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, \'(\'')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '(';
-			@tokens = (@tokens, $self->step_tokens(2));
-			$self->confess_at_current_offset('expected \')\', qr/\\{\\{.*?\\}\\}/s')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_native_code_block_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{functions}}, { type => 'model_function', identifier => $tokens[1][1], code => $var_format_native_code_substitution->($tokens[4][1]), };
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{functions}}, $self->context_path_action_block({ type => 'model_function', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'static' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'function') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, \'(\'')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '(';
-			@tokens = (@tokens, $self->step_tokens(2));
-			$self->confess_at_current_offset('expected \')\', qr/\\{\\{.*?\\}\\}/s')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_native_code_block_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(2));
-			push @{$context_object->{functions}}, { type => 'model_static_function', identifier => $tokens[2][1], code => $var_format_native_code_substitution->($tokens[5][1]), };
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{functions}}, $self->context_path_action_block({ type => 'model_static_function', line_number => $tokens[0][2], identifier => $tokens[2][1], arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'on' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_event_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			$self->confess_at_current_offset('expected qr/\\{\\{.*?\\}\\}/s')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_native_code_block_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{functions}}, { type => 'on_event_function', identifier => $var_format_event_identifier_substitution->($tokens[1][1]), code => $var_format_native_code_substitution->($tokens[2][1]), };
+			push @{$context_object->{functions}}, $self->context_path_action_block({ type => 'on_event_function', line_number => $tokens[0][2], identifier => $var_format_event_identifier_substitution->($tokens[1][1]), arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_model_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'model_pointer_property', property_type => $var_format_model_identifier_substitution->($tokens[0][1]), modifiers => { default => '0', }, modifiers => $self->context_model_property_type_modifiers({}), });
+			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'model_pointer_property', line_number => $tokens[0][2], property_type => $var_format_model_identifier_substitution->($tokens[0][1]), modifiers => { default => '0', }, modifiers => $self->context_model_property_type_modifiers({}), });
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));
@@ -236,7 +227,7 @@ sub context_model_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'file_pointer_property', property_type => $var_format_file_identifier_substitution->($tokens[0][1]), modifiers => { default => '""', }, modifiers => $self->context_model_property_type_modifiers({}), });
+			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'file_pointer_property', line_number => $tokens[0][2], property_type => $var_format_file_identifier_substitution->($tokens[0][1]), modifiers => { default => '""', }, modifiers => $self->context_model_property_type_modifiers({}), });
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));
@@ -245,7 +236,7 @@ sub context_model_block {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'model_property', property_type => $tokens[0][1], modifiers => $self->context_model_property_type_modifiers({}), });
+			push @{$context_object->{properties}}, $self->context_model_property_identifier({ type => 'model_property', line_number => $tokens[0][2], property_type => $tokens[0][1], modifiers => $self->context_model_property_type_modifiers({}), });
 			$self->confess_at_current_offset('expected \';\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
 			@tokens = (@tokens, $self->step_tokens(1));

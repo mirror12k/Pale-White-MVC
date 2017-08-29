@@ -41,6 +41,104 @@ sub format_classname {
 	return "\\$classname" =~ s/::/\\/gr
 }
 
+sub compile_model {
+	my ($self, $model) = @_;
+
+
+	my @code;
+
+	push @code, "public static \$table_name = '$model->{identifier}';\n\n";
+	push @code, "public static \$_model_cache = array('id' => array());\n";
+
+	my @model_properties = grep { not exists $_->{modifiers}{array_property} } @{$model->{properties}};
+	my @model_array_properties = grep { exists $_->{modifiers}{array_property} } @{$model->{properties}};
+	my @model_submodel_properties = grep { $_->{type} eq 'model_pointer_property' } @{$model->{properties}};
+	my @model_file_properties = grep { $_->{type} eq 'file_pointer_property' } @{$model->{properties}};
+	my @model_json_properties = grep { $_->{type} eq 'model_property' and $_->{property_type} eq 'json' } @{$model->{properties}};
+
+	if (@model_properties) {
+		push @code, "public static \$model_properties = array(\n";
+		push @code, "\t'id' => 'int',\n";
+		push @code, "\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @model_properties;
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$model_properties = array();\n";
+	}
+
+	if (@model_array_properties) {
+		push @code, "public static \$model_array_properties = array(\n";
+		push @code, "\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @model_array_properties;
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$model_array_properties = array();\n";
+	}
+
+	if (@model_submodel_properties) {
+		push @code, "public static \$model_submodel_properties = array(\n";
+		push @code, "\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @model_submodel_properties;
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$model_submodel_properties = array();\n";
+	}
+
+	if (@model_file_properties) {
+		push @code, "public static \$model_file_properties = array(\n";
+		push @code, "\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @model_file_properties;
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$model_file_properties = array();\n";
+	}
+
+	if (@model_json_properties) {
+		push @code, "public static \$model_json_properties = array(\n";
+		push @code, "\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @model_json_properties;
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$model_json_properties = array();\n";
+	}
+
+	push @code, "\n";
+	my %model_functions;
+	foreach my $function (@{$model->{functions}}) {
+		die "duplicate function $function->{identifier} defined in model $model->{identifier}"
+				if exists $model_functions{$function->{identifier}};
+		$model_functions{$function->{identifier}} = 1;
+
+		if ($function->{type} eq 'model_function') {
+			push @code, "public function $function->{identifier} (array \$args = array()) {\n";
+			push @code, map "\t$_ ", $self->compile_path_arguments_validation($function->{arguments},
+					"model function \"$function->{identifier}\"");
+			push @code, map "\t$_ ", $self->compile_action_block($function->{block});
+			# push @code, map "$_\n", split "\n", $function->{code};
+			push @code, "}\n";
+		} elsif ($function->{type} eq 'model_static_function') {
+			push @code, "public static function $function->{identifier} (array \$args = array()) {\n";
+			push @code, map "\t$_ ", $self->compile_path_arguments_validation($function->{arguments},
+					"model function \"$function->{identifier}\"");
+			push @code, map "\t$_ ", $self->compile_action_block($function->{block});
+			# push @code, map "$_\n", split "\n", $function->{code};
+			push @code, "}\n";
+		} elsif ($function->{type} eq 'on_event_function') {
+			push @code, "public function $function->{identifier} () {\n";
+			push @code, "\tparent::$function->{identifier}();\n";
+			push @code, map "\t$_ ", $self->compile_action_block($function->{block});
+			# push @code, map "$_\n", split "\n", $function->{code};
+			push @code, "}\n";
+		} else {
+			die "unimplemented function type $function->{type}";
+		}
+	}
+	push @code, "\n";
+
+
+
+
+	@code = map "\t$_", @code;
+	@code = ("class $model->{identifier} extends \\PaleWhite\\Model {\n", @code, "}\n\n\n");
+
+	return @code
+}
+
 sub compile_controller {
 	my ($self, $controller) = @_;
 	die "invalid controller: $controller->{type}" unless $controller->{type} eq 'controller_definition';
@@ -195,25 +293,38 @@ sub compile_path {
 	my ($self, $path, $first) = @_;
 	my @code;
 
-	if (@{$path->{arguments}}) {
-		my $args_var = $self->{context_args_variable};
-		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$path->{arguments}}) {
-			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
-			if ($path->{type} eq 'event_block') {
-				push @code, "\tthrow new \\PaleWhite\\ValidationException"
-						. "('missing argument \"$arg->{identifier}\" to event \"$path->{identifier}\"');\n";
-			} elsif ($path->{type} eq 'action_block') {
-				push @code, "\tthrow new \\PaleWhite\\ValidationException"
-						. "('missing argument \"$arg->{identifier}\" to action \"$path->{identifier}\"');\n";
-			} else {
-				push @code, "\tthrow new \\PaleWhite\\ValidationException"
-						. "('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
-			}
-		}
-		push @code, "\n";
-		push @code, $self->compile_action_block($path->{arguments});
-		push @code, "\n";
+	my $target;
+	if ($path->{type} eq 'event_block') {
+		$target = "event \"$path->{identifier}\"";
+	} elsif ($path->{type} eq 'action_block') {
+		$target = "action \"$path->{identifier}\"";
+	} elsif ($path->{type} eq 'default_path') {
+		$target = "path default";
+	} else {
+		$target = "path \"$path->{path}\"";
 	}
+
+	push @code, $self->compile_path_arguments_validation($path->{arguments}, $target);
+	# if (@{$path->{arguments}}) {
+
+		# my $args_var = $self->{context_args_variable};
+		# foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$path->{arguments}}) {
+		# 	push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
+		# 	if ($path->{type} eq 'event_block') {
+		# 		push @code, "\tthrow new \\PaleWhite\\ValidationException"
+		# 				. "('missing argument \"$arg->{identifier}\" to event \"$path->{identifier}\"');\n";
+		# 	} elsif ($path->{type} eq 'action_block') {
+		# 		push @code, "\tthrow new \\PaleWhite\\ValidationException"
+		# 				. "('missing argument \"$arg->{identifier}\" to action \"$path->{identifier}\"');\n";
+		# 	} else {
+		# 		push @code, "\tthrow new \\PaleWhite\\ValidationException"
+		# 				. "('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
+		# 	}
+		# }
+		# push @code, "\n";
+		# push @code, $self->compile_action_block($path->{arguments});
+		# push @code, "\n";
+	# }
 
 	push @code, $self->compile_action_block($path->{block});
 
@@ -248,7 +359,34 @@ sub compile_path {
 	return @code
 }
 
-our $identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
+sub compile_path_arguments_validation {
+	my ($self, $arguments, $target) = @_;
+	my @code;
+
+	return unless @$arguments;
+
+	my $args_var = $self->{context_args_variable};
+
+	foreach my $arg (grep $_->{type} eq 'argument_specifier', @$arguments) {
+		push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
+		push @code, "\tthrow new \\PaleWhite\\ValidationException"
+				. "('missing argument \"$arg->{identifier}\" to $target');\n";
+		# if ($path->{type} eq 'event_block') {
+		# 	push @code, "\tthrow new \\PaleWhite\\ValidationException"
+		# 			. "('missing argument \"$arg->{identifier}\" to event \"$path->{identifier}\"');\n";
+		# } elsif ($path->{type} eq 'action_block') {
+		# 	push @code, "\tthrow new \\PaleWhite\\ValidationException"
+		# 			. "('missing argument \"$arg->{identifier}\" to action \"$path->{identifier}\"');\n";
+		# } else {
+		# }
+	}
+	push @code, "\n";
+	push @code, $self->compile_action_block($arguments);
+	push @code, "\n";
+
+	return @code
+}
+
 
 sub compile_path_condition {
 	my ($self, $condition) = @_;
@@ -639,6 +777,8 @@ sub compile_expression {
 
 		if ($expression->{expression}{type} eq 'variable_expression') {
 			return "$sub_expression->$expression->{identifier}($arguments_list)";
+		} elsif ($expression->{expression}{type} eq 'access_expression') {
+			return "$sub_expression->$expression->{identifier}($arguments_list)";
 		} elsif ($expression->{expression}{type} eq 'model_class_expression') {
 			return "$sub_expression\::$expression->{identifier}($arguments_list)";
 		} elsif ($expression->{expression}{type} eq 'native_library_expression') {
@@ -652,6 +792,8 @@ sub compile_expression {
 		my $sub_expression = $self->compile_expression($expression->{expression});
 
 		if ($expression->{expression}{type} eq 'variable_expression') {
+			return "$sub_expression->$expression->{identifier}";
+		} elsif ($expression->{expression}{type} eq 'access_expression') {
 			return "$sub_expression->$expression->{identifier}";
 		} elsif ($expression->{expression}{type} eq 'model_class_expression') {
 			return "$sub_expression\::\$$expression->{identifier}";

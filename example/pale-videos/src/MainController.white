@@ -9,10 +9,15 @@ model VideoFileModel {
 	int views;
 	string[255] video_name;
 
-	on delete {{
-		if ($this->video_file !== null)
-			$this->video_file->delete();
-	}}
+	on delete {
+		if (this.video_file) {
+			this.video_file.delete();
+		}
+	}
+	# on delete {{
+	# 	if ($this->video_file !== null)
+	# 		$this->video_file->delete();
+	# }}
 }
 
 controller MainController {

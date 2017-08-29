@@ -115,34 +115,46 @@ list context root {
 object context model_block {
 	switch {
 		'function' => {
-			match $identifier_regex, '('
-			match ')', $native_code_block_regex
-			$_{functions}[] = {
+			match $identifier_regex
+			# match '('
+			# match ')', $native_code_block_regex
+			$_{functions}[] = !path_action_block->{
 				type => 'model_function'
+				line_number => $0{line_number}
 				identifier => $1
-				code => $format_native_code_substitution->$4
+				arguments => !optional_arguments_list->[]
+				# code => $format_native_code_substitution->$4
+				block => []
 			}
 		}
 		'static', 'function' => {
-			match $identifier_regex, '('
-			match ')', $native_code_block_regex
-			$_{functions}[] = {
+			match $identifier_regex
+			# match '('
+			# match ')', $native_code_block_regex
+			$_{functions}[] = !path_action_block->{
 				type => 'model_static_function'
+				line_number => $0{line_number}
 				identifier => $2
-				code => $format_native_code_substitution->$5
+				arguments => !optional_arguments_list->[]
+				# code => $format_native_code_substitution->$5
+				block => []
 			}
 		}
 		'on', $event_identifier_regex => {
-			match $native_code_block_regex
-			$_{functions}[] = {
+			# match $native_code_block_regex
+			$_{functions}[] = !path_action_block->{
 				type => 'on_event_function'
+				line_number => $0{line_number}
 				identifier => $format_event_identifier_substitution->$1
-				code => $format_native_code_substitution->$2
+				arguments => !optional_arguments_list->[]
+				# code => $format_native_code_substitution->$2
+				block => []
 			}
 		}
 		$model_identifier_regex => {
 			$_{properties}[] = !model_property_identifier->{
 				type => 'model_pointer_property'
+				line_number => $0{line_number}
 				property_type => $format_model_identifier_substitution->$0
 				modifiers => {
 					default => '0'
@@ -154,6 +166,7 @@ object context model_block {
 		$file_identifier_regex => {
 			$_{properties}[] = !model_property_identifier->{
 				type => 'file_pointer_property'
+				line_number => $0{line_number}
 				property_type => $format_file_identifier_substitution->$0
 				modifiers => {
 					default => '""'
@@ -165,6 +178,7 @@ object context model_block {
 		$identifier_regex => {
 			$_{properties}[] = !model_property_identifier->{
 				type => 'model_property'
+				line_number => $0{line_number}
 				property_type => $0
 				modifiers => !model_property_type_modifiers->{}
 			}
@@ -301,17 +315,6 @@ object context controller_block {
 				block => []
 			}
 		}
-		# 'action' => {
-		# 	match $identifier_regex
-
-		# 	$_{actions}[] = {
-		# 		type => 'action'
-		# 		line_number => $0{line_number}
-		# 		identifier => $1
-		# 		arguments => !optional_arguments_list->[]
-		# 		code => !native_code_block->$2
-		# 	}
-		# }
 		'action' => {
 			match $identifier_regex
 

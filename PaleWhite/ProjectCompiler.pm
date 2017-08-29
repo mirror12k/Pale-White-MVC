@@ -11,9 +11,6 @@ use Sugar::IO::File;
 use Sugar::IO::Dir;
 
 use PaleWhite::Glass::PHPCompiler;
-# use PaleWhite::ControllerPHPCompiler;
-# use PaleWhite::ModelPHPCompiler;
-# use PaleWhite::ModelSQLCompiler;
 use PaleWhite::MVC::Compiler;
 use PaleWhite::JS::Compiler;
 use PaleWhite::Delta::DeltaSQLCompiler;
