@@ -144,6 +144,18 @@ abstract class Controller {
 		if (!hash_equals($_SESSION['pale_white_csrf_token'], $token))
 			throw new \PaleWhite\ValidationException("incorrect csrf token");
 	}
+
+	public function get_session_variable($name) {
+		$name = (string)$name;
+		if (isset($_SESSION[$name]))
+			return $_SESSION[$name];
+		else
+			return null;
+	}
+
+	public function set_session_variable($name, $value) {
+		$_SESSION[(string)$name] = $value;
+	}
 }
 
 

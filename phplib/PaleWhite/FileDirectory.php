@@ -60,6 +60,7 @@ class FileDirectoryFile {
 	public $file_directory_class;
 
 	public $cached_mime_type;
+	public $cached_filesize;
 
 	public function __construct($filename, $filepath, $file_directory_class) {
 		$this->filename = $filename;
@@ -76,6 +77,11 @@ class FileDirectoryFile {
 			if (!isset($this->cached_mime_type))
 				$this->cached_mime_type = mime_content_type($this->filepath);
 			return $this->cached_mime_type;
+
+		} elseif ($name === 'filesize') {
+			if (!isset($this->cached_filesize))
+				$this->cached_filesize = filesize($this->filepath);
+			return $this->cached_filesize;
 
 		} elseif ($name === 'url') {
 			if (strpos($this->filepath, "./") !== 0)

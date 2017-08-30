@@ -645,7 +645,7 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'assign_session_variable') {
 		my $expression = $self->compile_expression($action->{expression});
-		return "\$_SESSION['$action->{identifier}'] = $expression;\n"
+		return "\$this->set_session_variable('$action->{identifier}', $expression);\n"
 
 	} elsif ($action->{type} eq 'expression_statement') {
 		if ($action->{expression}{type} ne 'method_call_expression') {
@@ -747,7 +747,7 @@ sub compile_expression {
 		return 'array(' . $self->compile_expression_list($expression->{value}) . ')'
 		
 	} elsif ($expression->{type} eq 'session_variable_expression') {
-		return "\$_SESSION['$expression->{identifier}']";
+		return "\$this->get_session_variable('$expression->{identifier}')";
 
 	} elsif ($expression->{type} eq 'length_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});
