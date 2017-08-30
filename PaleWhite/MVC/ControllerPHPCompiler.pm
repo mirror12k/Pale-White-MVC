@@ -559,7 +559,7 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'set_localization') {
 		my $expression = $self->compile_expression($action->{expression});
-		return "\$this->set_localization($expression);\n"
+		return "\$runtime->set_localization($expression);\n"
 
 	} elsif ($action->{type} eq 'assign_status') {
 		my $expression = $self->compile_expression($action->{expression});
@@ -576,7 +576,7 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'schedule_event') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$this->schedule_event('$action->{controller_identifier}', '$action->{event_identifier}', $arguments);\n"
+		return "\$runtime->schedule_event('$action->{controller_identifier}', '$action->{event_identifier}', $arguments);\n"
 
 	} elsif ($action->{type} eq 'controller_action') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
@@ -654,7 +654,7 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'assign_session_variable') {
 		my $expression = $self->compile_expression($action->{expression});
-		return "\$this->set_session_variable('$action->{identifier}', $expression);\n"
+		return "\$runtime->set_session_variable('$action->{identifier}', $expression);\n"
 
 	} elsif ($action->{type} eq 'expression_statement') {
 		if ($action->{expression}{type} ne 'method_call_expression') {
@@ -756,7 +756,7 @@ sub compile_expression {
 		return 'array(' . $self->compile_expression_list($expression->{value}) . ')'
 		
 	} elsif ($expression->{type} eq 'session_variable_expression') {
-		return "\$this->get_session_variable('$expression->{identifier}')";
+		return "\$runtime->get_session_variable('$expression->{identifier}')";
 
 	} elsif ($expression->{type} eq 'length_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});

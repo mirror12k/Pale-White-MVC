@@ -152,6 +152,57 @@ class PHPRuntime {
 
 		return $class::$$field;
 	}
+
+	public function schedule_event($controller_class, $controller_event, array $args) {
+		global $config;
+		if (!$config['enable_events'])
+			throw new \PaleWhite\InvalidException("attempt to schedule event while events are disabled in config");
+
+		if (isset($args['offset']))
+			$offset = (int)$args['offset'];
+		else
+			$offset = 0;
+
+		if (isset($args['args']))
+			$event_args = $args['args'];
+		else
+			$event_args = array();
+
+		$event_controller_events = $controller_class::$events;
+		if (!in_array($controller_event, $event_controller_events))
+			throw new \PaleWhite\InvalidException("no event '$controller_event' registered in controller '$controller_class'");
+
+		$event_model = \_EventModel::create(array(
+			'trigger_time' => time() + $offset,
+			'controller_class' => $controller_class,
+			'controller_event' => $controller_event,
+			'args' => $event_args,
+		));
+
+		$this->log_message("registered event [$controller_class:$controller_event]");
+
+		return $event_model;
+	}
+
+	public function set_localization($localization) {
+		$localization = (string)$localization;
+		if (!preg_match('/\A[a-zA-Z_][a-zA-Z_0-9]*\Z/', $localization))
+			throw new \PaleWhite\ValidationException("invalid localization: '$localization'!");
+
+		$this->current_localization = $localization;
+	}
+
+	public function get_session_variable($name) {
+		$name = (string)$name;
+		if (isset($_SESSION[$name]))
+			return $_SESSION[$name];
+		else
+			return null;
+	}
+
+	public function set_session_variable($name, $value) {
+		$_SESSION[(string)$name] = $value;
+	}
 }
 
 

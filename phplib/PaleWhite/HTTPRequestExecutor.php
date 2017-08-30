@@ -160,6 +160,7 @@ class HTTPRequestExecutor {
 
 	public function send_http_response(Response $response) {
 		global $config;
+		global $runtime;
 
 		// if the response has a status, send it
 		if ($response->status !== null) {
