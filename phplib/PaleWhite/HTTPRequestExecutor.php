@@ -21,121 +21,32 @@ if(!function_exists('hash_equals')) {
 
 class HTTPRequestExecutor {
 
-	public function log_message($message) {
-		$message = (string)$message;
-		$message = "[". get_called_class() . "] " . $message;
-
-		global $config;
-
-		error_log($message);
-		if ($config['log_file'] !== '')
-			error_log(date("[Y-m-d H:i:s]") . " [" . $_SERVER['REMOTE_ADDR'] . "] $message\n", 3, $config['log_file']);
-	}
-
-	public function log_exception($exception) {
-		if (! $exception instanceof \Exception)
-			throw new \PaleWhite\InvalidException("attempt to log_exception non-exception object");
-		
-		$this->log_message("an uncaught '" . get_class($exception) . "' exception occurred:");
-		$this->log_message($exception->getMessage());
-		$this->log_message("at " . $exception->getFile() . ":" . $exception->getLine());
-		
-		foreach ($exception->getTrace() as $trace) {
-			$message = $trace['file'] . "(" . $trace['line'] . "): ";
-			if (isset($trace['class'])) {
-				$message .= $trace['class'] . $trace['type'];
-			}
-			$message .= $trace['function'];
-			$this->log_message(" > $message");
-		}
-	}
-
 	public function execute () {
 		global $config;
 
 		// setup runtime
 		global $runtime;
-		$runtime = array(
-			'current_localization' => (string)$config['default_localization'],
-		);
+		$runtime = new PHPRuntime();
+		// $runtime = array(
+		// 	'current_localization' => (string)$config['default_localization'],
+		// );
 
 		// process the path
-		$url = parse_url(urldecode($_SERVER['REQUEST_URI']));
-		$path = $url['path'];
-		$path = substr($path, strlen($config['site_base']));
+		// $url = parse_url(urldecode($_SERVER['REQUEST_URI']));
+		// $path = $url['path'];
+		// $path = substr($path, strlen($config['site_base']));
 
 
-		if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && (string)$_SERVER['HTTP_X_REQUESTED_WITH'] === 'pale_white/ajax') {
-			$is_ajax = true;
-			$this->log_message("routing ajax '$path'");
-		} else {
-			$is_ajax = false;
-			$this->log_message("routing '$path'");
-		}
+
 
 
 		try {
 
+
 			// set up the global environment
-			global $database;
-			$database = new \PaleWhite\DatabaseDriver($config['database_config']);
-
-			// enable the session
-			session_start();
-			// $this->log_message("_SESSION: " . json_encode($_SESSION));
-			if (!isset($_SESSION['pale_white_csrf_token']))
-			{
-				$seed = openssl_random_pseudo_bytes(32);
-				if ($seed === false)
-					throw new \PaleWhite\PaleWhiteException("failed to generate csrf token, not enough entropy");
-				$_SESSION['pale_white_csrf_token'] = bin2hex($seed);
-			}
-
-			if (isset($_SERVER['CONTENT_TYPE']) && $_SERVER['CONTENT_TYPE'] === 'application/json') {
-				// get json input from ajax request
-				$input = file_get_contents('php://input');
-				$args = json_decode($input, true);
-				// $this->log_message("got json request data: " . json_encode($args));
-
-			} else {
-				// process any post arguments
-				$args = array();
-				foreach ($_POST as $k => $v)
-					$args[$k] = $v;
-
-				// process any file uploads into args
-				foreach ($_FILES as $field => $file_upload)
-				{
-					// $this->log_message("\$_FILES[$field]: " . json_encode($file_upload));
-					if (!isset($file_upload['error']) || is_array($file_upload['error']))
-						throw new \PaleWhite\PaleWhiteException("invalid file upload");
-					if ($file_upload['error'] === UPLOAD_ERR_INI_SIZE)
-						throw new \PaleWhite\PaleWhiteException("file upload failed: size exceeded");
-						// may need to increase upload limits in your php.ini
-						// under post_max_size and upload_max_filesize
-					if ($file_upload['error'] === UPLOAD_ERR_PARTIAL)
-						throw new \PaleWhite\PaleWhiteException("file upload failed: failed to upload whole file");
-					if ($file_upload['error'] === UPLOAD_ERR_NO_TMP_DIR)
-						throw new \PaleWhite\PaleWhiteException("file upload failed: no tmp directory");
-					if ($file_upload['error'] === UPLOAD_ERR_CANT_WRITE)
-						throw new \PaleWhite\PaleWhiteException("file upload failed: cant write directory");
-					if ($file_upload['error'] === UPLOAD_ERR_OK) {
-						$file_container = new \PaleWhite\FileUpload($file_upload['name'], $file_upload['tmp_name'], $file_upload['size']);
-						$args[$field] = $file_container;
-					} elseif ($file_upload['error'] === UPLOAD_ERR_NO_FILE) {
-						$args[$field] = null;
-					} else {
-						throw new \PaleWhite\PaleWhiteException("file upload failed");
-					}
-				}
-				// $this->log_message("got post request data: " . json_encode($args));
-			}
-
-			// set up api objects
-			$request = new \PaleWhite\Request($path, $args);
-			$response = new \PaleWhite\Response();
-
-
+			$runtime->initialize_http();
+			$runtime->initialize_session();
+			$runtime->initialize_database();
 
 			if ($config['maintenance_mode']) {
 				// call the maintenance controller
@@ -148,31 +59,41 @@ class HTTPRequestExecutor {
 			$controller = new $controller_class();
 
 			// validate a csrf token if the request is ajax
-			if ($is_ajax) {
+			if ($runtime->is_ajax) {
 				if (isset($args['_csrf_token']))
 					$controller->validate_csrf_token((string)$args['_csrf_token']);
 				else
 					throw new \PaleWhite\ValidationException("all ajax actions require a valid _csrf_token");
 			}
+
+			// if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && (string)$_SERVER['HTTP_X_REQUESTED_WITH'] === 'pale_white/ajax') {
+			if ($runtime->is_ajax) {
+				// $is_ajax = true;
+				$runtime->log_message(get_called_class(), "routing ajax '$runtime->path'");
+			} else {
+				// $is_ajax = false;
+				$runtime->log_message(get_called_class(), "routing '$runtime->path'");
+			}
 			
 			// route the request
-			if ($is_ajax) {
-				$controller->route_ajax($request, $response);
+			if ($runtime->is_ajax) {
+				$controller->route_ajax($runtime->request, $runtime->response);
 			} else {
-				$controller->route($request, $response);
+				$controller->route($runtime->request, $runtime->response);
 			}
 
 			// if an exception didnt occur, we now got to processing the response and sending it
 
 		} catch (\Exception $e) {
-			$this->log_exception($e);
+			$runtime->log_exception(get_called_class(), $e);
 
 			// last-chance exception catch
 			// since an exception occured, we trash the previous response object,
 			// and create our own response to describe the error
 			$response = new \PaleWhite\Response();
+			$runtime->response = $response;
 			$response->status = "500 Server Error";
-			if ($is_ajax) {
+			if ($runtime->is_ajax) {
 				if ($config['show_exception_trace']) {
 					// show a detailed dump of data if show_exception_trace is enabled
 					$exception_trace = array(
@@ -230,7 +151,7 @@ class HTTPRequestExecutor {
 		}
 
 		// after the request has been process and a response has been generated
-		$this->send_http_response($response);
+		$this->send_http_response($runtime->response);
 
 		// after sending the response, we can process scheduled events in the queue
 		if ($config['enable_events'])
@@ -267,7 +188,7 @@ class HTTPRequestExecutor {
 		// send the body
 		if ($response->body !== null) {
 			if ($response->body instanceof \PaleWhite\FileDirectoryFile) {
-				$this->log_message("sending file: '" . $response->body->filepath . "'");
+				$runtime->log_message(get_called_class(), "sending file: '" . $response->body->filepath . "'");
 				readfile($response->body->filepath);
 			} elseif (is_array($response->body)) {
 				if (!isset($response->headers['content-type']))
@@ -280,6 +201,7 @@ class HTTPRequestExecutor {
 	}
 
 	public function process_event_queue() {
+		global $runtime;
 		try {
 			$events = \_EventModel::get_list(array(
 				'trigger_time' => array('le' => time()),
@@ -293,18 +215,18 @@ class HTTPRequestExecutor {
 				$result = $event->delete();
 
 				if ($result > 0) {
-					$this->log_message("triggering event [$controller_class:$controller_event]");
+					$runtime->log_message(get_called_class(), "triggering event [$controller_class:$controller_event]");
 					$controller = new $controller_class();
 					$controller->route_event($controller_event, $args);
 					
 				} else {
-					$this->log_message("notice: failed to lock event [$controller_class:$controller_event]");
+					$runtime->log_message(get_called_class(), "notice: failed to lock event [$controller_class:$controller_event]");
 				}
 			}
 
 		} catch (\Exception $e) {
-			$this->log_message("exception occured while processing event queue!");
-			$this->log_exception($e);
+			$runtime->log_message(get_called_class(), "exception occured while processing event queue!");
+			$runtime->log_exception(get_called_class(), $e);
 		}
 	}
 }

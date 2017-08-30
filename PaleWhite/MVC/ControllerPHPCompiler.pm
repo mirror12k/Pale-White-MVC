@@ -106,6 +106,7 @@ sub compile_model {
 
 		if ($function->{type} eq 'model_function') {
 			push @code, "public function $function->{identifier} (array \$args = array()) {\n";
+			push @code, "global \$runtime;\n\n";
 			push @code, map "\t$_ ", $self->compile_path_arguments_validation($function->{arguments},
 					"model function \"$function->{identifier}\"");
 			push @code, map "\t$_ ", $self->compile_action_block($function->{block});
@@ -113,6 +114,7 @@ sub compile_model {
 			push @code, "}\n";
 		} elsif ($function->{type} eq 'model_static_function') {
 			push @code, "public static function $function->{identifier} (array \$args = array()) {\n";
+			push @code, "global \$runtime;\n\n";
 			push @code, map "\t$_ ", $self->compile_path_arguments_validation($function->{arguments},
 					"model function \"$function->{identifier}\"");
 			push @code, map "\t$_ ", $self->compile_action_block($function->{block});
@@ -121,6 +123,7 @@ sub compile_model {
 		} elsif ($function->{type} eq 'on_event_function') {
 			push @code, "public function $function->{identifier} () {\n";
 			push @code, "\tparent::$function->{identifier}();\n";
+			push @code, "global \$runtime;\n\n";
 			push @code, map "\t$_ ", $self->compile_action_block($function->{block});
 			# push @code, map "$_\n", split "\n", $function->{code};
 			push @code, "}\n";
@@ -196,7 +199,7 @@ sub compile_controller_route {
 	return @code unless @paths;
 
 	push @code, "parent::route(\$req, \$res);\n";
-	push @code, "\n";
+	push @code, "global \$runtime;\n\n";
 	my $first = 1;
 	foreach my $path (@paths) {
 		push @code, $self->compile_path($path, $first);
@@ -213,7 +216,7 @@ sub compile_controller_route {
 	if (exists $controller->{error_path}) {
 		@code = map "\t$_", @code;
 		my @exception_code = map "\t$_", $self->compile_path($controller->{error_path});
-		unshift @exception_code, "\t\$this->log_exception(\$e);\n";
+		unshift @exception_code, "\t\$runtime->log_exception(get_called_class(), \$e);\n";
 
 		@code = ("try {\n", @code, "} catch (\\Exception \$e) {\n", @exception_code, "}\n");
 	}
@@ -236,7 +239,7 @@ sub compile_controller_route_ajax {
 	return @code unless @paths;
 
 	push @code, "parent::route_ajax(\$req, \$res);\n";
-	push @code, "\n";
+	push @code, "global \$runtime;\n\n";
 	my $first = 1;
 	foreach my $path (@paths) {
 		push @code, $self->compile_path($path, $first);
@@ -271,6 +274,8 @@ sub compile_controller_route_event {
 	my @events;
 	@events = (@events, @{$controller->{controller_events}}) if exists $controller->{controller_events};
 	return @code unless @events;
+
+	push @code, "global \$runtime;\n\n";
 
 	my $first = 1;
 	foreach my $event (@events) {
@@ -435,6 +440,8 @@ sub compile_controller_validate {
 	}
 	return @code unless @validators;
 
+	push @code, "global \$runtime;\n\n";
+
 	my $first = 1;
 	foreach my $validator (@validators) {
 		push @code, $self->compile_validator($validator, $first);
@@ -475,6 +482,8 @@ sub compile_controller_action {
 		@actions = @{$controller->{actions}};
 	}
 	return @code unless @actions;
+
+	push @code, "global \$runtime;\n\n";
 
 	my $first = 1;
 	foreach my $action (@actions) {
@@ -529,11 +538,11 @@ sub compile_action {
 
 	if ($action->{type} eq 'log_message') {
 		my $expression = $self->compile_expression($action->{expression});
-		return "\$this->log_message($expression);\n"
+		return "\$runtime->log_message(get_called_class(), $expression);\n"
 
 	} elsif ($action->{type} eq 'log_exception') {
 		my $expression = $self->compile_expression($action->{expression});
-		return "\$this->log_exception($expression);\n"
+		return "\$runtime->log_exception(get_called_class(), $expression);\n"
 
 	} elsif ($action->{type} eq 'render_template') {
 		my $class = $self->format_classname($action->{identifier});
@@ -731,7 +740,7 @@ sub compile_expression {
 		return "'$expression->{value}'"
 
 	} elsif ($expression->{type} eq 'localized_string_expression') {
-		return "\$this->get_localized_string('$expression->{namespace_identifier}', '$expression->{identifier}')"
+		return "\$runtime->get_localized_string('$expression->{namespace_identifier}', '$expression->{identifier}')"
 
 	} elsif ($expression->{type} eq 'string_interpolation_expression') {
 		my $expression_list = $self->compile_expression_list($expression->{expression_list});
@@ -755,9 +764,10 @@ sub compile_expression {
 
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		if ($expression->{identifier} eq '_csrf_token') {
-			return "\$_SESSION['pale_white_csrf_token']";
-		} elsif ($expression->{identifier} eq '_time') {
+		# if ($expression->{identifier} eq '_csrf_token') {
+		# 	return "\$_SESSION['pale_white_csrf_token']";
+		# } els
+		if ($expression->{identifier} eq '_time') {
 			return "time()";
 		} else {
 			return "\$$expression->{identifier}";

@@ -19,6 +19,8 @@ namespace PaleWhite;
 // 	}
 // }
 
+global $runtime;
+
 // base model class which provides a lot of magic methods for compiled models
 abstract class Model {
 	public $_data;
@@ -69,8 +71,8 @@ abstract class Model {
 			throw new \PaleWhite\InvalidException(
 					"attempted to add() undefined model property '$array_name' in model class: " . get_called_class());
 
-		global $database;
-		$query = $database->insert()
+		global $runtime;
+		$query = $runtime->database->insert()
 				->table(static::$table_name . '__array_property__' . $array_name)
 				->values(array('parent_id' => $this->_data['id'], 'value' => static::cast_to_store($array_name, $value)));
 
@@ -88,8 +90,8 @@ abstract class Model {
 			throw new \PaleWhite\InvalidException(
 					"attempted to remove() undefined model property '$array_name' in model class: " . get_called_class());
 
-		global $database;
-		$query = $database->delete()
+		global $runtime;
+		$query = $runtime->database->delete()
 				->table(static::$table_name . '__array_property__' . $array_name)
 				->where(array('parent_id' => $this->_data['id'], 'value' => static::cast_to_store($array_name, $value)));
 
@@ -105,8 +107,8 @@ abstract class Model {
 			throw new \PaleWhite\InvalidException(
 					"attempted to contains() undefined model property '$array_name' in model class: " . get_called_class());
 
-		global $database;
-		$query = $database->select()
+		global $runtime;
+		$query = $runtime->database->select()
 				->fields(array('id'))
 				->table(static::$table_name . '__array_property__' . $array_name)
 				->where(array('parent_id' => $this->_data['id'], 'value' => static::cast_to_store($array_name, $value)));
@@ -158,8 +160,8 @@ abstract class Model {
 				throw new \PaleWhite\InvalidException("invalid list argument: '$name', in model class: " . get_called_class());
 		}
 
-		global $database;
-		$query = $database->count()
+		global $runtime;
+		$query = $runtime->database->count()
 				->table(static::$table_name . '__array_property__' . $array_name)
 				->where(array('parent_id' => $this->_data['id']));
 
@@ -190,8 +192,8 @@ abstract class Model {
 	public function delete() {
 		$this->on_delete();
 
-		global $database;
-		$query = $database->delete()
+		global $runtime;
+		$query = $runtime->database->delete()
 				->table(static::$table_name)
 				->where(array('id' => $this->_data['id']));
 		$result = $query->fetch();
@@ -201,7 +203,7 @@ abstract class Model {
 		foreach (static::$model_array_properties as $field => $field_type) {
 			$loaded[$field] = static::load_array_data($data['id'], $field);
 
-			$query = $database->delete()
+			$query = $runtime->database->delete()
 					->table(static::$table_name . '__array_property__' . $field)
 					->where(array('parent_id' => $this->_data['id']));
 			$query->fetch();
@@ -245,8 +247,8 @@ abstract class Model {
 	public static function get_by(array $values) {
 		$values = static::store_data($values);
 
-		global $database;
-		$query = $database->select()
+		global $runtime;
+		$query = $runtime->database->select()
 				->table(static::$table_name)
 				->where($values)
 				->limit(1);
@@ -276,9 +278,9 @@ abstract class Model {
 		// convert to database-safe format
 		$where_values = static::store_data($where_values);
 
+		global $runtime;
 		// build the query
-		global $database;
-		$query = $database->select()
+		$query = $runtime->database->select()
 				->table(static::$table_name)
 				->where($where_values);
 
@@ -311,9 +313,9 @@ abstract class Model {
 		// convert to database-safe format
 		$where_values = static::store_data($where_values);
 
+		global $runtime;
 		// build the query
-		global $database;
-		$query = $database->select()
+		$query = $runtime->database->select()
 				->table(static::$table_name)
 				->where($where_values);
 
@@ -356,8 +358,8 @@ abstract class Model {
 						"attempted to create undefined model property '$field' in model class: " . get_called_class());
 		}
 
-		global $database;
-		$query = $database->insert()
+		global $runtime;
+		$query = $runtime->database->insert()
 				->table(static::$table_name)
 				->values($item_fields);
 		$result = $query->fetch();
@@ -366,7 +368,7 @@ abstract class Model {
 			throw new \PaleWhite\ModelException(get_called_class(),
 					"database failed to create object");
 
-		$obj_id = $database->insert_id;
+		$obj_id = $runtime->database->insert_id;
 		$obj = static::get_by_id($obj_id);
 		if ($obj === null)
 			throw new \PaleWhite\ModelException(get_called_class(),
@@ -395,8 +397,8 @@ abstract class Model {
 	}
 
 	private static function load_array_data($id, $field, $args=array()) {
-		global $database;
-		$query = $database->select()
+		global $runtime;
+		$query = $runtime->database->select()
 				->table(static::$table_name . '__array_property__' . $field)
 				->fields(array('value'))
 				->where(array('parent_id' => $id));
@@ -574,8 +576,8 @@ abstract class Model {
 		if (count($item_fields) > 0) {
 			$item_fields = static::store_data($item_fields);
 
-			global $database;
-			$query = $database->update()
+			global $runtime;
+			$query = $runtime->database->update()
 					->table(static::$table_name)
 					->values($item_fields)
 					->where(array('id' => $this->_data['id']));
@@ -589,14 +591,14 @@ abstract class Model {
 	private function update_array_field($field, $value) {
 		$value = static::store_array_data($field, $value);
 
-		global $database;
-		$delete_query = $database->delete()
+		global $runtime;
+		$delete_query = $runtime->database->delete()
 				->table(static::$table_name . '__array_property__' . $field)
 				->where(array('parent_id' => $this->_data['id']));
 		$delete_query->fetch();
 
 		foreach ($value as $item) {
-			$insert_query = $database->insert()
+			$insert_query = $runtime->database->insert()
 					->table(static::$table_name . '__array_property__' . $field)
 					->values(array('parent_id' => $this->_data['id'], 'value' => $item));
 			$insert_query->fetch();

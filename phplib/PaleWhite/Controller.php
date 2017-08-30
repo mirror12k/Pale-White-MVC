@@ -21,35 +21,6 @@ abstract class Controller {
 		throw new \PaleWhite\InvalidException("undefined action requested: '$action'");
 	}
 
-	public function log_message($message) {
-		$message = (string)$message;
-		$message = "[". get_called_class() . "] " . $message;
-
-		global $config;
-
-		error_log($message);
-		if ($config['log_file'] !== '')
-			error_log(date("[Y-m-d H:i:s]") . " [" . $_SERVER['REMOTE_ADDR'] . "] $message\n", 3, $config['log_file']);
-	}
-
-	public function log_exception($exception) {
-		if (! $exception instanceof \Exception)
-			throw new \PaleWhite\InvalidException("attempt to log_exception non-exception object");
-
-		$this->log_message("a '" . get_class($exception) . "' exception occurred:");
-		$this->log_message($exception->getMessage());
-		$this->log_message("at " . $exception->getFile() . ":" . $exception->getLine());
-		
-		foreach ($exception->getTrace() as $trace) {
-			$message = $trace['file'] . "(" . $trace['line'] . "): ";
-			if (isset($trace['class'])) {
-				$message .= $trace['class'] . $trace['type'];
-			}
-			$message .= $trace['function'];
-			$this->log_message(" > $message");
-		}
-	}
-
 	public function render_template($template_class, array $args) {
 		$template = new $template_class();
 		return $template->render($args);
@@ -124,20 +95,7 @@ abstract class Controller {
 			throw new \PaleWhite\ValidationException("invalid localization: '$localization'!");
 
 		global $runtime;
-		$runtime['current_localization'] = $localization;
-	}
-
-	public function get_localized_string($localization_namespace, $field) {
-		global $runtime;
-		$current_localization = (string)$runtime['current_localization'];
-		if ($current_localization === '')
-			throw new \PaleWhite\InvalidException("no current localization set!");
-
-		$class = "\\Localization\\$current_localization\\$localization_namespace";
-		if (!class_exists($class))
-			throw new \PaleWhite\InvalidException("no localization definition found for $localization_namespace:$current_localization");
-
-		return $class::$$field;
+		$runtime->current_localization = $localization;
 	}
 
 	public function validate_csrf_token($token) {

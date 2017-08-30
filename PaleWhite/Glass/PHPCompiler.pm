@@ -84,7 +84,8 @@ sub compile_template_render {
 	return @code unless @tags;
 
 	push @code, "\$text = parent::render(\$args);\n";
-	push @code, "\n";
+	push @code, "global \$runtime;\n\n";
+
 	push @code, $self->compile_block(\@tags);
 	# say "debug: $self->{text_accumulator}";
 	push @code, $self->flush_accumulator;
@@ -112,7 +113,7 @@ sub compile_template_render_block {
 	return @code unless keys %blocks;
 
 	push @code, "\$text = parent::render_block(\$block, \$args);\n";
-	push @code, "\n";
+	push @code, "global \$runtime;\n\n";
 
 	foreach my $block (sort keys %blocks) {
 		my @block_code = $self->compile_block($blocks{$block}{block});
@@ -178,7 +179,7 @@ sub compile_item {
 			attributes => {
 				name => { type => 'string_expression', string => "_csrf_token", },
 				type => { type => 'string_expression', string => "hidden", },
-				value => { type => 'variable_expression', identifier => "_csrf_token", },
+				value => { type => '_csrf_token_expression' },
 			},
 		})
 
@@ -189,7 +190,7 @@ sub compile_item {
 			id => '_csrf_token',
 			attributes => {
 				name => { type => 'string_expression', string => "_csrf_token", },
-				content => { type => 'variable_expression', identifier => "_csrf_token", },
+				content => { type => '_csrf_token_expression' },
 			},
 		})
 
@@ -287,7 +288,7 @@ sub compile_html_tag {
 
 				if ($expression->{string} =~ /\A\//) {
 					push @code, $self->compile_argument_expression(
-							{ type => 'variable_expression', identifier => '_site_base' }, 'html_attribute');
+							{ type => '_site_base_expression' }, 'html_attribute');
 				}
 			}
 			push @code, $self->compile_argument_expression($tag->{attributes}{$key}, 'html_attribute');
@@ -349,6 +350,8 @@ sub compile_argument_expression {
 		return
 		
 	} elsif ($expression->{type} eq 'variable_expression'
+			or $expression->{type} eq '_site_base_expression'
+			or $expression->{type} eq '_csrf_token_expression'
 			or $expression->{type} eq 'access_expression'
 			or $expression->{type} eq 'length_expression'
 			or $expression->{type} eq 'method_call_expression'
@@ -393,19 +396,28 @@ sub compile_value_expression {
 		return "\"$expression->{string}\""
 
 	} elsif ($expression->{type} eq 'localized_string_expression') {
-		return "\$this->get_localized_string(\'$expression->{namespace_identifier}\', \'$expression->{identifier}\')"
+		return "\$runtime->get_localized_string(\'$expression->{namespace_identifier}\', \'$expression->{identifier}\')"
 
 	} elsif ($expression->{type} eq 'interpolation_expression') {
 		return join ' . ', map $self->compile_value_expression($_), @{$expression->{expressions}}
 		
+	} elsif ($expression->{type} eq '_site_base_expression') {
+		return "\$runtime->site_base";
+		
+	} elsif ($expression->{type} eq '_csrf_token_expression') {
+		return "\$runtime->csrf_token";
+
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		if ($expression->{identifier} eq '_site_base') {
-			return "\$this->get_site_base()";
-		} elsif ($expression->{identifier} eq '_csrf_token') {
-			return "\$this->get_csrf_token()";
-		} elsif ($expression->{identifier} eq '_time') {
+		# if ($expression->{identifier} eq '_site_base') {
+		# 	return "\$runtime->site_base";
+		# } elsif ($expression->{identifier} eq '_csrf_token') {
+		# 	return "\$runtime->csrf_token";
+		# } els
+		if ($expression->{identifier} eq '_time') {
 			return "time()";
+		} elsif ($expression->{identifier} eq 'runtime') {
+			return "\$runtime";
 		} elsif (exists $self->{local_variable_scope}{$expression->{identifier}}) {
 			return "\$$expression->{identifier}";
 		} else {
