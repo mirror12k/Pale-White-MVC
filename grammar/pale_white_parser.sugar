@@ -388,7 +388,7 @@ object context interpolated_string_path_expression {
 		$identifier_regex, '=', '.', '.', '.' => {
 			$_ = {
 				type => 'match_identifier'
-				regex => '.+'
+				regex => '.*'
 				identifier => $0
 			}
 		}
@@ -402,7 +402,7 @@ object context interpolated_string_path_expression {
 		'.', '.', '.' => {
 			$_ = {
 				type => 'match_any'
-				regex => '.+'
+				regex => '.*'
 			}
 		}
 		default {

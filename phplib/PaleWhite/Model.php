@@ -261,7 +261,7 @@ abstract class Model {
 			return $result[0];
 	}
 
-	public static function get_list(array $values) {
+	public static function get_list(array $values = array()) {
 		// parse out any special values
 		$where_values = array();
 		foreach ($values as $name => $value) {
@@ -296,7 +296,7 @@ abstract class Model {
 		return $result;
 	}
 
-	public static function count(array $values) {
+	public static function count(array $values = array()) {
 		// parse out any special values
 		$where_values = array();
 		foreach ($values as $name => $value) {
@@ -315,7 +315,7 @@ abstract class Model {
 
 		global $runtime;
 		// build the query
-		$query = $runtime->database->select()
+		$query = $runtime->database->count()
 				->table(static::$table_name)
 				->where($where_values);
 
@@ -326,7 +326,7 @@ abstract class Model {
 		if (isset($order))
 			$query->order($order);
 
-		$result = static::get_by_query($query);
+		$result = $query->fetch();
 
 		return $result;
 	}
@@ -343,7 +343,7 @@ abstract class Model {
 		return $objects;
 	}
 
-	public static function create(array $data) {
+	public static function create(array $data = array()) {
 		$data = static::store_data($data);
 
 		$item_fields = array();
@@ -396,7 +396,7 @@ abstract class Model {
 		return $loaded;
 	}
 
-	private static function load_array_data($id, $field, $args=array()) {
+	private static function load_array_data($id, $field, $args = array()) {
 		global $runtime;
 		$query = $runtime->database->select()
 				->table(static::$table_name . '__array_property__' . $field)

@@ -458,7 +458,7 @@ sub context_interpolated_string_path_expression {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(5));
-			$context_object = { type => 'match_identifier', regex => '.+', identifier => $tokens[0][1], };
+			$context_object = { type => 'match_identifier', regex => '.*', identifier => $tokens[0][1], };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
@@ -470,7 +470,7 @@ sub context_interpolated_string_path_expression {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(3));
-			$context_object = { type => 'match_any', regex => '.+', };
+			$context_object = { type => 'match_any', regex => '.*', };
 			}
 			else {
 			$self->confess_at_current_offset('expected path expression');
