@@ -305,6 +305,15 @@ object context controller_block {
 				block => []
 			}
 		}
+		'ajax' => {
+			$_{ajax_paths}[] = !path_action_block->{
+				type => 'match_path'
+				line_number => $0{line_number}
+				path => !interpolated_string_path->[]
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
 		'event' => {
 			match $identifier_regex
 			$_{controller_events}[] = !path_action_block->{

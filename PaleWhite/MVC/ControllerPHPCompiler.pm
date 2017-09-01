@@ -584,10 +584,12 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'route_controller') {
 		my $class = $self->format_classname($action->{identifier});
-		my $path_argument = exists $action->{arguments}{path} ? $self->compile_expression($action->{arguments}{path}) : '$path';
-		my $args_argument = exists $action->{arguments}{args} ? $self->compile_expression($action->{arguments}{args}) : '$args';
+		my $path_argument = exists $action->{arguments}{path}
+				? $self->compile_expression($action->{arguments}{path}) : '$req->path';
+		my $args_argument = exists $action->{arguments}{args}
+				? $self->compile_expression($action->{arguments}{args}) : $self->{context_args_variable};
 		# my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$this->route_subcontroller('$class', \$res, $path_argument, $args_argument);\n"
+		return "\$this->route_subcontroller('$class', $path_argument, $args_argument, \$res);\n"
 
 	} elsif ($action->{type} eq 'return_statement') {
 		return "return;\n"
