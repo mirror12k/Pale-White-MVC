@@ -60,8 +60,8 @@ class HTTPRequestExecutor {
 
 			// validate a csrf token if the request is ajax
 			if ($runtime->is_ajax) {
-				if (isset($args['_csrf_token']))
-					$controller->validate_csrf_token((string)$args['_csrf_token']);
+				if (isset($runtime->request->args['_csrf_token']))
+					$controller->validate_csrf_token((string)$runtime->request->args['_csrf_token']);
 				else
 					throw new \PaleWhite\ValidationException("all ajax actions require a valid _csrf_token");
 			}

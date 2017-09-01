@@ -192,7 +192,15 @@ sub compile_item {
 				name => { type => 'string_expression', string => "_csrf_token", },
 				content => { type => '_csrf_token_expression' },
 			},
-		})
+		}),
+		$self->compile_html_tag({
+			identifier => 'meta',
+			id => '_site_base',
+			attributes => {
+				name => { type => 'string_expression', string => "_site_base", },
+				content => { type => '_site_base_expression' },
+			},
+		}),
 
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
 		my @code;

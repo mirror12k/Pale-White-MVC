@@ -24,7 +24,15 @@ pale_white = {
 		var token = document.head.querySelector("meta#_csrf_token");
 
 		if (token === undefined)
-			throw "CSRF Token meta-tag required on the page!";
+			throw "csrf token meta-tag required on the page!";
+
+		return token.getAttribute("content");
+	},
+	get_site_base: function () {
+		var token = document.head.querySelector("meta#_site_base");
+
+		if (token === undefined)
+			throw "site base meta-tag required on the page!";
 
 		return token.getAttribute("content");
 	},
