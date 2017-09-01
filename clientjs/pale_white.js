@@ -96,8 +96,8 @@ pale_white = {
 				// create the new dom and add javascript hooks
 				var newdom = document.createElement('div');
 				newdom.innerHTML = dom_content[selector];
-				newdom = newdom.firstChild;
 				pale_white.add_hooks(newdom);
+				newdom = newdom.firstChild;
 
 				// replace the target with it
 				node.parentNode.replaceChild(newdom, node);
