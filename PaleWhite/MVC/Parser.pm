@@ -86,6 +86,8 @@ our $contexts = {
 	model_property_type_modifiers => 'context_model_property_type_modifiers',
 	more_action_expression => 'context_more_action_expression',
 	native_code_block => 'context_native_code_block',
+	object_constructor_dynamic_expression => 'context_object_constructor_dynamic_expression',
+	object_constructor_expression => 'context_object_constructor_expression',
 	optional_arguments_list => 'context_optional_arguments_list',
 	path_action_block => 'context_path_action_block',
 	path_action_block_list => 'context_path_action_block_list',
@@ -863,11 +865,40 @@ sub context_action_arguments {
 			return $context_object;
 			}
 			}
+			else {
+			return $context_object;
+			}
+	}
+	return $context_object;
+}
+
+sub context_object_constructor_expression {
+	my ($self, $context_object) = @_;
+
+	while ($self->more_tokens) {
+	my @tokens;
+
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			push @{$context_object->{values}}, { type => 'identifier_object_key', identifier => $tokens[0][1], expression => $self->context_action_expression, };
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			$context_object->{$self->context_format_string($tokens[0][1])} = $self->context_action_expression;
+			push @{$context_object->{values}}, { type => 'string_object_key', value => $self->context_format_string($tokens[0][1]), expression => $self->context_action_expression, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{values}}, $self->context_object_constructor_dynamic_expression({ type => 'expression_object_key', key_expression => $self->context_action_expression, });
+			}
+			else {
+			return $context_object;
+			}
 			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -876,12 +907,19 @@ sub context_action_arguments {
 			else {
 			return $context_object;
 			}
-			}
-			else {
-			return $context_object;
-			}
 	}
 	return $context_object;
+}
+
+sub context_object_constructor_dynamic_expression {
+	my ($self, $context_object) = @_;
+	my @tokens;
+
+			$self->confess_at_current_offset('expected \'}\', \'=\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=';
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object->{value_expresssion} = $self->context_action_expression;
+			return $context_object;
 }
 
 sub context_action_expression_list {
@@ -1078,7 +1116,7 @@ sub context_action_expression {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'object_expression', line_number => $tokens[0][2], value => $self->context_action_arguments({}), };
+			$context_object = $self->context_object_constructor_expression({ type => 'object_expression', line_number => $tokens[0][2], });
 			$self->confess_at_current_offset('expected \'}\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
 			@tokens = (@tokens, $self->step_tokens(1));

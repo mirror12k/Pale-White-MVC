@@ -798,19 +798,60 @@ object context action_arguments {
 				return
 			}
 		}
+		# $string_regex, '=' => {
+		# 	$_{!format_string->$0} = !action_expression
+		# 	if ',' => {
+		# 		# allow another argument to get parsed
+		# 	} else {
+		# 		return
+		# 	}
+		# }
+		default {
+			return
+		}
+	}
+}
+
+
+object context object_constructor_expression {
+	switch {
+		$identifier_regex, '=' => {
+			$_{values}[] = {
+				type => 'identifier_object_key'
+				identifier => $0
+				expression => !action_expression
+			}
+		}
 		$string_regex, '=' => {
-			$_{!format_string->$0} = !action_expression
-			if ',' => {
-				# allow another argument to get parsed
-			} else {
-				return
+			$_{values}[] = {
+				type => 'string_object_key'
+				value => !format_string->$0
+				expression => !action_expression
+			}
+		}
+		'{' => {
+			$_{values}[] = !object_constructor_dynamic_expression->{
+				type => 'expression_object_key'
+				key_expression => !action_expression
 			}
 		}
 		default {
 			return
 		}
 	}
+	if ',' => {
+		# allow another argument to get parsed
+	} else {
+		return
+	}
 }
+
+object context object_constructor_dynamic_expression {
+	match '}', '='
+	$_{value_expresssion} = !action_expression
+	return
+}
+
 
 
 list context action_expression_list {
@@ -1005,10 +1046,9 @@ object context action_expression {
 			return
 		}
 		'{' => {
-			$_ = {
+			$_ = !object_constructor_expression->{
 				type => 'object_expression'
 				line_number => $0{line_number}
-				value => !action_arguments->{}
 			}
 			match '}'
 			return

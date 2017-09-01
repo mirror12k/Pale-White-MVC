@@ -684,6 +684,27 @@ sub compile_arguments_array {
 	return 'array(' . join (', ', @expressions) . ')'
 }
 
+sub compile_object_expression_array {
+	my ($self, $arguments) = @_;
+
+
+	my @expressions;
+	foreach my $key (@$arguments) {
+		if ($key->{type} eq 'identifier_object_key') {
+			push @expressions, "'$key->{identifier}' => " . $self->compile_expression($key->{expression});
+		} elsif ($key->{type} eq 'string_object_key') {
+			my $key_string = $key->{value};
+			$key_string =~ s/([\\'])/\\$1/gs;
+			push @expressions, "'$key_string' => " . $self->compile_expression($key->{expression});
+		} else {
+			push @expressions, $self->compile_expression($key->{key_expression})
+					. " => " . $self->compile_expression($key->{value_expresssion});
+		}
+	}
+
+	return 'array(' . join (', ', @expressions) . ')'
+}
+
 
 sub compile_expression_list {
 	my ($self, $expression_list) = @_;
@@ -739,7 +760,9 @@ sub compile_expression {
 		return "\$this->action('$expression->{identifier}', $arguments)"
 
 	} elsif ($expression->{type} eq 'string_expression') {
-		return "'$expression->{value}'"
+		my $string = $expression->{value};
+		$string =~ s/([\\'])/\\$1/gs;
+		return "'$string'";
 
 	} elsif ($expression->{type} eq 'localized_string_expression') {
 		return "\$runtime->get_localized_string('$expression->{namespace_identifier}', '$expression->{identifier}')"
@@ -752,7 +775,7 @@ sub compile_expression {
 		return "$expression->{value}"
 		
 	} elsif ($expression->{type} eq 'object_expression') {
-		return '(object)' . $self->compile_arguments_array($expression->{value})
+		return '(object)' . $self->compile_object_expression_array($expression->{values})
 		
 	} elsif ($expression->{type} eq 'array_expression') {
 		return 'array(' . $self->compile_expression_list($expression->{value}) . ')'
