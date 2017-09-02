@@ -1,9 +1,27 @@
 
 pale_white = {
 	registered_hooks: [],
+	registered_scroll_hooks: [],
 
 	onload: function () {
 		this.add_hooks(document.body);
+		window.addEventListener('scroll', function (event) { pale_white.onscroll(event); });
+	},
+	onscroll: function (event) {
+		// console.log('scrolled to ', window.scrollY, window.scrollY + window.innerHeight);
+		this.registered_scroll_hooks.forEach(function (hook) {
+			var nodes = document.querySelectorAll(hook.selector);
+			for (var i = 0; i < nodes.length; i++) {
+				var node = nodes[i];
+				var y_min = node.offsetTop;
+				var y_max = node.offsetTop + node.offsetHeight;
+
+				if (window.scrollY + window.innerHeight >= y_min && window.scrollY < y_max) {
+					// console.log('scrolled to item ', hook.selector);
+					hook.callback.call(node, event);
+				}
+			}
+		});
 	},
 	add_hooks: function (dom) {
 		this.registered_hooks.forEach(function (hook) {
@@ -14,11 +32,18 @@ pale_white = {
 		});
 	},
 	register_hook: function (selector, event, callback) {
-		this.registered_hooks.push({
-			selector: selector,
-			event: event,
-			callback: callback,
-		});
+		if (event === 'scroll') {
+			this.registered_scroll_hooks.push({
+				selector: selector,
+				callback: callback,
+			});
+		} else {
+			this.registered_hooks.push({
+				selector: selector,
+				event: event,
+				callback: callback,
+			});
+		}
 	},
 	get_csrf_token: function () {
 		var token = document.head.querySelector("meta#_csrf_token");
