@@ -6,6 +6,7 @@ pale_white = {
 	onload: function () {
 		this.add_hooks(document.body);
 		window.addEventListener('scroll', function (event) { pale_white.onscroll(event); });
+		this.onscroll(undefined);
 	},
 	onscroll: function (event) {
 		// console.log('scrolled to ', window.scrollY, window.scrollY + window.innerHeight);
@@ -146,6 +147,17 @@ pale_white = {
 			data[pair[0]] = pair[1];
 		}
 		return data;
+	},
+	html_nodes: function (html_text) {
+		var newdom = document.createElement('div');
+		newdom.innerHTML = html_text;
+		pale_white.add_hooks(newdom);
+
+		var children = [];
+		for (var i = 0; i < newdom.children.length; i++) {
+			children[i] = newdom.children[i];
+		}
+		return children;
 	},
 };
 

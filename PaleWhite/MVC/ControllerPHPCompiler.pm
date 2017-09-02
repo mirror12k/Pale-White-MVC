@@ -654,6 +654,10 @@ sub compile_action {
 		my $expression = $self->compile_expression($action->{expression});
 		return "\$$action->{identifier} = $expression;\n"
 
+	} elsif ($action->{type} eq 'assign_member_variable') {
+		my $expression = $self->compile_expression($action->{expression});
+		return "\$$action->{variable_identifier}->$action->{identifier} = $expression;\n"
+
 	} elsif ($action->{type} eq 'assign_session_variable') {
 		my $expression = $self->compile_expression($action->{expression});
 		return "\$runtime->set_session_variable('$action->{identifier}', $expression);\n"

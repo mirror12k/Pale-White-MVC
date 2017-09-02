@@ -774,6 +774,16 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
+		$identifier_regex, '.', $identifier_regex, '=' => {
+			$_{block}[] = {
+				type => 'assign_member_variable'
+				line_number => $0{line_number}
+				variable_identifier => $0
+				identifier => $2
+				expression => !action_expression
+			}
+			match ';'
+		}
 		'}' => {
 			return
 		}
