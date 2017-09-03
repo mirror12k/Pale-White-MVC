@@ -74,6 +74,9 @@ list context root {
 			push !model_block->{
 				type => 'model_definition'
 				identifier => $1
+				functions => []
+				properties => []
+				virtual_properties => []
 			}
 			match '}'
 		}
@@ -114,40 +117,41 @@ list context root {
 
 object context model_block {
 	switch {
+		'get', ':' => {
+			match $identifier_regex
+			$_{virtual_properties}[] = !path_action_block->{
+				type => 'virtual_property'
+				line_number => $0{line_number}
+				identifier => $2
+				block => []
+			}
+		}
 		'function' => {
 			match $identifier_regex
-			# match '('
-			# match ')', $native_code_block_regex
 			$_{functions}[] = !path_action_block->{
 				type => 'model_function'
 				line_number => $0{line_number}
 				identifier => $1
 				arguments => !optional_arguments_list->[]
-				# code => $format_native_code_substitution->$4
 				block => []
 			}
 		}
 		'static', 'function' => {
 			match $identifier_regex
-			# match '('
-			# match ')', $native_code_block_regex
 			$_{functions}[] = !path_action_block->{
 				type => 'model_static_function'
 				line_number => $0{line_number}
 				identifier => $2
 				arguments => !optional_arguments_list->[]
-				# code => $format_native_code_substitution->$5
 				block => []
 			}
 		}
 		'on', $event_identifier_regex => {
-			# match $native_code_block_regex
 			$_{functions}[] = !path_action_block->{
 				type => 'on_event_function'
 				line_number => $0{line_number}
 				identifier => $format_event_identifier_substitution->$1
 				arguments => !optional_arguments_list->[]
-				# code => $format_native_code_substitution->$2
 				block => []
 			}
 		}

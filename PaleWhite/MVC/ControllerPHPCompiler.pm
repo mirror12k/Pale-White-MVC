@@ -97,7 +97,18 @@ sub compile_model {
 		push @code, "public static \$model_json_properties = array();\n";
 	}
 
+	if (@{$model->{virtual_properties}}) {
+		push @code, "public static \$model_virtual_properties = array(\n";
+		push @code, "\t'$_->{identifier}' => '1',\n" foreach @{$model->{virtual_properties}};
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$model_virtual_properties = array();\n";
+	}
+
 	push @code, "\n";
+	push @code, $self->compile_model_get_virtual_property($model);
+	push @code, "\n";
+
 	my %model_functions;
 	foreach my $function (@{$model->{functions}}) {
 		die "duplicate function $function->{identifier} defined in model $model->{identifier}"
@@ -141,6 +152,38 @@ sub compile_model {
 
 	return @code
 }
+
+sub compile_model_get_virtual_property {
+	my ($self, $model) = @_;
+	my @code;	
+
+	return unless @{$model->{virtual_properties}};
+	
+	push @code, "global \$runtime;\n\n";
+
+	my $first = 1;
+	foreach my $property (@{$model->{virtual_properties}}) {
+		if ($first) {
+			push @code, "if (\$name === '$property->{identifier}') {\n";
+		} else {
+			push @code, "} elseif (\$name === '$property->{identifier}') {\n";
+		}
+		$first = 0;
+
+		push @code, map "\t$_ ", $self->compile_action_block($property->{block});
+	}
+
+	push @code, "} else {\n";
+	push @code, "\tparent::get_virtual_property(\$name);\n";
+	push @code, "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function get_virtual_property(\$name) {\n", @code, "}\n", "\n");
+
+	return @code;
+}
+
+
 
 sub compile_controller {
 	my ($self, $controller) = @_;

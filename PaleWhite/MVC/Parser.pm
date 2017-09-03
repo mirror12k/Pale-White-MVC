@@ -141,7 +141,7 @@ sub context_root {
 			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/, \'{\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '{';
 			@tokens = (@tokens, $self->step_tokens(2));
-			push @$context_list, $self->context_model_block({ type => 'model_definition', identifier => $tokens[1][1], });
+			push @$context_list, $self->context_model_block({ type => 'model_definition', identifier => $tokens[1][1], functions => [], properties => [], virtual_properties => [], });
 			$self->confess_at_current_offset('expected \'}\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '}';
 			@tokens = (@tokens, $self->step_tokens(1));
@@ -192,7 +192,16 @@ sub context_model_block {
 	while ($self->more_tokens) {
 	my @tokens;
 
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'function') {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'get' and $self->{tokens}[$self->{tokens_index} + 1][1] eq ':') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{virtual_properties}}, $self->context_path_action_block({ type => 'virtual_property', line_number => $tokens[0][2], identifier => $tokens[2][1], block => [], });
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'function') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));

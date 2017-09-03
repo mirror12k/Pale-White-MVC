@@ -48,9 +48,17 @@ abstract class Model {
 			}
 			return $this->_data[$name];
 
+		} elseif (isset(static::$model_virtual_properties[$name])) {
+			return $this->get_virtual_property($name);
+
 		} else
 			throw new \PaleWhite\InvalidException(
 					"attempted to get undefined model property '$name' in model class: " . get_called_class());
+	}
+
+	public function get_virtual_property($name) {
+		throw new \PaleWhite\InvalidException(
+				"undefined virtual model property '$name' in model class: " . get_called_class());
 	}
 
 	public function __set($name, $value) {
