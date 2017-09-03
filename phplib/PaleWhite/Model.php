@@ -57,7 +57,7 @@ abstract class Model {
 		if ($name === 'id') {
 			throw new \PaleWhite\InvalidException(
 					"attempted to set model property 'id' in model class: " . get_called_class());
-		} elseif (isset($this->_data[$name])) {
+		} elseif (isset(static::$model_properties[$name])) {
 			$this->_data[$name] = $value;
 			$this->update_fields(array($name => $value));
 		} else {

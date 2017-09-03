@@ -5,7 +5,7 @@ namespace PaleWhite;
 abstract class FileDirectory {
 	// public static $directory = "./mydir";
 
-	public static function accept_file_upload(\PaleWhite\FileUpload $file_upload) {
+	private static function accept_file_upload(\PaleWhite\FileUpload $file_upload) {
 		$file_hash = hash_file('sha256', $file_upload->temp_filepath);
 		$filename = $file_hash;
 
@@ -16,9 +16,27 @@ abstract class FileDirectory {
 		$filepath = static::$directory . '/' . $filename;
 
 		if (file_exists($filepath))
-			throw new \PaleWhite\FileException(get_called_class(), "file $filepath already exists");
+			throw new \PaleWhite\FileException(get_called_class(), "file '$filepath' already exists");
 		if (!move_uploaded_file($file_upload->temp_filepath, $filepath))
 			throw new \PaleWhite\FileException(get_called_class(), "failed to move uploaded file: " . $file_upload->temp_filepath);
+
+		return static::load_file($filename);
+	}
+
+	private static function move_existing_file($old_filepath) {
+		$file_hash = hash_file('sha256', $old_filepath);
+		$filename = $file_hash;
+
+		if (static::$properties['suffix_timestamp']) {
+			$filename .= '_' . time();
+		}
+
+		$filepath = static::$directory . '/' . $filename;
+
+		if (file_exists($filepath))
+			throw new \PaleWhite\FileException(get_called_class(), "file '$filepath' already exists");
+		if (!rename($old_filepath, $filepath))
+			throw new \PaleWhite\FileException(get_called_class(), "failed to move existing file: " . $old_filepath);
 
 		return static::load_file($filename);
 	}
@@ -42,12 +60,23 @@ abstract class FileDirectory {
 				throw new \PaleWhite\ValidationException('argument "accept_upload" not a file upload');
 
 			return static::accept_file_upload($file_upload);
+
+		} elseif (isset($args['move_existing'])) {
+			$path = (string)$args['move_existing'];
+			if (!file_exists($path))
+				throw new \PaleWhite\ValidationException('argument "move_existing" not an existing file');
+			if (is_uploaded_file($path))
+				throw new \PaleWhite\ValidationException('argument "move_existing" is a file upload, file uploads must be loaded through "accept_upload"');
+
+			return static::move_existing_file($path);
+
 		} elseif (isset($args['path'])) {
-			$path = $args['path'];
+			$path = (string)$args['path'];
 			if (!is_string($path))
 				throw new \PaleWhite\ValidationException('argument "path" not a string');
 
 			return static::load_file($path);
+
 		} else {
 			throw new \PaleWhite\InvalidException('invalid arguments to file');
 		}
