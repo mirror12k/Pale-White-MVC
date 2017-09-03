@@ -564,6 +564,13 @@ sub context_arguments_list_item {
 			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[6][1], };
 			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], validator_min_size => $tokens[2][1], validator_max_size => $tokens[4][1], identifier => $tokens[6][1], };
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '?' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			push @$context_list, { type => 'optional_argument_specifier', line_number => $tokens[0][2], identifier => $tokens[2][1], };
+			push @$context_list, { type => 'optional_validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], identifier => $tokens[2][1], };
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;

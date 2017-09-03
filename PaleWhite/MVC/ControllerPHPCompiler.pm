@@ -310,26 +310,6 @@ sub compile_path {
 	}
 
 	push @code, $self->compile_path_arguments_validation($path->{arguments}, $target);
-	# if (@{$path->{arguments}}) {
-
-		# my $args_var = $self->{context_args_variable};
-		# foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$path->{arguments}}) {
-		# 	push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
-		# 	if ($path->{type} eq 'event_block') {
-		# 		push @code, "\tthrow new \\PaleWhite\\ValidationException"
-		# 				. "('missing argument \"$arg->{identifier}\" to event \"$path->{identifier}\"');\n";
-		# 	} elsif ($path->{type} eq 'action_block') {
-		# 		push @code, "\tthrow new \\PaleWhite\\ValidationException"
-		# 				. "('missing argument \"$arg->{identifier}\" to action \"$path->{identifier}\"');\n";
-		# 	} else {
-		# 		push @code, "\tthrow new \\PaleWhite\\ValidationException"
-		# 				. "('missing argument \"$arg->{identifier}\" to path \"$path->{path}\"');\n";
-		# 	}
-		# }
-		# push @code, "\n";
-		# push @code, $self->compile_action_block($path->{arguments});
-		# push @code, "\n";
-	# }
 
 	push @code, $self->compile_action_block($path->{block});
 
@@ -376,14 +356,6 @@ sub compile_path_arguments_validation {
 		push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
 		push @code, "\tthrow new \\PaleWhite\\ValidationException"
 				. "('missing argument \"$arg->{identifier}\" to $target');\n";
-		# if ($path->{type} eq 'event_block') {
-		# 	push @code, "\tthrow new \\PaleWhite\\ValidationException"
-		# 			. "('missing argument \"$arg->{identifier}\" to event \"$path->{identifier}\"');\n";
-		# } elsif ($path->{type} eq 'action_block') {
-		# 	push @code, "\tthrow new \\PaleWhite\\ValidationException"
-		# 			. "('missing argument \"$arg->{identifier}\" to action \"$path->{identifier}\"');\n";
-		# } else {
-		# }
 	}
 	push @code, "\n";
 	push @code, $self->compile_action_block($arguments);
@@ -499,35 +471,6 @@ sub compile_controller_action {
 	return @code
 }
 
-# sub compile_controller_action_block {
-# 	my ($self, $action, $first) = @_;
-# 	my @code;
-
-# 	if (@{$action->{arguments}}) {
-# 		my $args_var = $self->{context_args_variable};
-# 		foreach my $arg (grep $_->{type} eq 'argument_specifier', @{$action->{arguments}}) {
-# 			push @code, "if (!isset(${args_var}['$arg->{identifier}']))\n";
-# 			push @code, "\tthrow new \\PaleWhite\\ValidationException"
-# 					. "('missing argument \"$arg->{identifier}\" to action \"$action->{identifier}\"');\n";
-# 		}
-# 		push @code, "\n";
-# 		push @code, $self->compile_action_block($action->{arguments});
-# 		push @code, "\n";
-# 	}
-
-# 	push @code, $self->compile_action_block($action->{block});
-# 	# push @code, map "$_\n", map s/\A\t\t?//r, split "\n", $action->{code};
-
-# 	@code = map "\t$_", @code;
-# 	if ($first) {
-# 		@code = ("if (\$action === '$action->{identifier}') {\n", @code);
-# 	} else {
-# 		@code = ("} elseif (\$action === '$action->{identifier}') {\n", @code);
-# 	}
-
-# 	return @code
-# }
-
 sub compile_action_block {
 	my ($self, $block) = @_;
 	return map $self->compile_action($_), @$block;
@@ -602,12 +545,18 @@ sub compile_action {
 		my $args_var = $self->{context_args_variable};
 		return "\$$action->{identifier} = ${args_var}['$action->{identifier}'];\n"
 
-	} elsif ($action->{type} eq 'validate_variable') {
+	} elsif ($action->{type} eq 'optional_argument_specifier') {
+		my $args_var = $self->{context_args_variable};
+		return "\$$action->{identifier} = isset(${args_var}['$action->{identifier}']) "
+				. "? ${args_var}['$action->{identifier}'] : null;\n"
+
+	} elsif ($action->{type} eq 'validate_variable' or $action->{type} eq 'optional_validate_variable') {
+		my @code;
+
 		if ($action->{validator_identifier} eq 'int') {
-			return "\$$action->{identifier} = (int)\$$action->{identifier};\n"
+			push @code, "\$$action->{identifier} = (int)\$$action->{identifier};\n"
 
 		} elsif ($action->{validator_identifier} eq 'string') {
-			my @code;
 			push @code, "\$$action->{identifier} = (string)\$$action->{identifier};\n";
 			if (exists $action->{validator_max_size}) {
 				push @code, "if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
@@ -619,27 +568,33 @@ sub compile_action {
 					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
 							. "doesnt reach min length of $action->{validator_min_size}');\n"
 			}
-			return @code
 
 		} elsif ($action->{validator_identifier} =~ $model_identifier_regex) {
 			my $model_class = $action->{validator_identifier};
 			$model_class =~ s/\Amodel::/\\/s;
 			$model_class =~ s/::/\\/s;
-			return "if (! (\$$action->{identifier} instanceof \\PaleWhite\\Model "
+			push @code, "if (! (\$$action->{identifier} instanceof \\PaleWhite\\Model "
 					. "&& \$$action->{identifier} instanceof $model_class))\n",
 				"\tthrow new \\PaleWhite\\ValidationException"
 					. "('argument \"$action->{identifier}\" not an instance of \"$model_class\" model');\n"
 
 		} elsif ($action->{validator_identifier} eq '_file_upload') {
-			return "if (! \$$action->{identifier} instanceof \\PaleWhite\\FileUpload)\n",
+			push @code, "if (! \$$action->{identifier} instanceof \\PaleWhite\\FileUpload)\n",
 				"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" not a file upload');\n"
 
 		} elsif ($action->{validator_identifier} eq '_csrf_token') {
-			return "\$this->validate_csrf_token(\$$action->{identifier});\n"
+			push @code, "\$this->validate_csrf_token(\$$action->{identifier});\n"
 
 		} else {
-			return "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
+			push @code, "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
 		}
+
+		if ($action->{type} eq 'optional_validate_variable') {
+			@code = map "\t$_", @code;
+			@code = ("if (isset(\$$action->{identifier})) {\n", @code, "}\n");
+		}
+
+		return @code
 		
 	} elsif ($action->{type} eq 'if_statement') {
 		my $expression = $self->compile_expression($action->{expression});

@@ -502,6 +502,19 @@ list context arguments_list_item {
 				identifier => $6
 			}
 			
+		} elsif '?', $identifier_regex => {
+			push {
+				type => 'optional_argument_specifier'
+				line_number => $0{line_number}
+				identifier => $2
+			}
+			push {
+				type => 'optional_validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				identifier => $2
+			}
+			
 		} elsif $identifier_regex => {
 			push {
 				type => 'argument_specifier'
