@@ -667,6 +667,14 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
+		'shell_execute' => {
+			$_{block}[] = {
+				type => 'shell_execute'
+				line_number => $0{line_number}
+				arguments_list => !action_expression_list->[]
+			}
+			match ';'
+		}
 		'action' => {
 			match $identifier_regex
 			$_{block}[] = {
@@ -986,6 +994,7 @@ object context action_expression {
 				line_number => $0{line_number}
 				expression => !action_expression
 			}
+			return
 		}
 		'render_json' => {
 			$_{block}[] = {
@@ -993,6 +1002,15 @@ object context action_expression {
 				line_number => $0{line_number}
 				arguments => !action_arguments->{}
 			}
+			return
+		}
+		'shell_execute' => {
+			$_ = {
+				type => 'shell_execute_expression'
+				line_number => $0{line_number}
+				arguments_list => !action_expression_list->[]
+			}
+			return
 		}
 		'action', $identifier_regex => {
 			$_ = {

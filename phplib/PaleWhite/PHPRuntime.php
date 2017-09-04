@@ -17,7 +17,10 @@ class PHPRuntime {
 
 	public $database;
 
+	// ------------------------------------------
 	// initialization functions to setup the runtime environment
+	// ------------------------------------------
+
 	public function initialize_http() {
 		global $config;
 
@@ -110,7 +113,10 @@ class PHPRuntime {
 		$this->csrf_token = $_SESSION['pale_white_csrf_token'];
 	}
 
+	// ------------------------------------------
 	// api functions to support compiled code
+	// ------------------------------------------
+
 	public function log_message($context, $message) {
 		$message = (string)$message;
 		$message = "[$context] $message";
@@ -153,7 +159,7 @@ class PHPRuntime {
 		return $class::$$field;
 	}
 
-	public function schedule_event($controller_class, $controller_event, array $args) {
+	public function schedule_event($context, $controller_class, $controller_event, array $args) {
 		global $config;
 		if (!$config['enable_events'])
 			throw new \PaleWhite\InvalidException("attempt to schedule event while events are disabled in config");
@@ -179,7 +185,7 @@ class PHPRuntime {
 			'args' => $event_args,
 		));
 
-		$this->log_message("registered event [$controller_class:$controller_event]");
+		$this->log_message($context, "registered event [$controller_class:$controller_event]");
 
 		return $event_model;
 	}
@@ -202,6 +208,25 @@ class PHPRuntime {
 
 	public function set_session_variable($name, $value) {
 		$_SESSION[(string)$name] = $value;
+	}
+
+	public function shell_execute($context, array $command_args) {
+		if (count($command_args) < 1)
+			throw new \PaleWhite\ValidationException("empty shell_execute command");
+
+		$escaped_args = array();
+		foreach ($command_args as $arg)
+			$escaped_args[] = escapeshellarg($arg);
+
+		$cmd = implode(' ', $escaped_args);
+		$cmd = escapeshellcmd($cmd);
+
+		$output = array();
+		exec("$cmd 2>&1", $output, $return_value);
+		$this->log_message($context, "executed command [$cmd], retval: $return_value");
+		$output = implode("\n", $output);
+
+		return (object)array('output' => $output, 'return_value' => $return_value);
 	}
 }
 

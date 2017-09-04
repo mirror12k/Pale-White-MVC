@@ -562,7 +562,12 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'schedule_event') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$runtime->schedule_event('$action->{controller_identifier}', '$action->{event_identifier}', $arguments);\n"
+		return "\$runtime->schedule_event(get_called_class(), '$action->{controller_identifier}', "
+				. "'$action->{event_identifier}', $arguments);\n"
+
+	} elsif ($action->{type} eq 'shell_execute') {
+		my $arguments_list = $self->compile_expression_list($action->{arguments_list});
+		return "\$runtime->shell_execute(get_called_class(), array($arguments_list));\n"
 
 	} elsif ($action->{type} eq 'controller_action') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
@@ -760,6 +765,10 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'render_json_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});
 		return "json_encode(${sub_expression})"
+		
+	} elsif ($expression->{type} eq 'shell_execute_expression') {
+		my $arguments_list = $self->compile_expression_list($expression->{arguments_list});
+		return "\$runtime->shell_execute(get_called_class(), array($arguments_list))"
 
 	} elsif ($expression->{type} eq 'controller_action_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
