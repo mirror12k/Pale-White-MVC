@@ -158,7 +158,7 @@ sub compile_model_get_virtual_property {
 	my @code;	
 
 	return unless @{$model->{virtual_properties}};
-	
+
 	push @code, "global \$runtime;\n\n";
 
 	my $first = 1;
@@ -776,6 +776,10 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'integer_expression') {
 		return "$expression->{value}"
 		
+	} elsif ($expression->{type} eq 'not_expression') {
+		my $sub_expression = $self->compile_expression($expression->{expression});
+		return "!( $sub_expression )"
+		
 	} elsif ($expression->{type} eq 'object_expression') {
 		return '(object)' . $self->compile_object_expression_array($expression->{values})
 		
@@ -864,6 +868,11 @@ sub compile_expression {
 		my $left_expression = $self->compile_expression($expression->{left_expression});
 		my $right_expression = $self->compile_expression($expression->{right_expression});
 		return "( $left_expression === $right_expression )";
+
+	} elsif ($expression->{type} eq 'not_equals_expression') {
+		my $left_expression = $self->compile_expression($expression->{left_expression});
+		my $right_expression = $self->compile_expression($expression->{right_expression});
+		return "( $left_expression !== $right_expression )";
 
 	} else {
 		die "unknown expression: $expression->{type}";

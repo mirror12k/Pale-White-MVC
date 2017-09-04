@@ -2,7 +2,7 @@ package PaleWhite::MVC::Parser
 
 native_code_block_regex = /\{\{.*?\}\}/s
 
-symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|=|,|\.|\?|!|\@|\//
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\//
 # symbol_regex = /\{|\}|\[|\]|\(|\)|;/
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 file_identifier_regex = /file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
@@ -1072,6 +1072,14 @@ object context action_expression {
 			}
 			return
 		}
+		'!' => {
+			$_ = {
+				type => 'not_expression'
+				line_number => $0{line_number}
+				expression => !action_expression
+			}
+			return
+		}
 		'{' => {
 			$_ = !object_constructor_expression->{
 				type => 'object_expression'
@@ -1206,6 +1214,15 @@ object context more_action_expression {
 		'==' => {
 			$_ = {
 				type => 'equals_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'!=' => {
+			$_ = {
+				type => 'not_equals_expression'
 				line_number => $0{line_number}
 				identifier => $1
 				left_expression => $_
