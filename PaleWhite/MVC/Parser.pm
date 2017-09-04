@@ -1063,6 +1063,12 @@ sub context_action_expression {
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = { type => 'render_file_expression', line_number => $tokens[0][2], expression => $self->context_action_expression, };
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'render_json') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{block}}, { type => 'render_json_expression', line_number => $tokens[0][2], arguments => $self->context_action_arguments({}), };
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;

@@ -756,6 +756,10 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'render_file_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});
 		return "file_get_contents(${sub_expression}->filepath)"
+		
+	} elsif ($expression->{type} eq 'render_json_expression') {
+		my $sub_expression = $self->compile_expression($expression->{expression});
+		return "json_encode(${sub_expression})"
 
 	} elsif ($expression->{type} eq 'controller_action_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});

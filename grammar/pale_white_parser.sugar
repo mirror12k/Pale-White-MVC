@@ -987,6 +987,13 @@ object context action_expression {
 				expression => !action_expression
 			}
 		}
+		'render_json' => {
+			$_{block}[] = {
+				type => 'render_json_expression'
+				line_number => $0{line_number}
+				arguments => !action_arguments->{}
+			}
+		}
 		'action', $identifier_regex => {
 			$_ = {
 				type => 'controller_action_expression'
