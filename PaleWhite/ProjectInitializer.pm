@@ -108,6 +108,24 @@ button.hello_world => on click
 '
 }
 
+sub default_font_include_file {
+	return "
+
+\@font-face {
+	font-family: 'example_font';
+	src: url('example.woff2') format('woff2');
+	/*
+	src: url('example.woff') format('woff');
+	src: url('example.ttf') format('truetype');
+	src: url('example.otf') format('opentype');
+	*/
+	font-weight: normal;
+	font-style: normal;
+}
+
+"
+}
+
 sub initilize_project {
 	my ($project_directory, %options) = @_;
 
@@ -133,11 +151,15 @@ sub initilize_project {
 		$src_dir->new_dir('js')->mk;
 		$src_dir->dir('js')->new_file('app.white_js')->write(default_js_file);
 	}
+	if ($options{fonts}) {
+		$src_dir->new_dir('fonts')->mk;
+		$src_dir->dir('fonts')->new_file('example_font.css')->write(default_font_include_file);
+	}
 }
 
 sub main {
 
-	die "usage: $0 [+js] [+local] [+models] <project directory name>" unless @_;
+	die "usage: $0 [+js] [+fonts] [+local] [+models] <project directory name>" unless @_;
 
 	my %options;
 
@@ -145,6 +167,8 @@ sub main {
 		my $arg = shift;
 		if ($arg eq '+js') {
 			$options{js} = 1;
+		} elsif ($arg eq '+fonts') {
+			$options{fonts} = 1;
 		} elsif ($arg eq '+local') {
 			$options{local} = 1;
 		} elsif ($arg eq '+models') {
