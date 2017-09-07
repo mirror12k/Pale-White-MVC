@@ -1,0 +1,249 @@
+
+
+
+
+wishlist:
+	meta objects for models
+	an admin backend for viewing/editting models as listed items
+
+further wishlist:
+	passing templates as arguments and values
+		!template SuperTemplate
+			div.super_container
+				// invoke template from variable
+				!template $dynamic_template
+				// pass the name of a template
+				!template RenderContainerTemplate template="UserContainerTemplate"
+
+	extensible helper plugins
+	optional compilation to a big javascript package to allow client-side sites
+
+controlled wishlist:
+	regex path arguments
+		path "/page/{{page=/\d+/}}" {}
+
+	websockets/ajax client-heavy site
+		load all glass templates as client-side javascript files
+		and have all actions exposed via websockets or ajax
+		have controllers mostly loaded on client-side
+		hook location switches and have a client-side controller process to perform a simple server request
+			server picks the template and template args for it, as well as performing any controller actions required
+			server returns a json response which tells client-side which template with which arguments to load
+		templates should be optionally markable as client-side only using cached model data to avoid excessive server-side requests
+			this would require client-side controllers fully implementing the template and model picking logic for those paths
+			can mark these paths as static so that they are compiled into the client-side controller
+	transplant comments directly to compiled php code
+	a cli to perform server-side action easier?
+	automatic admin backend for viewing and editting modeled objects?
+	a description package which outlines all contained packages?
+	view controllers to easily assign logic to specific views?
+
+	a testing suite which is done from server-side cli php execution
+		doesnt render templates fully, just returns the template names and arguments passed as the test status
+		this way controller logic can be checked without depending on templating output
+
+more wishlist:
+	abstract models to serve as references to other models
+		this would allow easily extending allowable values
+
+
+	optional model and file arguments with a question mark
+	increment/decrement operators for model properties
+	array type validators for controllers
+	jquery like library?
+	script minimization during compilation?
+	delay template rendering until output phase
+		this allows controller validation tests
+		also removes posibility of templates errors muddying controllers
+
+
+	reference validation
+		parses all models, controllers, templates, file directories, and native library declarations
+		cross references these at every step to ensure that all references to these objects are valid
+		this will turn several runtime errors into compile time errors
+
+
+	filedirectory file listing
+
+
+	javascript on timer
+	javascript on scroll
+
+	rate limited download?
+	interface for sendable stuff?
+
+	virtual paths
+		// mark paths with labels:
+			homepage: path "/" {...}
+		// inline virtual paths:
+			a href=&homepage
+		// inline virtual paths with arguments:
+			modelpage: path "/model/{{model_id}}" {...}
+			...
+			a href=&modelpage{model_id=15}
+		// compiles to function invokation:
+			$this->virtual_path("modelpage", array('model_id' => '15'));
+
+	modeldeltas to create and delete models
+		create model Asdf {
+			...
+		}
+		delete model Asdf;
+
+	controller json input validation
+
+	http query method
+	emailing interface
+	email and text obfuscation
+		thinking of just using a series of spans and divs to break up text and invisible text spans thrown in for good measure
+		alternatively image based rendering
+	email validation
+	secure encrypted tokens to use for validation
+		send email with IV + AES-encrypt(IV+sha256(email))
+		validate by recieving email, token... compare AES-decrypt(token) to IV + sha256(email)
+
+		simple interface of create_token("my_string"), then validate_token("my_string", token)
+
+	easy plugin interface
+		plugins inject directly into controllers
+			override routing to existing controllers - to add their own paths or override existing paths
+			override template hook - to override templates
+			hook existing controller events - allow override of existing events or simply hooking them
+				also allow hooking events in HTTPRequestExecutor like, init, on_request, on_response, after_response
+			inject controllers
+			inject templates
+			inject models (how will they be registered in the database?)
+		plugins should be stored in a plugins folder in the root of the main application
+		plugins are enabled from config
+			each plugin has a load_plugin.php which requires in the includes.php and loads a Plugin object
+			the plugin object is passed to the active runtime which keeps track of all active plugins
+			when a hookable action occurs, the runtime is called first to let it process hooks beforehand
+				$runtime->on_event("MainController:say_hello", $args);
+				$runtime->on_path("MainController:/stuff", $args);
+			runtime iterates through all of its active plugins to see if any of them have hooks for the given items
+				foreach ($this->active_plugins as $plugin)
+					if (isset($plugin->event_hooks[$event_identifier]))
+						$plugin->{$plugin->event_hooks[$event_identifier]}($args);
+
+
+		plugin MagicPlugin {
+			// hook a possible controller event
+			hook event MainController:say_hello [int a, int b] {
+				// do stuff
+			}
+			// hook the primary request executor
+			hook event HTTPRequestExecutor:on_request [req] {
+			}
+			// hook and override the event
+			// overriding presents the problem of plugin conflict
+			hook event MainController:say_hello [int a, int b] !override {}
+
+			// hook template blocks to inject another template
+			// directly adds the html from MyContentTemplate to the content block
+			hook template MainPageTemplate:content => MyContentTemplate;
+
+			// filter-style hook actions?
+			hook action MainController {}
+
+			// hook path and perform actions on it before the main controller
+			hook path MainController:"/asdf" {
+			}
+		}
+
+
+
+	plugin StatsTrackerPlugin {
+		hook event HTTPRequestExecutor:on_request [req] {
+			request_ip = native::StatsTrackerRequestLib.get_request_ip();
+			request_useragent = native::StatsTrackerRequestLib.get_request_useragent();
+			request_referrer = native::StatsTrackerRequestLib.get_request_referrer();
+			request_path = req.path;
+
+			# # record the ip in the database
+			# model::StatsTrackerIpRecordModel.upsert({request_ip=request_ip, request_count=1}, {request_count={increment=1}});
+
+			if (request_useragent) {
+				# record the ip and useragent in the database
+				model::StatsTrackerUseragentRecordModel.upsert({request_ip=request_ip, request_useragent=request_useragent, request_count=1}, {request_count={increment=1}});
+			} else {
+				# record ip with empty useragent
+				model::StatsTrackerUseragentRecordModel.upsert({request_ip=request_ip, request_useragent="", request_count=1}, {request_count={increment=1}});
+			}
+
+			if (request_referrer) {
+				# if a referrer is set, record that with the path in the database
+				model::StatsTrackerReferrerRecordModel.upsert({request_referrer=request_referrer, request_path=request_path, request_count=1}, {request_count={increment=1}});
+			} else {
+				# else record path with empty referrer
+				model::StatsTrackerReferrerRecordModel.upsert({request_referrer="", request_path=request_path, request_count=1}, {request_count={increment=1}});
+			}
+		}
+	}
+
+	native_library StatsTrackerRequestLib => "/StatsTrackerRequestLib.php";
+
+	// model StatsTrackerIpRecordModel {
+	// 	string[255] ip;
+	// 	int request_count;
+	// }
+
+	model StatsTrackerUseragentRecordModel {
+		string[255] request_ip;
+		string[4000] request_useragent;
+		int request_count;
+	}
+
+	model StatsTrackerReferrerRecordModel {
+		string[4000] request_referrer;
+		string[4000] request_path;
+		int request_count;
+	}
+
+
+	extentions system
+		extensions can inject their own native library
+		stored under libs folder
+		they extend the functionality of the active runtime object to add their own apis
+
+	parenthesis expressions
+	controller referencing
+	fail2ban extension/plugin with easy interface
+		on failed login, can call plugins.fail2ban.failed_login()
+		on successful login, can call plugins.fail2ban.successful_login()
+		test whether the ip is banned: plugins.fail2ban.is_banned()
+
+		use ip-indexed model counting strikes against it
+			success resets strikes to zero
+		settings set in config.php for ban-threshold
+
+
+
+
+drag-and-drop css framework
+	spaced titles
+	spaced boxes
+	spaced forms
+	basic box design with drop shadows
+	links in italic, underline on click
+	header bar
+
+dynamic template rendering
+	"\n" => br
+	"\n---\n" => hr
+	"[[link: http://www.example.org/: asdf]]" => a href="http://www.eaxmple.org/" "asdf"
+	"[[image: /example.jpg]]" => img src="{{runtime.site_base}}/example.jpg"
+	"[[b: asdf]]" => span style="font-weight: bold;" "asdf"
+	"[[i: asdf]]" => span style="font-style: italic;" "asdf"
+
+	images and links would not allow any other tags inside
+
+swiss-army-knife backend model editor
+	view lists of items
+	edit fields and push changes to the database
+	secure login
+
+view controller which automagically attach to their declared template/super-template
+	complex logic for the associated template
+	allow event based hooks which plugins can come in and dynamically edit page values
+
+

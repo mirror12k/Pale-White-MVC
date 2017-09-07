@@ -43,16 +43,27 @@ templated and pre-compiled mvc
 				allows retrieval by field(s)
 			create
 				creates a new object and loads it from
-			create_many
-				simply an array loop of create
 			list
 				queries a list of items based on arguments
-			cast_field_to_string
-			cast_field_from_string
-			flush_cache
-				flushes all cached objects
+				special arguments of _offset, _limit, and _order allow more specific listing
+			count
+				counts the number of entries matching the given list query
+
+		getter functions for meta array properties
+			add
+				adds an item to the back of the meta array
+			remove
+				removes a number/all instances of the item from the meta array
+			contains
+				whether or not the item exists in the item's meta array
+			list_array
+				returns a list of items in the model's meta array
+				allows special arguments to retrieve only a small portion of the fields
+			count_array
+				counts the list of items matching the query in a model's meta array
+
+		produce a setup.sql file for the create table statements for this model
 		staticly cache model objects by id and other fields to prevent retrieving them multiple times
-		this will also produce a setup.sql file for the create table statement for this model
 
 		on-creation and on deletion hooks:
 			on create {{
@@ -62,10 +73,56 @@ templated and pre-compiled mvc
 				error_log("model deleted!");
 			}}
 
-		further wishlist:
-			meta arrays and meta objects for models
-			an admin backend for viewing/editting models as listed items
-			salted+hashed password field for easy comparison
+		database table delta files:
+			# special files dedicated to refractoring the database
+			modeldelta MyModel {
+				# add a field
+				+int hitcount;
+				# add a field duplicating values from an existing column
+				+string[255] author_bak = author;
+				# delete a field
+				-int hitcount;
+
+				# resize a field
+				*string[255] author_bak -> string[5] author_bak;
+				# rename a field
+				*string[5] author_bak -> string[5] author_old;
+
+				# create an array field
+				+int[] hitcount;
+				# create an array field copying values from an existing one
+				+int[] double_count = hitcount;
+				# delete an array field
+				-int[] hitcount;
+
+				# rename an array field
+				*int[] double_count -> int[] count_old;
+			}
+			# compiles into a simple sql file executable on the server
+
+		json fields:
+			// simply declare json fields in a model
+				model MyModel {
+					json data;
+				}
+			// now arbitrary objects and arrays can be assigned to it, and will be stored in database as a json string
+			// accessing these fields again produces the same objects/arrays originally assigned or null by default
+
+		salted password fields:
+			// create a model with a salted hashed password field
+				model UserModel {
+					string[255] username;
+					salted_sha256 password;
+				}
+			// create the model as normal
+				user = create UserModel username="admin", password="pass";
+			// password is automatically salted and hashed before being stored in the database
+			// now it can be compared in controllers:
+				if (user.matches_hashed_field("password", my_password)) {
+					...
+				} else {
+					...
+				}
 
 
 
@@ -124,7 +181,7 @@ templated and pre-compiled mvc
 				div.container#main_container
 
 			tag properties
-				a href="https://asdf", alt="my link"
+				a href="https://asdf" alt="my link"
 
 			template args inlined into text
 				!template ArgyTemplate
@@ -133,41 +190,15 @@ templated and pre-compiled mvc
 			loops
 				!foreach users as user
 					li "user: {{user.username}}"
-
-		wishlist
-			inline html
-				div.container
-					{< html_var >}
 			calling sub templates with optional arguments
 				!template SuperTemplate
 					div.user_container
 						!template UserContainerTemplate user=user, color='red'
+			inline html
+				div.container
+					{< html_var >}
 
-			passing templates as arguments and values
-				!template SuperTemplate
-					div.super_container
-						// invoke template from variable
-						!template $dynamic_template
-						// pass the name of a template
-						!template RenderContainerTemplate template="UserContainerTemplate"
 
-			anonymous template definitions
-				!template SuperTemplate
-					// include the template here,
-					!template RenderContainerTemplate
-						// render blocks INSIDE the included template
-						!block border
-							{my_awesome_border}
-						!block container
-							!template UserContainerTemplate
-
-			simpler div containers
-				!template NestedDivsTemplate
-					#main_container
-						.container
-
-			extensible helper plugins
-			optional compilation to a big javascript package to allow client-side sites
 
 	controllers
 		compile directly to php classes, they define paths, rewrite rules, and path arguments
@@ -326,19 +357,20 @@ templated and pre-compiled mvc
 				// equivalent to
 				head
 					meta id="_csrf_token", name="_csrf_token", content={_csrf_token}
+				// csrf meta token is used by pale-white's ajax action to inject csrf tokens into every request
 
 				// optionally generated serverside
-				ajax '/get_csrf_token' {
-					return token=_csrf_token
+				ajax "/get_csrf_token" {
+					render_json token=_csrf_token;
 				}
 
 				// validate in arguments
-				path '/check_csrf_token' [ !_csrf_token ] {
+				path "/check_csrf_token" [ !_csrf_token ] {
 					// good to go!
 				}
 
 				// optionally validate later
-				path '/check_later' [ _csrf_token ] {
+				path "/check_later" [ _csrf_token ] {
 					validate _csrf_token as _csrf_token;
 					// good to go!
 				}
@@ -348,17 +380,13 @@ templated and pre-compiled mvc
 					// good to go!
 				}
 
-		wishlist:
-			regex path arguments
-				path '/page/{{page=/\d+/}}' {}
-
 			ajax paths which return json responses
 				// arguments are taken from json data
-				ajax '/create/link' [ asdf, zxcv ] {
-					validate asdf as qwer with zxcv=zxcv
+				ajax "/create/link" [ asdf, zxcv ] {
+					validate asdf as qwer;
 					// stuff
 					// returns a json response
-					return status='success', data=link_id
+					render_json status="success", data=link_id;
 				}
 
 			secure file upload
@@ -368,53 +396,186 @@ templated and pre-compiled mvc
 				}
 
 				// use it in an ajax path
-				ajax '/do_stuff' [ _file_upload user_file ] {
+				ajax "/do_stuff" [ _file_upload user_file ] {
 					// validate the user and arguments
-					validate ...;
+					// validate ...;
 
 					// after validation, we accept the file transfer
 					filepath = file MemeVideoUploadDirectory from=user_file;
 
-					// record the file somehow by creating a model out of it or something
-					return status="success"
+					// record the file by creating a model referencing it
+					video = create VideoModel filepath=filepath;
+
+					render_json status="success";
 				}
 
 				// later we can load the file by filepath and specify the content_type
 				path "/video/{{video_id}}.webm" {
 					video = model VideoModel video_id=video_id;
-					content_type "video/webm";
+					header "Content-Type" = "video/webm";
 					render_file video.filepath;
 				}
 
-				// models can tie files to themselves so that the file is deleted when the model is deleted
-				// by simply creating the VideoModel with this file argument, it is tied to the file
+				// files are referenced in models by their directories
 				model VideoModel {
-					file::meme_videos filepath;
+					file::MemeVideoUploadDirectory filepath;
 					model::comment[] comments;
 				}
 
-				files are stored on disk by file hash and with no extention to forbid any extention-based execution
+				// files are stored on disk by file hash and with no extention to forbid any extention-based execution
 
-			log file recording all exceptions occuring in the application
+			filedirectory timestamp suffixing
+				// simply add a 'suffix_timestamp' property to the file directory declaration
+				file_directory VideoUploadsDirectory "./uploads" {
+					suffix_timestamp;
+				}
 
-			websockets/ajax client-heavy site
-				load all glass templates as client-side javascript files
-				and have all actions exposed via websockets or ajax
-				have controllers mostly loaded on client-side
-				hook location switches and have a client-side controller process to perform a simple server request
-					server picks the template and template args for it, as well as performing any controller actions required
-					server returns a json response which tells client-side which template with which arguments to load
-				templates should be optionally markable as client-side only using cached model data to avoid excessive server-side requests
-					this would require client-side controllers fully implementing the template and model picking logic for those paths
-					can mark these paths as static so that they are compiled into the client-side controller
-			library inclusion
-			transplant comments directly to compiled php code
-			a cli to perform server-side action easier?
-			automatic admin backend for viewing and editting modeled objects?
-			a description package which outlines all contained packages?
-			view controllers to easily assign logic to specific views?
 
-			a testing suite which is done from server-side cli php execution
-				doesnt render templates fully, just returns the template names and arguments passed as the test status
-				this way controller logic can be checked without depending on templating output
+			calling static and dynamic functions in controllers
+				// method calling:
+					my_model.func("asdf");
+				// static model calling:
+					model::MyModel.func("asdf");
 
+			native code libraries for inclusion and usage in controllers and models
+				// declare library in a controller for sanity and includes:
+					native_library MyApp::MyLibrary => "lib/MyApp.php";
+
+				// call libraries by referering to their classname:
+					native::MyApp::MyLibrary.func("hello world");
+
+
+
+			data logging
+				// log strings with the log action:
+					path global {
+						log "got request {{path}}";
+					}
+				// specify an extra logging file in the config file
+					"log_file" => "/var/pale/data.log",
+				// fatal exceptions are automatically logged by HTTPRequestExecutor
+
+
+			simple maintenance mode enabled from the config file
+				// enabled from config.php
+					'maintenance_mode' => true/false,
+				// option to set controller launched durning maintenance mode:
+					'maintenance_mode_controller' => '\\PaleWhite\\DefaultMaintenanceController',
+
+
+			callback event scheduling
+				// a model is injected during compile time into projects
+					model _EventModel {
+						int trigger_time;
+						string[512] controller;
+						string[512] event;
+						string args;
+					}
+				// declare event callbacks in controllers:
+					event say_hello {
+						log "saying hello!";
+					}
+				// schedule events from controllers:
+					path "/" {
+						schedule_event EventController.say_hello offset=3600, args={
+							a = 15,
+							b = 25,
+						};
+					}
+				// offset specifies the time in seconds relative to when it was scheduled to trigger the event
+				// args is a simple object of string/integer values which will be encoded as json
+					// compiles to:
+						$this->schedule_event('EventController', 'say_hello', array('offset' => 3600, 'args' => array(...)));
+
+				// a config option enables event processing:
+					'enable_events' => true,
+				// the HTTPRequestExecutor selects events to process after it is done with a normal request
+				// if an event dies during processing, it wont be processed again
+				// events are processed as soon as a page is loaded,
+				// so a website without traffic will find it difficult to load events on time
+
+			native system command calling
+				// safely escapes arguments
+				// logs invoked commands and return values
+				// packages return code and output text in neat object
+
+				// this provides the potential for very heavy algorithmic or computational work to be
+				// done by server-side scripts/programs, such as packaging/unpackaging archives,
+				// compiling files, and long-crawling outside data
+				ajax "/echo/{{message}}" {
+					ret = shell_execute "echo", "your message: ", message;
+					if (ret.return_value == 0) {
+						render_json status="success", data=ret.output;
+					} else {
+						render_json status="error", data=ret.return_value;
+					}
+				}
+				// notice: executing arbitrary commands is still dangerous
+				// recommended practice is calling secure perl/python scripts with arguments,
+				// and employing safe practices in those scripts as well
+
+
+
+
+	client-side js
+		javascript-less ajax requests
+			// implemented using html forms with a class of .ajax_trigger
+				form.ajax_trigger action="/my_ajax_action"
+					input type="hidden" value="some_action"
+					button "submit"
+			// this will trigger an ajax request to "/my_ajax_action" (with csrf security)
+
+		angular-style dom replacement in ajax
+			// specifying a "dom_content" field in a status="success" ajax response
+					// will trigger replacement of specified dom selectors with new content
+				render_json status="succeess", dom_content={
+					"div.title" = "hello world!",
+					"div.my_content" = render MyContentTemplate,
+				}
+
+		javascript syntactic sugar for declaring hooks
+			body => on load
+				// do javascript stuff
+			div.tag => on click
+				this.hide();
+
+		javascript on load hooks
+			on load
+				console.log("loaded!");
+
+		have javascript hooks reapplied to any imported html
+			// this is done automatically to any new content imported with dom_content
+			// can also be done manually from javascript:
+				pale_white.add_hooks(my_node);
+
+	localization files which tie to glass templates
+		// first set a localization in a controller
+			set_localization 'en';
+		// this sets a global setting variable for which localization will be selected from a list of them
+		// write a localization file "my_localization.local"
+			localization my_page:en {
+				title = "Hello"
+				world = "World"
+			}
+		// then they can be referenced in templates:
+			div.title
+				@my_page/title
+			div.content
+				@my_page/world
+		// or can be referenced in controllers:
+			path error {
+				render ErrorTemplate error=@my_page/error;
+			}
+
+		// localization compiles to a php class:
+			namespace \Localization\en;
+			class my_page {
+				public static $title = "Hello";
+				public static $world = "World";
+			}
+
+		// expressed as:
+			$this->get_localization('my_page', 'title');
+		// which will test the current runtime localization setting
+			$class = "\\Localization\\$current_localization\\$localization_namespace";
+			return $class::$$field;
