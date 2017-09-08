@@ -228,6 +228,12 @@ class PHPRuntime {
 
 		return (object)array('output' => $output, 'return_value' => $return_value);
 	}
+
+	public function trigger_event($controller_class, $controller_event, $args) {
+		$this->log_message(get_called_class(), "triggering event [$controller_class:$controller_event]");
+		$controller = new $controller_class();
+		$controller->route_event($controller_event, $args);
+	}
 }
 
 

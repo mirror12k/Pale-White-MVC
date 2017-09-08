@@ -216,10 +216,7 @@ class HTTPRequestExecutor {
 				$result = $event->delete();
 
 				if ($result > 0) {
-					$runtime->log_message(get_called_class(), "triggering event [$controller_class:$controller_event]");
-					$controller = new $controller_class();
-					$controller->route_event($controller_event, $args);
-					
+					$runtime->trigger_event($controller_class, $controller_event, $args);
 				} else {
 					$runtime->log_message(get_called_class(), "notice: failed to lock event [$controller_class:$controller_event]");
 				}
