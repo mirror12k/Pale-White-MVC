@@ -185,6 +185,151 @@ sub compile_model_get_virtual_property {
 
 
 
+sub compile_plugin {
+	my ($self, $plugin) = @_;
+	die "invalid plugin: $plugin->{type}" unless $plugin->{type} eq 'plugin_definition';
+
+	my $identifier = $plugin->{identifier};
+	my @code;
+
+	my $parent = 'PaleWhite::Plugin';
+	$parent = $self->format_classname($parent);
+
+	push @code, $self->compile_plugin_event_hooks($plugin);
+	push @code, $self->compile_plugin_action_hooks($plugin);
+	push @code, $self->compile_plugin_controller_route_hooks($plugin);
+	push @code, $self->compile_plugin_controller_ajax_hooks($plugin);
+
+	push @code, $self->compile_plugin_route_event($plugin);
+	# push @code, $self->compile_plugin_route($plugin);
+	# push @code, $self->compile_plugin_route_ajax($plugin);
+	# push @code, $self->compile_plugin_validate($plugin);
+	# push @code, $self->compile_plugin_action($plugin);
+	
+	@code = map "\t$_", @code;
+	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_plugin_event_hooks {
+	my ($self, $plugin) = @_;
+
+	my @code;
+
+	$plugin->{event_hooks} //= [];
+	if (@{$plugin->{event_hooks}}) {
+		push @code, "public \$event_hooks = array(\n";
+		foreach my $event (@{$plugin->{event_hooks}}) {
+			push @code, "\t'$event->{controller_class}:$event->{identifier}',\n";
+		}
+		push @code, ");\n";
+	} else {
+		push @code, "public \$event_hooks = array();\n";
+	}
+
+	push @code, "\n";
+
+	return @code
+}
+
+sub compile_plugin_action_hooks {
+	my ($self, $plugin) = @_;
+
+	my @code;
+
+	$plugin->{action_hooks} //= [];
+	if (@{$plugin->{action_hooks}}) {
+		push @code, "public \$action_hooks = array(\n";
+		foreach my $event (@{$plugin->{action_hooks}}) {
+			push @code, "\t'$event->{controller_class}:$event->{identifier}',\n";
+		}
+		push @code, ");\n";
+	} else {
+		push @code, "public \$action_hooks = array();\n";
+	}
+
+	push @code, "\n";
+
+	return @code
+}
+
+sub compile_plugin_controller_route_hooks {
+	my ($self, $plugin) = @_;
+
+	my @code;
+
+	$plugin->{controller_route_hooks} //= [];
+	if (@{$plugin->{controller_route_hooks}}) {
+		push @code, "public \$controller_route_hooks = array(\n";
+		foreach my $event (@{$plugin->{controller_route_hooks}}) {
+			push @code, "\t'$event->{controller_class}',\n";
+		}
+		push @code, ");\n";
+	} else {
+		push @code, "public \$controller_route_hooks = array();\n";
+	}
+
+	push @code, "\n";
+
+	return @code
+}
+
+sub compile_plugin_controller_ajax_hooks {
+	my ($self, $plugin) = @_;
+
+	my @code;
+
+	$plugin->{controller_ajax_hooks} //= [];
+	if (@{$plugin->{controller_ajax_hooks}}) {
+		push @code, "public \$controller_ajax_hooks = array(\n";
+		foreach my $event (@{$plugin->{controller_ajax_hooks}}) {
+			push @code, "\t'$event->{controller_class}',\n";
+		}
+		push @code, ");\n";
+	} else {
+		push @code, "public \$controller_ajax_hooks = array();\n";
+	}
+
+	push @code, "\n";
+
+	return @code
+}
+
+sub compile_plugin_route_event {
+	my ($self, $plugin) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+
+	my @events;
+	@events = (@events, @{$plugin->{event_hooks}}) if exists $plugin->{event_hooks};
+	return @code unless @events;
+
+	push @code, "global \$runtime;\n\n";
+
+	my $first = 1;
+	foreach my $event (@events) {
+		push @code, $self->compile_path($event, $first);
+		push @code, "\n";
+		$first = 0;
+	}
+
+	push @code, "} else {\n";
+	push @code, "\tparent::route_event_hook(\$event, \$args);\n";
+	push @code, "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function route_event_hook (\$event, array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+
+
+
+
+
 sub compile_controller {
 	my ($self, $controller) = @_;
 	die "invalid controller: $controller->{type}" unless $controller->{type} eq 'controller_definition';
@@ -348,6 +493,8 @@ sub compile_path {
 		$target = "action \"$path->{identifier}\"";
 	} elsif ($path->{type} eq 'default_path') {
 		$target = "path default";
+	} elsif ($path->{type} eq 'event_hook') {
+		$target = "event hook \"$path->{controller_class}:$path->{identifier}\"";
 	} else {
 		$target = "path \"$path->{path}\"";
 	}
@@ -356,26 +503,20 @@ sub compile_path {
 
 	push @code, $self->compile_action_block($path->{block});
 
+	my $condition_code;
 	if ($path->{type} eq 'match_path') {
-		my ($condition_code, $match_code) = $self->compile_path_condition($path->{path});
+		my $match_code;
+		($condition_code, $match_code) = $self->compile_path_condition($path->{path});
 		@code = (@$match_code, @code);
-
-		@code = map "\t$_", @code;
-		if ($first) {
-			@code = ("if ($condition_code) {\n", @code);
-		} else {
-			@code = ("} elseif ($condition_code) {\n", @code);
-		}
 	} elsif ($path->{type} eq 'event_block') {
-		my $condition_code = "\$event === '$path->{identifier}'";
-		@code = map "\t$_", @code;
-		if ($first) {
-			@code = ("if ($condition_code) {\n", @code);
-		} else {
-			@code = ("} elseif ($condition_code) {\n", @code);
-		}
+		$condition_code = "\$event === '$path->{identifier}'";
 	} elsif ($path->{type} eq 'action_block') {
-		my $condition_code = "\$action === '$path->{identifier}'";
+		$condition_code = "\$action === '$path->{identifier}'";
+	} elsif ($path->{type} eq 'event_hook') {
+		$condition_code = "\$event === '$path->{controller_class}:$path->{identifier}'";
+	}
+
+	if (defined $condition_code) {
 		@code = map "\t$_", @code;
 		if ($first) {
 			@code = ("if ($condition_code) {\n", @code);

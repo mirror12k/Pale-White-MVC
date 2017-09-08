@@ -68,6 +68,13 @@ global \$config;
 		'mysql_password' => '',
 		'mysql_database' => '',
 	),
+	
+	// list of plugins destined to be loaded into the application
+	// listed by key value pairs, with the key being the plugin identifier,
+	// and the value is the plugin specific config,
+	// with the special key 'plugin_class' defining the class to be instantiated by the system
+	// loaded plugins can then be accessed programmatically through runtime.plugins.PLUGIN_NAME
+	'plugins' => array(),
 );
 
 "

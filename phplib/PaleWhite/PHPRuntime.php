@@ -29,7 +29,10 @@ class PHPRuntime {
 
 		$this->plugins = (object)array();
 		foreach ($config['plugins'] as $plugin_name => $plugin_config) {
-			$plugin_class = $plugin_config['class'];
+			$plugin_directory = $config['plugins_folder'] . '/' . $plugin_config['plugin_class'];
+			require_once "$plugin_directory/includes.php";
+
+			$plugin_class = $plugin_config['plugin_class'];
 			$this->register_plugin($plugin_name, new $plugin_class());
 		}
 	}
@@ -248,7 +251,7 @@ class PHPRuntime {
 
 		if (isset($this->event_hooks["$controller_class:$controller_event"]))
 			foreach ($this->event_hooks["$controller_class:$controller_event"] as $callback)
-				$callback($controller_event, $args);
+				$callback("$controller_class:$controller_event", $args);
 
 		if ($controller_class !== 'Runtime') {
 			$controller = new $controller_class();
@@ -257,19 +260,19 @@ class PHPRuntime {
 	}
 
 	public function register_plugin($plugin_name, \PaleWhite\Plugin $plugin_object) {
-		if (isset($this->plugins["$plugin_name"]))
+		if (isset($this->plugins->$plugin_name))
 			throw new \PaleWhite\InvalidException("plugin '$plugin_name' has already been loaded");
 		else
-			$this->plugins["$plugin_name"] = $plugin_object;
+			$this->plugins->$plugin_name = $plugin_object;
 
-		$$plugin_object->on_registered();
+		$plugin_object->on_registered();
 	}
 
-	public function register_event_hook($controller_class, $controller_event, $callback) {
-		if (isset($this->event_hooks["$controller_class:$controller_event"]))
-			$this->event_hooks["$controller_class:$controller_event"][] = $callback;
+	public function register_event_hook($event_id, $callback) {
+		if (isset($this->event_hooks["$event_id"]))
+			$this->event_hooks["$event_id"][] = $callback;
 		else
-			$this->event_hooks["$controller_class:$controller_event"] = array($callback);
+			$this->event_hooks["$event_id"] = array($callback);
 	}
 }
 

@@ -89,6 +89,15 @@ list context root {
 			}
 			match '}'
 		}
+		'plugin' => {
+			match $identifier_regex, '{'
+			push !plugin_block->{
+				type => 'plugin_definition'
+				line_number => $0{line_number}
+				identifier => $1
+			}
+			match '}'
+		}
 		'file_directory' => {
 			match $identifier_regex, $string_regex, '{'
 			push !file_directory_block->{
@@ -354,6 +363,58 @@ object context controller_block {
 		}
 	}
 }
+
+
+
+object context plugin_block {
+	switch {
+		'hook', 'event' => {
+			match $class_identifier_regex, ':', $identifier_regex
+			$_{event_hooks}[] = !path_action_block->{
+				type => 'event_hook'
+				line_number => $0{line_number}
+				controller_class => $2
+				identifier => $4
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
+		'hook', 'action' => {
+			match $class_identifier_regex, ':', $identifier_regex
+			$_{action_hooks}[] = !path_action_block->{
+				type => 'action_hook'
+				line_number => $0{line_number}
+				controller_class => $2
+				identifier => $4
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
+		'hook', 'controller', 'route' => {
+			match $class_identifier_regex
+			$_{controller_route_hooks}[] = !path_action_block->{
+				type => 'controller_route_hook'
+				line_number => $0{line_number}
+				controller_class => $2
+				block => []
+			}
+		}
+		'hook', 'controller', 'ajax' => {
+			match $class_identifier_regex
+			$_{controller_ajax_hooks}[] = !path_action_block->{
+				type => 'controller_ajax_hook'
+				line_number => $0{line_number}
+				controller_class => $2
+				block => []
+			}
+		}
+		default {
+			return
+		}
+	}
+}
+
+
 
 
 item context native_code_block {

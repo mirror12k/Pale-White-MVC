@@ -86,6 +86,9 @@ sub compile_php {
 		} elsif ($item->{type} eq 'controller_definition') {
 			my $compiler = PaleWhite::MVC::ControllerPHPCompiler->new;
 			push @code, $compiler->compile_controller($item);
+		} elsif ($item->{type} eq 'plugin_definition') {
+			my $compiler = PaleWhite::MVC::ControllerPHPCompiler->new;
+			push @code, $compiler->compile_plugin($item);
 		} elsif ($item->{type} eq 'file_directory_definition') {
 			my $compiler = PaleWhite::MVC::FileDirectoryPHPCompiler->new;
 			push @code, $compiler->compile_file_directory($item);
