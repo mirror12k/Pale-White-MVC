@@ -75,6 +75,9 @@ global \$config;
 	// with the special key 'plugin_class' defining the class to be instantiated by the system
 	// loaded plugins can then be accessed programmatically through runtime.plugins.PLUGIN_NAME
 	'plugins' => array(),
+	// location where plugins are stored
+	// plugins must be stored by their full plugin class name
+	'plugins_folder' => 'plugins',
 );
 
 "
@@ -119,11 +122,15 @@ sub compile_includes {
 }
 
 sub compile_project_directory {
-	my ($src_dir, $bin_dir) = @_;
+	my ($src_dir, $bin_dir, %options) = @_;
 	$src_dir = Sugar::IO::Dir->new($src_dir);
 	$bin_dir = Sugar::IO::Dir->new($bin_dir);
 
-	say "compiling PaleWhite project: $src_dir => $bin_dir";
+	if ($options{plugin}) {
+		say "compiling PaleWhite plugin: $src_dir => $bin_dir";
+	} else {
+		say "compiling PaleWhite project: $src_dir => $bin_dir";
+	}
 
 	my @includes;
 
@@ -138,7 +145,7 @@ sub compile_project_directory {
 	# clear the setup.sql file
 	$setup_sql_file->write('');
 	# add in PaleWhite library as an include
-	push @includes, "phplib/PaleWhite/lib.php";
+	push @includes, "phplib/PaleWhite/lib.php" unless $options{plugin};
 
 	my @all_files = $src_dir->recursive_files;
 
@@ -165,7 +172,7 @@ sub compile_project_directory {
 		}
 	}
 
-	do {
+	if (not $options{plugin}) {
 		# compile default event queue model
 		my $relative_path = "_EventModel.php";
 		my $destination_path = "$bin_dir/$relative_path";
@@ -185,7 +192,7 @@ sub compile_project_directory {
 
 		push @includes, @{$compiler->{native_library_includes}};
 		push @includes, $relative_path;
-	};
+	}
 
 	foreach my $source_path (@mvc_files) {
 
@@ -298,25 +305,27 @@ sub compile_project_directory {
 	$includes_file->write($compiled_php);
 	say "\tsetup.sql file: $setup_sql_file";
 
-	unless ($config_file->exists) {
-		say "\tconfig file: $config_file";
+	if (not $options{plugin}) {
+		unless ($config_file->exists) {
+			say "\tconfig file: $config_file";
 
-		$config_file->write(default_php_config_file);
+			$config_file->write(default_php_config_file);
 
-		say "\t\tdefault config written, please add your settings to properly setup your app";
-	}
+			say "\t\tdefault config written, please add your settings to properly setup your app";
+		}
 
-	unless ($htaccess_file->exists) {
-		say "\thtaccess file: $htaccess_file";
+		unless ($htaccess_file->exists) {
+			say "\thtaccess file: $htaccess_file";
 
-		$htaccess_file->write(default_htaccess_file);
+			$htaccess_file->write(default_htaccess_file);
 
-		say "\t\tdefault htaccess written, please edit it if necessary";
-	}
+			say "\t\tdefault htaccess written, please edit it if necessary";
+		}
 
-	unless ($index_file->exists) {
-		say "\tindex file: $index_file";
-		$index_file->write(default_php_index_file);
+		unless ($index_file->exists) {
+			say "\tindex file: $index_file";
+			$index_file->write(default_php_index_file);
+		}
 	}
 
 }
@@ -324,8 +333,19 @@ sub compile_project_directory {
 
 sub main {
 
-	die "usage: $0 <src directory> <bin directory>" unless @_ == 2;
-	compile_project_directory(@_);
+	die "usage: $0 <src directory> <bin directory>" unless @_ >= 2;
+
+	my %options;
+	while (@_ > 2) {
+		my $arg = shift;
+		if ($arg eq '--plugin') {
+			$options{plugin} = 1;
+		} else {
+			die "invalid option: $arg";
+		}
+	}
+
+	compile_project_directory(@_, %options);
 }
 
 caller or main(@ARGV);
