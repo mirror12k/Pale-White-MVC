@@ -17,9 +17,22 @@ class PHPRuntime {
 
 	public $database;
 
+	public $plugins;
+	public $event_hooks = array();
+
 	// ------------------------------------------
 	// initialization functions to setup the runtime environment
 	// ------------------------------------------
+
+	public function initialize_plugins() {
+		global $config;
+
+		$this->plugins = (object)array();
+		foreach ($config['plugins'] as $plugin_name => $plugin_config) {
+			$plugin_class = $plugin_config['class'];
+			$this->register_plugin($plugin_name, new $plugin_class());
+		}
+	}
 
 	public function initialize_http() {
 		global $config;
@@ -229,10 +242,34 @@ class PHPRuntime {
 		return (object)array('output' => $output, 'return_value' => $return_value);
 	}
 
-	public function trigger_event($controller_class, $controller_event, $args) {
-		$this->log_message(get_called_class(), "triggering event [$controller_class:$controller_event]");
-		$controller = new $controller_class();
-		$controller->route_event($controller_event, $args);
+	public function trigger_event($controller_class, $controller_event, array $args) {
+		if ($controller_class !== 'Runtime')
+			$this->log_message(get_called_class(), "event [$controller_class:$controller_event]");
+
+		if (isset($this->event_hooks["$controller_class:$controller_event"]))
+			foreach ($this->event_hooks["$controller_class:$controller_event"] as $callback)
+				$callback($controller_event, $args);
+
+		if ($controller_class !== 'Runtime') {
+			$controller = new $controller_class();
+			$controller->route_event($controller_event, $args);
+		}
+	}
+
+	public function register_plugin($plugin_name, \PaleWhite\Plugin $plugin_object) {
+		if (isset($this->plugins["$plugin_name"]))
+			throw new \PaleWhite\InvalidException("plugin '$plugin_name' has already been loaded");
+		else
+			$this->plugins["$plugin_name"] = $plugin_object;
+
+		$$plugin_object->on_registered();
+	}
+
+	public function register_event_hook($controller_class, $controller_event, $callback) {
+		if (isset($this->event_hooks["$controller_class:$controller_event"]))
+			$this->event_hooks["$controller_class:$controller_event"][] = $callback;
+		else
+			$this->event_hooks["$controller_class:$controller_event"] = array($callback);
 	}
 }
 

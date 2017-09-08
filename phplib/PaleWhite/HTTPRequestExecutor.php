@@ -44,9 +44,12 @@ class HTTPRequestExecutor {
 
 
 			// set up the global environment
+			$runtime->initialize_plugins();
 			$runtime->initialize_http();
 			$runtime->initialize_session();
 			$runtime->initialize_database();
+
+			$runtime->trigger_event('Runtime', 'init', array());
 
 			if ($config['maintenance_mode']) {
 				// call the maintenance controller
@@ -74,6 +77,8 @@ class HTTPRequestExecutor {
 				// $is_ajax = false;
 				$runtime->log_message(get_called_class(), "routing '$runtime->path'");
 			}
+
+			$runtime->trigger_event('Runtime', 'on_request', array('request' => $runtime->request));
 			
 			// route the request
 			if ($runtime->is_ajax) {
@@ -151,11 +156,15 @@ class HTTPRequestExecutor {
 		}
 
 		// after the request has been process and a response has been generated
+		$runtime->trigger_event('Runtime', 'on_response',
+				array('request' => $runtime->request, 'response' => $runtime->response));
 		$this->send_http_response($runtime->response);
 
 		// after sending the response, we can process scheduled events in the queue
 		if ($config['enable_events'])
 			$this->process_event_queue();
+
+		$runtime->trigger_event('Runtime', 'end', array());
 	}
 
 	public function send_http_response(Response $response) {
