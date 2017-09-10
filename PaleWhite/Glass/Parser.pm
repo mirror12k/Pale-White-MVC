@@ -371,7 +371,7 @@ sub context_glass_tag {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			$context_object->{id} = $tokens[1][1];
+			$context_object->{id} = $self->extended_html_class($tokens[1][1]);
 			}
 			else {
 			return $context_object;
