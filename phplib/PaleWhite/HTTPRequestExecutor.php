@@ -82,7 +82,9 @@ class HTTPRequestExecutor {
 			
 			// route the request
 			if ($runtime->is_ajax) {
-				$controller->route_ajax($runtime->request, $runtime->response);
+				$runtime->route_controller_ajax($controller_class,
+						$runtime->request->path, $runtime->request->args, $runtime->response);
+				// $controller->route_ajax($runtime->request, $runtime->response);
 			} else {
 				$runtime->route_controller_path($controller_class,
 						$runtime->request->path, $runtime->request->args, $runtime->response);

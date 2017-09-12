@@ -23,6 +23,7 @@ class PHPRuntime {
 	public $event_hooks = array();
 	public $action_hooks = array();
 	public $controller_route_hooks = array();
+	public $controller_ajax_hooks = array();
 
 	// ------------------------------------------
 	// initialization functions to setup the runtime environment
@@ -155,6 +156,16 @@ class PHPRuntime {
 
 		if (isset($this->controller_route_hooks["$controller_class"]))
 			foreach ($this->controller_route_hooks["$controller_class"] as $callback)
+				$callback("$controller_class", $req, $res);
+	}
+
+	public function route_controller_ajax($controller_class, $path, array $args, Response $res) {
+		$controller = $this->get_controller($controller_class);
+		$req = new Request($path, $args);
+		$controller->route_ajax($req, $res);
+
+		if (isset($this->controller_ajax_hooks["$controller_class"]))
+			foreach ($this->controller_ajax_hooks["$controller_class"] as $callback)
 				$callback("$controller_class", $req, $res);
 	}
 
@@ -323,6 +334,13 @@ class PHPRuntime {
 			$this->controller_route_hooks["$hook_id"][] = $callback;
 		else
 			$this->controller_route_hooks["$hook_id"] = array($callback);
+	}
+
+	public function register_controller_ajax_hook($hook_id, $callback) {
+		if (isset($this->controller_ajax_hooks["$hook_id"]))
+			$this->controller_ajax_hooks["$hook_id"][] = $callback;
+		else
+			$this->controller_ajax_hooks["$hook_id"] = array($callback);
 	}
 }
 

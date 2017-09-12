@@ -206,10 +206,9 @@ sub compile_plugin {
 	push @code, "\n";
 
 	push @code, $self->compile_plugin_route_event($plugin);
-	# push @code, $self->compile_plugin_route_ajax($plugin);
-	# push @code, $self->compile_plugin_validate($plugin);
 	push @code, $self->compile_plugin_route_action($plugin);
 	push @code, $self->compile_plugin_route_path($plugin);
+	push @code, $self->compile_plugin_route_ajax($plugin);
 	
 	@code = map "\t$_", @code;
 	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
@@ -379,6 +378,37 @@ sub compile_plugin_route_path {
 
 	@code = map "\t$_", @code;
 	@code = ("public function route_path_hook (\$controller, \\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n",
+			@code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_plugin_route_ajax {
+	my ($self, $plugin) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'plugin_route_ajax';
+
+	my @items;
+	@items = (@items, @{$plugin->{controller_ajax_hooks}}) if exists $plugin->{controller_ajax_hooks};
+	return @code unless @items;
+
+	push @code, "global \$runtime;\n\n";
+
+	my $first = 1;
+	foreach my $item (@items) {
+		push @code, $self->compile_path($item, $first);
+		push @code, "\n";
+		$first = 0;
+	}
+
+	push @code, "} else {\n";
+	push @code, "\tparent::route_ajax_hook(\$controller, \$req, \$res);\n";
+	push @code, "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function route_ajax_hook (\$controller, \\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n",
 			@code, "}\n", "\n");
 
 	return @code
@@ -590,6 +620,8 @@ sub compile_path {
 		$target = "action hook \"$path->{controller_class}:$path->{identifier}\"";
 	} elsif ($path->{type} eq 'controller_route_hook') {
 		$target = "controller route hook \"$path->{controller_class}\"";
+	} elsif ($path->{type} eq 'controller_ajax_hook') {
+		$target = "controller ajax hook \"$path->{controller_class}\"";
 	} else {
 		$target = "path \"$path->{path}\"";
 	}
@@ -612,6 +644,8 @@ sub compile_path {
 	} elsif ($path->{type} eq 'action_hook') {
 		$condition_code = "\$action === '$path->{controller_class}:$path->{identifier}'";
 	} elsif ($path->{type} eq 'controller_route_hook') {
+		$condition_code = "\$controller === '$path->{controller_class}'";
+	} elsif ($path->{type} eq 'controller_ajax_hook') {
 		$condition_code = "\$controller === '$path->{controller_class}'";
 	}
 
