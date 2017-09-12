@@ -14,6 +14,9 @@ abstract class Plugin {
 
 		foreach ($this->controller_route_hooks as $hook_id)
 			$runtime->register_controller_route_hook($hook_id, array($this, 'route_path_hook'));
+
+		foreach ($this->controller_ajax_hooks as $hook_id)
+			$runtime->register_controller_ajax_hook($hook_id, array($this, 'route_ajax_hook'));
 	}
 
 	public function route_event_hook ($event, array $args) {
@@ -25,7 +28,11 @@ abstract class Plugin {
 	}
 
 	public function route_path_hook ($controller, Request $req, Response $res) {
-		throw new \PaleWhite\InvalidException("undefined controller path hook routed: '$controller'");
+		throw new \PaleWhite\InvalidException("undefined controller route hook routed: '$controller'");
+	}
+
+	public function route_ajax_hook ($controller, Request $req, Response $res) {
+		throw new \PaleWhite\InvalidException("undefined controller ajax hook routed: '$controller'");
 	}
 }
 

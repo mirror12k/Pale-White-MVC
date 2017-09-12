@@ -826,7 +826,13 @@ sub compile_action {
 		my $args_argument = exists $action->{arguments}{args}
 				? $self->compile_expression($action->{arguments}{args}) : $self->{context_args_variable};
 		# my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$runtime->route_controller_path('$class', $path_argument, $args_argument, \$res);\n"
+		if ($self->{block_context_type} eq 'controller_route' or $self->{block_context_type} eq 'plugin_route_path') {
+			return "\$runtime->route_controller_path('$class', $path_argument, $args_argument, \$res);\n"
+		} elsif ($self->{block_context_type} eq 'controller_route_ajax' or $self->{block_context_type} eq 'plugin_route_ajax') {
+			return "\$runtime->route_controller_ajax('$class', $path_argument, $args_argument, \$res);\n"
+		} else {
+			die "attempt to route controller in invalid context '$self->{block_context_type}' on line $action->{line_number}";
+		}
 
 	} elsif ($action->{type} eq 'return_statement') {
 		return "return;\n"
