@@ -27,7 +27,8 @@ abstract class Controller {
 	}
 
 	public function route_subcontroller($controller_class, $path, array $args, Response $res) {
-		$controller = new $controller_class();
+		global $runtime;
+		$controller = $runtime->get_controller($controller_class);
 		$req = new Request($path, $args);
 		return $controller->route($req, $res);
 	}

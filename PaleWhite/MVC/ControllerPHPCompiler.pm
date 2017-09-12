@@ -115,6 +115,7 @@ sub compile_model {
 				if exists $model_functions{$function->{identifier}};
 		$model_functions{$function->{identifier}} = 1;
 
+		$self->{block_context_type} = $function->{type};
 		if ($function->{type} eq 'model_function') {
 			push @code, "public function $function->{identifier} (array \$args = array()) {\n";
 			push @code, "global \$runtime;\n\n";
@@ -159,6 +160,8 @@ sub compile_model_get_virtual_property {
 
 	return unless @{$model->{virtual_properties}};
 
+	$self->{block_context_type} = 'model_virtual_properties';
+
 	push @code, "global \$runtime;\n\n";
 
 	my $first = 1;
@@ -200,11 +203,13 @@ sub compile_plugin {
 	push @code, $self->compile_plugin_controller_route_hooks($plugin);
 	push @code, $self->compile_plugin_controller_ajax_hooks($plugin);
 
+	push @code, "\n";
+
 	push @code, $self->compile_plugin_route_event($plugin);
 	# push @code, $self->compile_plugin_route($plugin);
 	# push @code, $self->compile_plugin_route_ajax($plugin);
 	# push @code, $self->compile_plugin_validate($plugin);
-	# push @code, $self->compile_plugin_action($plugin);
+	push @code, $self->compile_plugin_route_action($plugin);
 	
 	@code = map "\t$_", @code;
 	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
@@ -228,8 +233,6 @@ sub compile_plugin_event_hooks {
 		push @code, "public \$event_hooks = array();\n";
 	}
 
-	push @code, "\n";
-
 	return @code
 }
 
@@ -248,8 +251,6 @@ sub compile_plugin_action_hooks {
 	} else {
 		push @code, "public \$action_hooks = array();\n";
 	}
-
-	push @code, "\n";
 
 	return @code
 }
@@ -270,8 +271,6 @@ sub compile_plugin_controller_route_hooks {
 		push @code, "public \$controller_route_hooks = array();\n";
 	}
 
-	push @code, "\n";
-
 	return @code
 }
 
@@ -291,8 +290,6 @@ sub compile_plugin_controller_ajax_hooks {
 		push @code, "public \$controller_ajax_hooks = array();\n";
 	}
 
-	push @code, "\n";
-
 	return @code
 }
 
@@ -301,6 +298,7 @@ sub compile_plugin_route_event {
 	my @code;
 
 	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'plugin_route_event';
 
 	my @events;
 	@events = (@events, @{$plugin->{event_hooks}}) if exists $plugin->{event_hooks};
@@ -321,6 +319,36 @@ sub compile_plugin_route_event {
 
 	@code = map "\t$_", @code;
 	@code = ("public function route_event_hook (\$event, array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_plugin_route_action {
+	my ($self, $plugin) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'plugin_route_action';
+
+	my @events;
+	@events = (@events, @{$plugin->{action_hooks}}) if exists $plugin->{action_hooks};
+	return @code unless @events;
+
+	push @code, "global \$runtime;\n\n";
+
+	my $first = 1;
+	foreach my $event (@events) {
+		push @code, $self->compile_path($event, $first);
+		push @code, "\n";
+		$first = 0;
+	}
+
+	push @code, "} else {\n";
+	push @code, "\tparent::route_action_hook(\$action, \$args);\n";
+	push @code, "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function route_action_hook (\$action, array \$args) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -380,6 +408,7 @@ sub compile_controller_route {
 	my @code;
 
 	$self->{context_args_variable} = '$req->args';
+	$self->{block_context_type} = 'controller_route';
 
 	my @paths;
 	@paths = (@paths, @{$controller->{global_paths}}) if exists $controller->{global_paths};
@@ -420,6 +449,7 @@ sub compile_controller_route_ajax {
 	my @code;
 
 	$self->{context_args_variable} = '$req->args';
+	$self->{block_context_type} = 'controller_route_ajax';
 
 	my @paths;
 	@paths = (@paths, @{$controller->{global_ajax_paths}}) if exists $controller->{global_ajax_paths};
@@ -458,6 +488,7 @@ sub compile_controller_route_event {
 	my @code;
 
 	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'controller_route_event';
 
 	my @events;
 	@events = (@events, @{$controller->{controller_events}}) if exists $controller->{controller_events};
@@ -482,6 +513,35 @@ sub compile_controller_route_event {
 	return @code
 }
 
+sub compile_controller_action {
+	my ($self, $controller) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'controller_action';
+
+	my @actions;
+	if (exists $controller->{actions}) {
+		@actions = @{$controller->{actions}};
+	}
+	return @code unless @actions;
+
+	push @code, "global \$runtime;\n\n";
+
+	my $first = 1;
+	foreach my $action (@actions) {
+		# push @code, $self->compile_controller_action_block($action, $first);
+		push @code, $self->compile_path($action, $first);
+		$first = 0;
+	}
+	push @code, "} else {\n", "\treturn parent::action(\$action, \$args);\n", "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function action (\$action, array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
 sub compile_path {
 	my ($self, $path, $first) = @_;
 	my @code;
@@ -495,6 +555,8 @@ sub compile_path {
 		$target = "path default";
 	} elsif ($path->{type} eq 'event_hook') {
 		$target = "event hook \"$path->{controller_class}:$path->{identifier}\"";
+	} elsif ($path->{type} eq 'action_hook') {
+		$target = "action hook \"$path->{controller_class}:$path->{identifier}\"";
 	} else {
 		$target = "path \"$path->{path}\"";
 	}
@@ -514,6 +576,8 @@ sub compile_path {
 		$condition_code = "\$action === '$path->{identifier}'";
 	} elsif ($path->{type} eq 'event_hook') {
 		$condition_code = "\$event === '$path->{controller_class}:$path->{identifier}'";
+	} elsif ($path->{type} eq 'action_hook') {
+		$condition_code = "\$action === '$path->{controller_class}:$path->{identifier}'";
 	}
 
 	if (defined $condition_code) {
@@ -627,34 +691,6 @@ sub compile_validator {
 	return @code
 }
 
-sub compile_controller_action {
-	my ($self, $controller) = @_;
-	my @code;
-
-	$self->{context_args_variable} = '$args';
-
-	my @actions;
-	if (exists $controller->{actions}) {
-		@actions = @{$controller->{actions}};
-	}
-	return @code unless @actions;
-
-	push @code, "global \$runtime;\n\n";
-
-	my $first = 1;
-	foreach my $action (@actions) {
-		# push @code, $self->compile_controller_action_block($action, $first);
-		push @code, $self->compile_path($action, $first);
-		$first = 0;
-	}
-	push @code, "} else {\n", "\treturn parent::action(\$action, \$args);\n", "}\n";
-
-	@code = map "\t$_", @code;
-	@code = ("public function action (\$action, array \$args) {\n", @code, "}\n", "\n");
-
-	return @code
-}
-
 sub compile_action_block {
 	my ($self, $block) = @_;
 	return map $self->compile_action($_), @$block;
@@ -712,7 +748,7 @@ sub compile_action {
 
 	} elsif ($action->{type} eq 'controller_action') {
 		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$this->action('$action->{identifier}', $arguments);\n"
+		return "\$runtime->trigger_action(get_called_class(), '$action->{identifier}', $arguments);\n"
 
 	} elsif ($action->{type} eq 'route_controller') {
 		my $class = $self->format_classname($action->{identifier});
@@ -913,7 +949,7 @@ sub compile_expression {
 
 	} elsif ($expression->{type} eq 'controller_action_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "\$this->action('$expression->{identifier}', $arguments)"
+		return "\$runtime->trigger_action(get_called_class(), '$expression->{identifier}', $arguments)"
 
 	} elsif ($expression->{type} eq 'string_expression') {
 		my $string = $expression->{value};

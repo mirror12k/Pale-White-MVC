@@ -59,7 +59,7 @@ class HTTPRequestExecutor {
 				$controller_class = $config['main_controller'];
 			}
 
-			$controller = new $controller_class();
+			$controller = $runtime->get_controller($controller_class);
 
 			// validate a csrf token if the request is ajax
 			if ($runtime->is_ajax) {

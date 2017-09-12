@@ -17,8 +17,11 @@ class PHPRuntime {
 
 	public $database;
 
+	public $controller_cache = array();
+
 	public $plugins;
 	public $event_hooks = array();
+	public $action_hooks = array();
 
 	// ------------------------------------------
 	// initialization functions to setup the runtime environment
@@ -132,6 +135,17 @@ class PHPRuntime {
 	// ------------------------------------------
 	// api functions to support compiled code
 	// ------------------------------------------
+
+	public function get_controller($controller_class) {
+		if (!isset($this->controller_cache[$controller_class])) {
+			if (!is_subclass_of($controller_class, '\\PaleWhite\\Controller'))
+				throw new \PaleWhite\InvalidException("attempt to get non-controller class");
+			
+			$this->controller_cache[$controller_class] = new $controller_class();
+		}
+
+		return $this->controller_cache[$controller_class];
+	}
 
 	public function log_message($context, $message) {
 		$message = (string)$message;
@@ -254,9 +268,20 @@ class PHPRuntime {
 				$callback("$controller_class:$controller_event", $args);
 
 		if ($controller_class !== 'Runtime') {
-			$controller = new $controller_class();
+			$controller = $this->get_controller($controller_class);
 			$controller->route_event($controller_event, $args);
 		}
+	}
+
+	public function trigger_action($controller_class, $controller_action, array $args) {
+		$controller = $this->get_controller($controller_class);
+		$args['result'] = $controller->action($controller_action, $args);
+
+		if (isset($this->action_hooks["$controller_class:$controller_action"]))
+			foreach ($this->action_hooks["$controller_class:$controller_action"] as $callback)
+				$args['result'] = $callback("$controller_class:$controller_action", $args);
+
+		return $args['result'];
 	}
 
 	public function register_plugin($plugin_name, \PaleWhite\Plugin $plugin_object) {
@@ -273,6 +298,13 @@ class PHPRuntime {
 			$this->event_hooks["$event_id"][] = $callback;
 		else
 			$this->event_hooks["$event_id"] = array($callback);
+	}
+
+	public function register_action_hook($action_id, $callback) {
+		if (isset($this->action_hooks["$action_id"]))
+			$this->action_hooks["$action_id"][] = $callback;
+		else
+			$this->action_hooks["$action_id"] = array($callback);
 	}
 }
 
