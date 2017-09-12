@@ -84,7 +84,9 @@ class HTTPRequestExecutor {
 			if ($runtime->is_ajax) {
 				$controller->route_ajax($runtime->request, $runtime->response);
 			} else {
-				$controller->route($runtime->request, $runtime->response);
+				$runtime->route_controller_path($controller_class,
+						$runtime->request->path, $runtime->request->args, $runtime->response);
+				// $controller->route($runtime->request, $runtime->response);
 			}
 
 			// if an exception didnt occur, we now got to processing the response and sending it

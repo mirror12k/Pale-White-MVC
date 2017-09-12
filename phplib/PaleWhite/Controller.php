@@ -26,12 +26,12 @@ abstract class Controller {
 		return $template->render($args);
 	}
 
-	public function route_subcontroller($controller_class, $path, array $args, Response $res) {
-		global $runtime;
-		$controller = $runtime->get_controller($controller_class);
-		$req = new Request($path, $args);
-		return $controller->route($req, $res);
-	}
+	// public function route_subcontroller($controller_class, $path, array $args, Response $res) {
+	// 	global $runtime;
+	// 	$controller = $runtime->get_controller($controller_class);
+	// 	$req = new Request($path, $args);
+	// 	return $controller->route($req, $res);
+	// }
 
 	public function load_model($model_class, array $args) {
 		$object = $model_class::get_by($args);

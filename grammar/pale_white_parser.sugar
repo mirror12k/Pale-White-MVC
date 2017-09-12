@@ -395,7 +395,7 @@ object context plugin_block {
 			$_{controller_route_hooks}[] = !path_action_block->{
 				type => 'controller_route_hook'
 				line_number => $0{line_number}
-				controller_class => $2
+				controller_class => $3
 				block => []
 			}
 		}
@@ -404,7 +404,7 @@ object context plugin_block {
 			$_{controller_ajax_hooks}[] = !path_action_block->{
 				type => 'controller_ajax_hook'
 				line_number => $0{line_number}
-				controller_class => $2
+				controller_class => $3
 				block => []
 			}
 		}

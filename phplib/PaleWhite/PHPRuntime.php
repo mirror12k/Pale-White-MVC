@@ -22,6 +22,7 @@ class PHPRuntime {
 	public $plugins;
 	public $event_hooks = array();
 	public $action_hooks = array();
+	public $controller_route_hooks = array();
 
 	// ------------------------------------------
 	// initialization functions to setup the runtime environment
@@ -145,6 +146,16 @@ class PHPRuntime {
 		}
 
 		return $this->controller_cache[$controller_class];
+	}
+
+	public function route_controller_path($controller_class, $path, array $args, Response $res) {
+		$controller = $this->get_controller($controller_class);
+		$req = new Request($path, $args);
+		$controller->route($req, $res);
+
+		if (isset($this->controller_route_hooks["$controller_class"]))
+			foreach ($this->controller_route_hooks["$controller_class"] as $callback)
+				$callback("$controller_class", $req, $res);
 	}
 
 	public function log_message($context, $message) {
@@ -293,18 +304,25 @@ class PHPRuntime {
 		$plugin_object->on_registered();
 	}
 
-	public function register_event_hook($event_id, $callback) {
-		if (isset($this->event_hooks["$event_id"]))
-			$this->event_hooks["$event_id"][] = $callback;
+	public function register_event_hook($hook_id, $callback) {
+		if (isset($this->event_hooks["$hook_id"]))
+			$this->event_hooks["$hook_id"][] = $callback;
 		else
-			$this->event_hooks["$event_id"] = array($callback);
+			$this->event_hooks["$hook_id"] = array($callback);
 	}
 
-	public function register_action_hook($action_id, $callback) {
-		if (isset($this->action_hooks["$action_id"]))
-			$this->action_hooks["$action_id"][] = $callback;
+	public function register_action_hook($hook_id, $callback) {
+		if (isset($this->action_hooks["$hook_id"]))
+			$this->action_hooks["$hook_id"][] = $callback;
 		else
-			$this->action_hooks["$action_id"] = array($callback);
+			$this->action_hooks["$hook_id"] = array($callback);
+	}
+
+	public function register_controller_route_hook($hook_id, $callback) {
+		if (isset($this->controller_route_hooks["$hook_id"]))
+			$this->controller_route_hooks["$hook_id"][] = $callback;
+		else
+			$this->controller_route_hooks["$hook_id"] = array($callback);
 	}
 }
 

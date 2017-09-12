@@ -471,7 +471,7 @@ sub context_plugin_block {
 			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_class_identifier_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{controller_route_hooks}}, $self->context_path_action_block({ type => 'controller_route_hook', line_number => $tokens[0][2], controller_class => $tokens[2][1], block => [], });
+			push @{$context_object->{controller_route_hooks}}, $self->context_path_action_block({ type => 'controller_route_hook', line_number => $tokens[0][2], controller_class => $tokens[3][1], block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'hook' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'controller' and $self->{tokens}[$self->{tokens_index} + 2][1] eq 'ajax') {
 			my @tokens_freeze = @tokens;
@@ -480,7 +480,7 @@ sub context_plugin_block {
 			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_class_identifier_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
-			push @{$context_object->{controller_ajax_hooks}}, $self->context_path_action_block({ type => 'controller_ajax_hook', line_number => $tokens[0][2], controller_class => $tokens[2][1], block => [], });
+			push @{$context_object->{controller_ajax_hooks}}, $self->context_path_action_block({ type => 'controller_ajax_hook', line_number => $tokens[0][2], controller_class => $tokens[3][1], block => [], });
 			}
 			else {
 			return $context_object;

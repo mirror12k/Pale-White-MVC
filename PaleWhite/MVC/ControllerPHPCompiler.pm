@@ -206,10 +206,10 @@ sub compile_plugin {
 	push @code, "\n";
 
 	push @code, $self->compile_plugin_route_event($plugin);
-	# push @code, $self->compile_plugin_route($plugin);
 	# push @code, $self->compile_plugin_route_ajax($plugin);
 	# push @code, $self->compile_plugin_validate($plugin);
 	push @code, $self->compile_plugin_route_action($plugin);
+	push @code, $self->compile_plugin_route_path($plugin);
 	
 	@code = map "\t$_", @code;
 	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
@@ -300,15 +300,15 @@ sub compile_plugin_route_event {
 	$self->{context_args_variable} = '$args';
 	$self->{block_context_type} = 'plugin_route_event';
 
-	my @events;
-	@events = (@events, @{$plugin->{event_hooks}}) if exists $plugin->{event_hooks};
-	return @code unless @events;
+	my @items;
+	@items = (@items, @{$plugin->{event_hooks}}) if exists $plugin->{event_hooks};
+	return @code unless @items;
 
 	push @code, "global \$runtime;\n\n";
 
 	my $first = 1;
-	foreach my $event (@events) {
-		push @code, $self->compile_path($event, $first);
+	foreach my $item (@items) {
+		push @code, $self->compile_path($item, $first);
 		push @code, "\n";
 		$first = 0;
 	}
@@ -330,15 +330,15 @@ sub compile_plugin_route_action {
 	$self->{context_args_variable} = '$args';
 	$self->{block_context_type} = 'plugin_route_action';
 
-	my @events;
-	@events = (@events, @{$plugin->{action_hooks}}) if exists $plugin->{action_hooks};
-	return @code unless @events;
+	my @items;
+	@items = (@items, @{$plugin->{action_hooks}}) if exists $plugin->{action_hooks};
+	return @code unless @items;
 
 	push @code, "global \$runtime;\n\n";
 
 	my $first = 1;
-	foreach my $event (@events) {
-		push @code, $self->compile_path($event, $first);
+	foreach my $item (@items) {
+		push @code, $self->compile_path($item, $first);
 		push @code, "\n";
 		$first = 0;
 	}
@@ -349,6 +349,37 @@ sub compile_plugin_route_action {
 
 	@code = map "\t$_", @code;
 	@code = ("public function route_action_hook (\$action, array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_plugin_route_path {
+	my ($self, $plugin) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'plugin_route_path';
+
+	my @items;
+	@items = (@items, @{$plugin->{controller_route_hooks}}) if exists $plugin->{controller_route_hooks};
+	return @code unless @items;
+
+	push @code, "global \$runtime;\n\n";
+
+	my $first = 1;
+	foreach my $item (@items) {
+		push @code, $self->compile_path($item, $first);
+		push @code, "\n";
+		$first = 0;
+	}
+
+	push @code, "} else {\n";
+	push @code, "\tparent::route_path_hook(\$controller, \$req, \$res);\n";
+	push @code, "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function route_path_hook (\$controller, \\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n",
+			@code, "}\n", "\n");
 
 	return @code
 }
@@ -557,11 +588,13 @@ sub compile_path {
 		$target = "event hook \"$path->{controller_class}:$path->{identifier}\"";
 	} elsif ($path->{type} eq 'action_hook') {
 		$target = "action hook \"$path->{controller_class}:$path->{identifier}\"";
+	} elsif ($path->{type} eq 'controller_route_hook') {
+		$target = "controller route hook \"$path->{controller_class}\"";
 	} else {
 		$target = "path \"$path->{path}\"";
 	}
 
-	push @code, $self->compile_path_arguments_validation($path->{arguments}, $target);
+	push @code, $self->compile_path_arguments_validation($path->{arguments}, $target) if exists $path->{arguments};
 
 	push @code, $self->compile_action_block($path->{block});
 
@@ -578,6 +611,8 @@ sub compile_path {
 		$condition_code = "\$event === '$path->{controller_class}:$path->{identifier}'";
 	} elsif ($path->{type} eq 'action_hook') {
 		$condition_code = "\$action === '$path->{controller_class}:$path->{identifier}'";
+	} elsif ($path->{type} eq 'controller_route_hook') {
+		$condition_code = "\$controller === '$path->{controller_class}'";
 	}
 
 	if (defined $condition_code) {
@@ -757,7 +792,7 @@ sub compile_action {
 		my $args_argument = exists $action->{arguments}{args}
 				? $self->compile_expression($action->{arguments}{args}) : $self->{context_args_variable};
 		# my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$this->route_subcontroller('$class', $path_argument, $args_argument, \$res);\n"
+		return "\$runtime->route_controller_path('$class', $path_argument, $args_argument, \$res);\n"
 
 	} elsif ($action->{type} eq 'return_statement') {
 		return "return;\n"
