@@ -408,6 +408,17 @@ object context plugin_block {
 				block => []
 			}
 		}
+		'action' => {
+			match $identifier_regex
+
+			$_{actions}[] = !path_action_block->{
+				type => 'action_block'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
 		default {
 			return
 		}
@@ -728,24 +739,24 @@ object context path_action_block_list {
 			}
 			match ';'
 		}
-		'shell_execute' => {
-			$_{block}[] = {
-				type => 'shell_execute'
-				line_number => $0{line_number}
-				arguments_list => !action_expression_list->[]
-			}
-			match ';'
-		}
-		'action' => {
-			match $identifier_regex
-			$_{block}[] = {
-				type => 'controller_action'
-				line_number => $0{line_number}
-				identifier => $1
-				arguments => !action_arguments->{}
-			}
-			match ';'
-		}
+		# 'shell_execute' => {
+		# 	$_{block}[] = {
+		# 		type => 'shell_execute'
+		# 		line_number => $0{line_number}
+		# 		arguments_list => !action_expression_list->[]
+		# 	}
+		# 	match ';'
+		# }
+		# 'action' => {
+		# 	match $identifier_regex
+		# 	$_{block}[] = {
+		# 		type => 'controller_action'
+		# 		line_number => $0{line_number}
+		# 		identifier => $1
+		# 		arguments => !action_arguments->{}
+		# 	}
+		# 	match ';'
+		# }
 		'route' => {
 			match $class_identifier_regex
 			$_{block}[] = {
@@ -1070,6 +1081,16 @@ object context action_expression {
 				type => 'shell_execute_expression'
 				line_number => $0{line_number}
 				arguments_list => !action_expression_list->[]
+			}
+			return
+		}
+		'action', 'plugins', '.', $identifier_regex, ':', $identifier_regex => {
+			$_ = {
+				type => 'plugin_action_expression'
+				line_number => $0{line_number}
+				plugin_identifier => $3
+				action_identifier => $5
+				arguments => !action_arguments->{}
 			}
 			return
 		}

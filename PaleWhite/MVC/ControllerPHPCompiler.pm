@@ -209,6 +209,7 @@ sub compile_plugin {
 	push @code, $self->compile_plugin_route_action($plugin);
 	push @code, $self->compile_plugin_route_path($plugin);
 	push @code, $self->compile_plugin_route_ajax($plugin);
+	push @code, $self->compile_controller_action($plugin);
 	
 	@code = map "\t$_", @code;
 	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
@@ -811,13 +812,13 @@ sub compile_action {
 		return "\$runtime->schedule_event(get_called_class(), '$action->{controller_identifier}', "
 				. "'$action->{event_identifier}', $arguments);\n"
 
-	} elsif ($action->{type} eq 'shell_execute') {
-		my $arguments_list = $self->compile_expression_list($action->{arguments_list});
-		return "\$runtime->shell_execute(get_called_class(), array($arguments_list));\n"
+	# } elsif ($action->{type} eq 'shell_execute') {
+	# 	my $arguments_list = $self->compile_expression_list($action->{arguments_list});
+	# 	return "\$runtime->shell_execute(get_called_class(), array($arguments_list));\n"
 
-	} elsif ($action->{type} eq 'controller_action') {
-		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$runtime->trigger_action(get_called_class(), '$action->{identifier}', $arguments);\n"
+	# } elsif ($action->{type} eq 'controller_action') {
+	# 	my $arguments = $self->compile_arguments_array($action->{arguments});
+	# 	return "\$runtime->trigger_action(get_called_class(), '$action->{identifier}', $arguments);\n"
 
 	} elsif ($action->{type} eq 'route_controller') {
 		my $class = $self->format_classname($action->{identifier});
@@ -899,7 +900,11 @@ sub compile_action {
 	} elsif ($action->{type} eq 'if_statement') {
 		my $expression = $self->compile_expression($action->{expression});
 		my @block = map "\t$_", $self->compile_action_block($action->{block});
-		return "if ($expression) {\n", @block, "}\n"
+		if ($action->{expression}{type} eq 'access_expression') {
+			return "if (isset($expression) && ($expression)) {\n", @block, "}\n"
+		} else {
+			return "if ($expression) {\n", @block, "}\n"
+		}
 
 	} elsif ($action->{type} eq 'else_statement') {
 		my @block = map "\t$_", $self->compile_action_block($action->{block});
@@ -918,7 +923,10 @@ sub compile_action {
 		return "\$runtime->set_session_variable('$action->{identifier}', $expression);\n"
 
 	} elsif ($action->{type} eq 'expression_statement') {
-		if ($action->{expression}{type} ne 'method_call_expression') {
+		if ($action->{expression}{type} ne 'method_call_expression'
+				and $action->{expression}{type} ne 'shell_execute_expression'
+				and $action->{expression}{type} ne 'plugin_action_expression'
+				and $action->{expression}{type} ne 'controller_action_expression') {
 			die "expression statement cannot be of type '$action->{expression}{type}'"
 				. " on line $action->{expression}{line_number}";
 		}
@@ -1021,6 +1029,10 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'shell_execute_expression') {
 		my $arguments_list = $self->compile_expression_list($expression->{arguments_list});
 		return "\$runtime->shell_execute(get_called_class(), array($arguments_list))"
+
+	} elsif ($expression->{type} eq 'plugin_action_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "\$runtime->plugins->$expression->{plugin_identifier}\->action('$expression->{action_identifier}', $arguments)"
 
 	} elsif ($expression->{type} eq 'controller_action_expression') {
 		my $arguments = $self->compile_arguments_array($expression->{arguments});

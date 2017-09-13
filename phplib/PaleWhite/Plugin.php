@@ -34,6 +34,10 @@ abstract class Plugin {
 	public function route_ajax_hook ($controller, Request $req, Response $res) {
 		throw new \PaleWhite\InvalidException("undefined controller ajax hook routed: '$controller'");
 	}
+
+	public function action ($action, array $args) {
+		throw new \PaleWhite\InvalidException("undefined action requested: '$action'");
+	}
 }
 
 
