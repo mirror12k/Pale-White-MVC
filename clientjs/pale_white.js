@@ -148,6 +148,34 @@ pale_white = {
 		}
 		return data;
 	},
+	api_request: function (url, args, callback) {
+		var xhr = new XMLHttpRequest();
+		xhr.open("POST", url, true);
+		xhr.setRequestHeader("X-Requested-With", "pale_white/api");
+		xhr.addEventListener('readystatechange', function () {
+			if (xhr.readyState == 4) {
+				if (xhr.response === "") {
+					console.log("[PaleWhite] empty response!");
+					response = {};
+				} else {
+					response = JSON.parse(xhr.response);
+				}
+				if (callback)
+					callback(response);
+			}
+		});
+		
+		if (args instanceof FormData) {
+			// xhr.setRequestHeader("Content-Type", "multipart/form-data");
+			args.append("_csrf_token", pale_white.get_csrf_token());
+			xhr.send(args);
+
+		} else {
+			xhr.setRequestHeader("Content-Type", "application/json");
+			args._csrf_token = pale_white.get_csrf_token();
+			xhr.send(JSON.stringify(args));
+		}
+	},
 	html_nodes: function (html_text) {
 		var newdom = document.createElement('div');
 		newdom.innerHTML = html_text;

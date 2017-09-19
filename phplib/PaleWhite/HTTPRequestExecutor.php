@@ -27,22 +27,8 @@ class HTTPRequestExecutor {
 		// setup runtime
 		global $runtime;
 		$runtime = new PHPRuntime();
-		// $runtime = array(
-		// 	'current_localization' => (string)$config['default_localization'],
-		// );
-
-		// process the path
-		// $url = parse_url(urldecode($_SERVER['REQUEST_URI']));
-		// $path = $url['path'];
-		// $path = substr($path, strlen($config['site_base']));
-
-
-
-
 
 		try {
-
-
 			// set up the global environment
 			$runtime->initialize_plugins();
 			$runtime->initialize_http();
@@ -69,12 +55,11 @@ class HTTPRequestExecutor {
 					throw new \PaleWhite\ValidationException("all ajax actions require a valid _csrf_token");
 			}
 
-			// if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && (string)$_SERVER['HTTP_X_REQUESTED_WITH'] === 'pale_white/ajax') {
 			if ($runtime->is_ajax) {
-				// $is_ajax = true;
 				$runtime->log_message(get_called_class(), "routing ajax '$runtime->path'");
+			} elseif ($runtime->is_api) {
+				$runtime->log_message(get_called_class(), "routing api '$runtime->path'");
 			} else {
-				// $is_ajax = false;
 				$runtime->log_message(get_called_class(), "routing '$runtime->path'");
 			}
 
@@ -84,11 +69,12 @@ class HTTPRequestExecutor {
 			if ($runtime->is_ajax) {
 				$runtime->route_controller_ajax($controller_class,
 						$runtime->request->path, $runtime->request->args, $runtime->response);
-				// $controller->route_ajax($runtime->request, $runtime->response);
+			} elseif ($runtime->is_api) {
+				$runtime->route_controller_api($controller_class,
+						$runtime->request->path, $runtime->request->args, $runtime->response);
 			} else {
 				$runtime->route_controller_path($controller_class,
 						$runtime->request->path, $runtime->request->args, $runtime->response);
-				// $controller->route($runtime->request, $runtime->response);
 			}
 
 			// if an exception didnt occur, we now got to processing the response and sending it

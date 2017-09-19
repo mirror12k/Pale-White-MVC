@@ -11,6 +11,7 @@ class PHPRuntime {
 	public $site_url;
 
 	public $is_ajax;
+	public $is_api;
 	public $request;
 	public $response;
 	public $csrf_token;
@@ -60,10 +61,12 @@ class PHPRuntime {
 
 		$this->site_url = $protocol.$domain;
 
+		$this->is_ajax = false;
+		$this->is_api = false;
 		if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && (string)$_SERVER['HTTP_X_REQUESTED_WITH'] === 'pale_white/ajax') {
 			$this->is_ajax = true;
-		} else {
-			$this->is_ajax = false;
+		} elseif (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && (string)$_SERVER['HTTP_X_REQUESTED_WITH'] === 'pale_white/api') {
+			$this->is_api = true;
 		}
 
 
