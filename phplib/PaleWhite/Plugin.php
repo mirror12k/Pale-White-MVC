@@ -17,6 +17,9 @@ abstract class Plugin {
 
 		foreach ($this->controller_ajax_hooks as $hook_id)
 			$runtime->register_controller_ajax_hook($hook_id, array($this, 'route_ajax_hook'));
+
+		foreach ($this->controller_api_hooks as $hook_id)
+			$runtime->register_controller_api_hook($hook_id, array($this, 'route_api_hook'));
 	}
 
 	public function route_event_hook ($event, array $args) {
@@ -33,6 +36,10 @@ abstract class Plugin {
 
 	public function route_ajax_hook ($controller, Request $req, Response $res) {
 		throw new \PaleWhite\InvalidException("undefined controller ajax hook routed: '$controller'");
+	}
+
+	public function route_api_hook ($controller, Request $req, Response $res) {
+		throw new \PaleWhite\InvalidException("undefined controller api hook routed: '$controller'");
 	}
 
 	public function action ($action, array $args) {

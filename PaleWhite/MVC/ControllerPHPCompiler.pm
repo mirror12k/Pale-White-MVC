@@ -202,6 +202,7 @@ sub compile_plugin {
 	push @code, $self->compile_plugin_action_hooks($plugin);
 	push @code, $self->compile_plugin_controller_route_hooks($plugin);
 	push @code, $self->compile_plugin_controller_ajax_hooks($plugin);
+	push @code, $self->compile_plugin_controller_api_hooks($plugin);
 
 	push @code, "\n";
 
@@ -209,6 +210,7 @@ sub compile_plugin {
 	push @code, $self->compile_plugin_route_action($plugin);
 	push @code, $self->compile_plugin_route_path($plugin);
 	push @code, $self->compile_plugin_route_ajax($plugin);
+	push @code, $self->compile_plugin_route_api($plugin);
 	push @code, $self->compile_controller_action($plugin);
 	
 	@code = map "\t$_", @code;
@@ -288,6 +290,25 @@ sub compile_plugin_controller_ajax_hooks {
 		push @code, ");\n";
 	} else {
 		push @code, "public \$controller_ajax_hooks = array();\n";
+	}
+
+	return @code
+}
+
+sub compile_plugin_controller_api_hooks {
+	my ($self, $plugin) = @_;
+
+	my @code;
+
+	$plugin->{controller_api_hooks} //= [];
+	if (@{$plugin->{controller_api_hooks}}) {
+		push @code, "public \$controller_api_hooks = array(\n";
+		foreach my $event (@{$plugin->{controller_api_hooks}}) {
+			push @code, "\t'$event->{controller_class}',\n";
+		}
+		push @code, ");\n";
+	} else {
+		push @code, "public \$controller_api_hooks = array();\n";
 	}
 
 	return @code
@@ -415,6 +436,37 @@ sub compile_plugin_route_ajax {
 	return @code
 }
 
+sub compile_plugin_route_api {
+	my ($self, $plugin) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'plugin_route_api';
+
+	my @items;
+	@items = (@items, @{$plugin->{controller_api_hooks}}) if exists $plugin->{controller_api_hooks};
+	return @code unless @items;
+
+	push @code, "global \$runtime;\n\n";
+
+	my $first = 1;
+	foreach my $item (@items) {
+		push @code, $self->compile_path($item, $first);
+		push @code, "\n";
+		$first = 0;
+	}
+
+	push @code, "} else {\n";
+	push @code, "\tparent::route_api_hook(\$controller, \$req, \$res);\n";
+	push @code, "}\n";
+
+	@code = map "\t$_", @code;
+	@code = ("public function route_api_hook (\$controller, \\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n",
+			@code, "}\n", "\n");
+
+	return @code
+}
+
 
 
 
@@ -434,6 +486,7 @@ sub compile_controller {
 
 	push @code, $self->compile_controller_route($controller);
 	push @code, $self->compile_controller_route_ajax($controller);
+	push @code, $self->compile_controller_route_api($controller);
 	push @code, $self->compile_controller_route_event($controller);
 	push @code, $self->compile_controller_validate($controller);
 	push @code, $self->compile_controller_action($controller);
@@ -541,6 +594,45 @@ sub compile_controller_route_ajax {
 	@code = map "\t$_", @code;
 
 	@code = ("public function route_ajax (\\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_controller_route_api {
+	my ($self, $controller) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$req->args';
+	$self->{block_context_type} = 'controller_route_api';
+
+	my @paths;
+	@paths = (@paths, @{$controller->{global_api_paths}}) if exists $controller->{global_api_paths};
+	@paths = (@paths, @{$controller->{api_paths}}) if exists $controller->{api_paths};
+	return @code unless @paths;
+
+	push @code, "parent::route_api(\$req, \$res);\n";
+	push @code, "global \$runtime;\n\n";
+	my $first = 1;
+	foreach my $path (@paths) {
+		push @code, $self->compile_path($path, $first);
+		push @code, "\n";
+		$first = 0 if $path->{type} eq 'match_path';
+	}
+
+	if (exists $controller->{default_api_path}) {
+		push @code, "} else {\n";
+		push @code, map "\t$_", $self->compile_path($controller->{default_api_path});
+	}
+	push @code, "}\n";
+
+	if (exists $controller->{error_api_path}) {
+		@code = map "\t$_", @code;
+		my @exception_code = map "\t$_", $self->compile_path($controller->{error_api_path});
+		@code = ("try {\n", @code, "} catch (\\Exception \$e) {\n", @exception_code, "}\n");
+	}
+	@code = map "\t$_", @code;
+
+	@code = ("public function route_api (\\PaleWhite\\Request \$req, \\PaleWhite\\Response \$res) {\n", @code, "}\n", "\n");
 
 	return @code
 }
@@ -831,6 +923,8 @@ sub compile_action {
 			return "\$runtime->route_controller_path('$class', $path_argument, $args_argument, \$res);\n"
 		} elsif ($self->{block_context_type} eq 'controller_route_ajax' or $self->{block_context_type} eq 'plugin_route_ajax') {
 			return "\$runtime->route_controller_ajax('$class', $path_argument, $args_argument, \$res);\n"
+		} elsif ($self->{block_context_type} eq 'controller_route_api' or $self->{block_context_type} eq 'plugin_route_api') {
+			return "\$runtime->route_controller_api('$class', $path_argument, $args_argument, \$res);\n"
 		} else {
 			die "attempt to route controller in invalid context '$self->{block_context_type}' on line $action->{line_number}";
 		}

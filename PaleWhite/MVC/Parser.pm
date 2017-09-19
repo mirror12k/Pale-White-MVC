@@ -406,6 +406,36 @@ sub context_controller_block {
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{ajax_paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_interpolated_string_path([]), arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'api' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'global') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			push @{$context_object->{global_api_paths}}, $self->context_path_action_block({ type => 'global_path', line_number => $tokens[0][2], arguments => $self->context_optional_arguments_list([]), block => [], });
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'api' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'default') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object->{default_api_path} = $self->context_path_action_block({ type => 'default_path', line_number => $tokens[0][2], arguments => [], block => [], });
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'api' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'error') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object->{error_api_path} = $self->context_path_action_block({ type => 'error_path', line_number => $tokens[0][2], arguments => [], block => [], });
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'api' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_string_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			push @{$context_object->{api_paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_format_string($tokens[1][1]), arguments => $self->context_optional_arguments_list([]), block => [], });
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'api') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{api_paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_interpolated_string_path([]), arguments => $self->context_optional_arguments_list([]), block => [], });
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'event') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -481,6 +511,15 @@ sub context_plugin_block {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_class_identifier_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{controller_ajax_hooks}}, $self->context_path_action_block({ type => 'controller_ajax_hook', line_number => $tokens[0][2], controller_class => $tokens[3][1], block => [], });
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'hook' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'controller' and $self->{tokens}[$self->{tokens_index} + 2][1] eq 'api') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(3));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_class_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{controller_api_hooks}}, $self->context_path_action_block({ type => 'controller_api_hook', line_number => $tokens[0][2], controller_class => $tokens[3][1], block => [], });
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action') {
 			my @tokens_freeze = @tokens;

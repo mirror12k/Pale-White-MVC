@@ -8,6 +8,7 @@ abstract class Controller {
 
 	public function route (Request $req, Response $res) {}
 	public function route_ajax (Request $req, Response $res) {}
+	public function route_api (Request $req, Response $res) {}
 
 	public function route_event ($event, array $args) {
 		throw new \PaleWhite\InvalidException("undefined event requested: '$event'");

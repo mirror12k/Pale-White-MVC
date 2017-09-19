@@ -327,6 +327,48 @@ object context controller_block {
 				block => []
 			}
 		}
+		'api', 'global' => {
+			$_{global_api_paths}[] = !path_action_block->{
+				type => 'global_path'
+				line_number => $0{line_number}
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
+		'api', 'default' => {
+			$_{default_api_path} = !path_action_block->{
+				type => 'default_path'
+				line_number => $0{line_number}
+				arguments => []
+				block => []
+			}
+		}
+		'api', 'error' => {
+			$_{error_api_path} = !path_action_block->{
+				type => 'error_path'
+				line_number => $0{line_number}
+				arguments => []
+				block => []
+			}
+		}
+		'api', $string_regex => {
+			$_{api_paths}[] = !path_action_block->{
+				type => 'match_path'
+				line_number => $0{line_number}
+				path => !format_string->$1
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
+		'api' => {
+			$_{api_paths}[] = !path_action_block->{
+				type => 'match_path'
+				line_number => $0{line_number}
+				path => !interpolated_string_path->[]
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
 		'event' => {
 			match $identifier_regex
 			$_{controller_events}[] = !path_action_block->{
@@ -403,6 +445,15 @@ object context plugin_block {
 			match $class_identifier_regex
 			$_{controller_ajax_hooks}[] = !path_action_block->{
 				type => 'controller_ajax_hook'
+				line_number => $0{line_number}
+				controller_class => $3
+				block => []
+			}
+		}
+		'hook', 'controller', 'api' => {
+			match $class_identifier_regex
+			$_{controller_api_hooks}[] = !path_action_block->{
+				type => 'controller_api_hook'
 				line_number => $0{line_number}
 				controller_class => $3
 				block => []
