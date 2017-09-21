@@ -12,10 +12,12 @@ class PHPRuntime {
 
 	public $is_ajax;
 	public $is_api;
+	public $remote_address;
+
 	public $request;
 	public $response;
-	public $csrf_token;
 
+	public $csrf_token;
 	public $database;
 
 	public $controller_cache = array();
@@ -60,6 +62,8 @@ class PHPRuntime {
 		$domain = $_SERVER['HTTP_HOST'];
 
 		$this->site_url = $protocol.$domain;
+
+		$this->remote_address = $_SERVER['REMOTE_ADDR'];
 
 		$this->is_ajax = false;
 		$this->is_api = false;
