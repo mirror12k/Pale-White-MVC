@@ -23,10 +23,10 @@ global $runtime;
 
 // base model class which provides a lot of magic methods for compiled models
 abstract class Model {
-	public $_data;
+	private $_data;
 	private $_loaded = array();
 
-	public function __construct(array $data) {
+	private function __construct(array $data) {
 		$this->_data = $data;
 	}
 
@@ -44,6 +44,15 @@ abstract class Model {
 				$this->_data[$name] = static::load_array_data($this->_data['id'], $name);
 				if (isset(static::$model_submodel_properties[$name]))
 					$this->_data[$name] = static::get_lazy_loaded_model_array($name, $this->_data[$name]);
+				$this->_loaded[$name] = true;
+			}
+			return $this->_data[$name];
+
+		} elseif (isset(static::$model_map_properties[$name])) {
+			if (!isset($this->_loaded[$name])) {
+				$this->_data[$name] = static::load_map_data($this->_data['id'], $name);
+				if (isset(static::$model_submodel_properties[$name]))
+					$this->_data[$name] = static::get_lazy_loaded_model_map($name, $this->_data[$name]);
 				$this->_loaded[$name] = true;
 			}
 			return $this->_data[$name];
@@ -86,7 +95,10 @@ abstract class Model {
 
 		$result = $query->fetch();
 		if ($result === true) {
-			$this->_data[$array_name][] = $value;
+			// write value to loaded data
+			if (isset($this->_loaded[$array_name]))
+				$this->_data[$array_name][] = $value;
+
 			return true;
 		} else {
 			return false;
@@ -185,6 +197,52 @@ abstract class Model {
 		return $result;
 	}
 
+	public function map_add($map_name, $key, $value) {
+		if (!isset(static::$model_map_properties[$map_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to map_add() undefined model property '$map_name' in model class: " . get_called_class());
+
+		global $runtime;
+		$query = $runtime->database->insert()
+				->table(static::$table_name . '__map_property__' . $map_name)
+				->values(array(
+					'parent_id' => $this->_data['id'],
+					'map_key' => $key,
+					'value' => static::cast_to_store($map_name, $value),
+				));
+
+		$result = $query->fetch();
+		if ($result === true) {
+			// write value to loaded data
+			if (isset($this->_loaded[$map_name]))
+				$this->_data[$map_name][$key] = $value;
+
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	public function map_remove($map_name, $key) {
+		if (!isset(static::$model_map_properties[$map_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to map_remove() undefined model property '$map_name' in model class: " . get_called_class());
+
+		global $runtime;
+		$query = $runtime->database->delete()
+				->table(static::$table_name . '__map_property__' . $map_name)
+				->values(array(
+					'parent_id' => $this->_data['id'],
+					'map_key' => $key,
+				));
+
+		if (isset($limit))
+			$query->limit($limit);
+
+		$result = $query->fetch();
+		return $result;
+	}
+
 	public function matches_hashed_field($name, $value) {
 		if (!isset(static::$model_properties[$name]) || static::$model_properties[$name] !== 'salted_sha256')
 			throw new \PaleWhite\InvalidException(
@@ -209,10 +267,17 @@ abstract class Model {
 		unset(static::$_model_cache['id'][$this->_data['id']]);
 
 		foreach (static::$model_array_properties as $field => $field_type) {
-			$loaded[$field] = static::load_array_data($data['id'], $field);
+			// $loaded[$field] = static::load_array_data($data['id'], $field);
 
 			$query = $runtime->database->delete()
 					->table(static::$table_name . '__array_property__' . $field)
+					->where(array('parent_id' => $this->_data['id']));
+			$query->fetch();
+		}
+
+		foreach (static::$model_map_properties as $field => $field_type) {
+			$query = $runtime->database->delete()
+					->table(static::$table_name . '__map_property__' . $field)
 					->where(array('parent_id' => $this->_data['id']));
 			$query->fetch();
 		}
@@ -232,10 +297,15 @@ abstract class Model {
 		return static::get_by(array('id' => $id));
 	}
 
-	public static function get_multiple_by_id(array $ids_list) {
+	private static function get_multiple_by_id(array $ids) {
 		// // return cached item if available
 		// if (isset(static::$_model_cache['id'][$id]))
 		// 	return static::$_model_cache['id'][$id];
+
+		$ids_list = array();
+		foreach ($ids as $key => $id) {
+			$ids_list[] = $id;
+		}
 
 		// retrieve the items as a list
 		$items = static::get_list(array('id' => $ids_list));
@@ -246,8 +316,8 @@ abstract class Model {
 
 		// reorder the items by the given ids_list order
 		$results = array();
-		foreach ($ids_list as $id)
-			$results[] = isset($items_by_id[$id]) ? $items_by_id[$id] : null;
+		foreach ($ids as $key => $id)
+			$results[$key] = isset($items_by_id[$id]) ? $items_by_id[$id] : null;
 
 		return $results;
 	}
@@ -427,6 +497,29 @@ abstract class Model {
 		return $array;
 	}
 
+	private static function load_map_data($id, $field, $args = array()) {
+		global $runtime;
+		$query = $runtime->database->select()
+				->table(static::$table_name . '__map_property__' . $field)
+				->fields(array('map_key', 'value'))
+				->where(array('parent_id' => $id));
+
+		if (isset($args['limit']))
+			$query->limit($args['limit']);
+		if (isset($args['offset']))
+			$query->offset($args['offset']);
+		if (isset($args['order']))
+			$query->order($args['order']);
+
+		$result = $query->fetch();
+
+		$array = array();
+		foreach ($result as $row)
+			$array[$row['map_key']] = static::cast_from_store($field, $row['value']);
+
+		return $array;
+	}
+
 	private static function store_data(array $data) {
 		$stored = array();
 		foreach ($data as $field => $value) {
@@ -442,10 +535,17 @@ abstract class Model {
 	}
 
 	private static function store_array_data($field, $value) {
-		$stored_array = array();
+		$stored = array();
 		foreach ($value as $item)
-			$stored_array[] = static::cast_to_store($field, $item);
-		return $stored_array;
+			$stored[] = static::cast_to_store($field, $item);
+		return $stored;
+	}
+
+	private static function store_map_data($field, $value) {
+		$stored = array();
+		foreach ($value as $key => $item)
+			$stored[$key] = static::cast_to_store($field, $item);
+		return $stored;
 	}
 
 	public static function cast_to_store($name, $value) {
@@ -539,6 +639,17 @@ abstract class Model {
 		if (count($value) === 0)
 			return array();
 		$class = static::$model_submodel_properties[$name];
+		return $class::get_multiple_by_id($value);
+	}
+
+	private static function get_lazy_loaded_model_map($name, $value) {
+		if (!isset(static::$model_map_properties[$name]))
+			throw new \PaleWhite\InvalidException(
+					"attempt to lazy load non-model property '$name' in model class: " . get_called_class());
+		
+		if (count($value) === 0)
+			return array();
+		$class = static::$model_map_properties[$name];
 		return $class::get_multiple_by_id($value);
 	}
 

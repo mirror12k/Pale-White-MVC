@@ -63,6 +63,8 @@ pale_white = {
 		return token.getAttribute("content");
 	},
 	ajax: function (url, args, callback) {
+		url = this.get_site_base() + url;
+
 		var xhr = new XMLHttpRequest();
 		xhr.open("POST", url, true);
 		xhr.setRequestHeader("X-Requested-With", "pale_white/ajax");

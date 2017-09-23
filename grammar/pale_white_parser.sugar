@@ -216,7 +216,7 @@ object context model_property_type_modifiers {
 				type => 'model_key_property'
 				line_number => $0{line_number}
 				property_type => 'int'
-				identifier => 'key'
+				identifier => 'map_key'
 				modifiers => {
 					unique => 'enabled'
 				}
@@ -227,7 +227,7 @@ object context model_property_type_modifiers {
 				type => 'model_key_property'
 				line_number => $0{line_number}
 				property_type => 'string'
-				identifier => 'key'
+				identifier => 'map_key'
 				modifiers => {
 					unique => 'enabled'
 					property_size => $3
