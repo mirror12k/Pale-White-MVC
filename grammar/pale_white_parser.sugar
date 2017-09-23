@@ -211,6 +211,29 @@ object context model_property_type_modifiers {
 		'[', ']' => {
 			$_{array_property} = 'enabled'
 		}
+		'{', 'int', '}' => {
+			$_{map_property} = {
+				type => 'model_key_property'
+				line_number => $0{line_number}
+				property_type => 'int'
+				identifier => 'key'
+				modifiers => {
+					unique => 'enabled'
+				}
+			}
+		}
+		'{', 'string', '[', $integer_regex, ']', '}' => {
+			$_{map_property} = {
+				type => 'model_key_property'
+				line_number => $0{line_number}
+				property_type => 'string'
+				identifier => 'key'
+				modifiers => {
+					unique => 'enabled'
+					property_size => $3
+				}
+			}
+		}
 		default {
 			return
 		}

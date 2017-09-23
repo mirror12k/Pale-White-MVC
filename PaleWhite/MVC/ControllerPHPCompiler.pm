@@ -50,8 +50,11 @@ sub compile_model {
 	push @code, "public static \$table_name = '$model->{identifier}';\n\n";
 	push @code, "public static \$_model_cache = array('id' => array());\n";
 
-	my @model_properties = grep { not exists $_->{modifiers}{array_property} } @{$model->{properties}};
+	my @model_properties =
+			grep { not exists $_->{modifiers}{array_property} and not exists $_->{modifiers}{map_property} }
+			@{$model->{properties}};
 	my @model_array_properties = grep { exists $_->{modifiers}{array_property} } @{$model->{properties}};
+	my @model_map_properties = grep { exists $_->{modifiers}{map_property} } @{$model->{properties}};
 	my @model_submodel_properties = grep { $_->{type} eq 'model_pointer_property' } @{$model->{properties}};
 	my @model_file_properties = grep { $_->{type} eq 'file_pointer_property' } @{$model->{properties}};
 	my @model_json_properties = grep { $_->{type} eq 'model_property' and $_->{property_type} eq 'json' } @{$model->{properties}};
@@ -63,6 +66,14 @@ sub compile_model {
 		push @code, ");\n";
 	} else {
 		push @code, "public static \$model_properties = array();\n";
+	}
+
+	if (@model_map_properties) {
+		push @code, "public static \$model_map_properties = array(\n";
+		push @code, "\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @model_map_properties;
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$model_map_properties = array();\n";
 	}
 
 	if (@model_array_properties) {

@@ -290,6 +290,18 @@ sub context_model_property_type_modifiers {
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object->{array_property} = 'enabled';
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'int' and $self->{tokens}[$self->{tokens_index} + 2][1] eq '}') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(3));
+			$context_object->{map_property} = { type => 'model_key_property', line_number => $tokens[0][2], property_type => 'int', identifier => 'key', modifiers => { unique => 'enabled', }, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'string' and $self->{tokens}[$self->{tokens_index} + 2][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 4][1] eq ']' and $self->{tokens}[$self->{tokens_index} + 5][1] eq '}') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(6));
+			$context_object->{map_property} = { type => 'model_key_property', line_number => $tokens[0][2], property_type => 'string', identifier => 'key', modifiers => { unique => 'enabled', property_size => $tokens[3][1], }, };
+			}
 			else {
 			return $context_object;
 			}

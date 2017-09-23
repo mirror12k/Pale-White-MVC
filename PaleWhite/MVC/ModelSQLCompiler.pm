@@ -74,7 +74,9 @@ sub compile_model {
 	});
 	$model_properties{id} = 1;
 
-	foreach my $property (grep { not exists $_->{modifiers}{array_property} } @{$model->{properties}}) {
+	foreach my $property (
+			grep { not exists $_->{modifiers}{array_property} and not exists $_->{modifiers}{map_property} }
+			@{$model->{properties}}) {
 		die "duplicate property $property->{identifier} defined in model $model->{identifier}"
 				if exists $model_properties{$property->{identifier}};
 		$model_properties{$property->{identifier}} = 1;
@@ -101,6 +103,14 @@ sub compile_model {
 		push @code, compile_array_property($model, $property);
 	}
 
+	foreach my $property (grep { exists $_->{modifiers}{map_property} } @{$model->{properties}}) {
+		die "duplicate property $property->{identifier} defined in model $model->{identifier}"
+				if exists $model_properties{$property->{identifier}};
+		$model_properties{$property->{identifier}} = 1;
+
+		push @code, compile_map_property($model, $property);
+	}
+
 	return @code
 }
 
@@ -125,6 +135,46 @@ sub compile_array_property {
 		identifier => 'parent_id',
 		property_type => 'int',
 	});
+
+	# clone the property to set the identifier to 'value'
+	push @property_code, compile_property({ %$property, identifier => 'value' });
+
+	foreach (0 .. $#property_code - 1) {
+		$property_code[$_] .= ',';
+	}
+
+	push @code, map "\t$_\n", @property_code;
+
+	push @code, ");\n";
+	push @code, "\n";
+	push @code, "\n";
+	push @code, "\n";
+
+	return @code
+}
+
+sub compile_map_property {
+	my ($model, $property) = @_;
+
+	my @code;
+	push @code, "CREATE TABLE IF NOT EXISTS $model->{identifier}__map_property__$property->{identifier} (\n";
+	my @property_code;
+
+	push @property_code, compile_property({
+		type => 'implicit_model_property',
+		identifier => 'id',
+		property_type => 'int',
+		modifiers => {
+			auto_increment => 1,
+			unique_key => 1,
+		},
+	});
+	push @property_code, compile_property({
+		type => 'implicit_model_property',
+		identifier => 'parent_id',
+		property_type => 'int',
+	});
+	push @property_code, compile_property($property->{modifiers}{map_property});
 
 	# clone the property to set the identifier to 'value'
 	push @property_code, compile_property({ %$property, identifier => 'value' });
