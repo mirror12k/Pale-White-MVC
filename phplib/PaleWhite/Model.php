@@ -129,12 +129,11 @@ abstract class Model {
 
 		global $runtime;
 		$query = $runtime->database->select()
-				->fields(array('id'))
 				->table(static::$table_name . '__array_property__' . $array_name)
 				->where(array('parent_id' => $this->_data['id'], 'value' => static::cast_to_store($array_name, $value)));
 
 		$result = $query->fetch();
-		return count($result) > 0;
+		return $result > 0;
 	}
 
 	public function list_array($array_name, $args = array()) {
@@ -197,6 +196,27 @@ abstract class Model {
 		return $result;
 	}
 
+	public function map_get($map_name, $key) {
+		if (!isset(static::$model_map_properties[$map_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to map_get() undefined model property '$map_name' in model class: " . get_called_class());
+
+		global $runtime;
+		$query = $runtime->database->select()
+				->table(static::$table_name . '__map_property__' . $map_name)
+				->where(array('parent_id' => $this->_data['id'], 'map_key' => $key));
+
+		$result = $query->fetch();
+		if (count($result) > 0) {
+			$value = $result[0]['value'];
+			if (static::$model_submodel_properties[$map_name])
+				$value = static::get_lazy_loaded_model($name, $value);
+			return $value;
+		} else {
+			return null;
+		}
+	}
+
 	public function map_add($map_name, $key, $value) {
 		if (!isset(static::$model_map_properties[$map_name]))
 			throw new \PaleWhite\InvalidException(
@@ -240,6 +260,80 @@ abstract class Model {
 			$query->limit($limit);
 
 		$result = $query->fetch();
+		return $result;
+	}
+
+	public function map_contains($map_name, $key) {
+		if (!isset(static::$model_map_properties[$map_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to map_contains() undefined model property '$map_name' in model class: " . get_called_class());
+
+		global $runtime;
+		$query = $runtime->database->count()
+				->table(static::$table_name . '__map_property__' . $map_name)
+				->where(array('parent_id' => $this->_data['id'], 'map_key' => $key));
+
+		$result = $query->fetch();
+		return $result > 0;
+	}
+
+	public function map_list($map_name, $args = array()) {
+		if (!isset(static::$model_map_properties[$map_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to map_list() undefined model property '$map_name' in model class: " . get_called_class());
+
+		// parse args
+		$list_array_args = array();
+		foreach ($args as $name => $value) {
+			if ($name === '_limit')
+				$list_array_args['limit'] = $value;
+			elseif ($name === '_offset')
+				$list_array_args['offset'] = $value;
+			elseif ($name === '_order')
+				$list_array_args['order'] = $value;
+			else
+				throw new \PaleWhite\InvalidException("invalid list argument: '$name', in model class: " . get_called_class());
+		}
+
+		$result_array = static::load_map_data($this->_data['id'], $map_name, $list_array_args);
+		if (isset(static::$model_submodel_properties[$map_name]))
+			$result_array = static::get_lazy_loaded_model_map($map_name, $result_array);
+
+		return $result_array;
+	}
+
+	public function map_count($map_name, $args = array()) {
+		if (!isset(static::$model_map_properties[$map_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to map_count() undefined model property '$map_name' in model class: " . get_called_class());
+
+		// parse args
+		$count_array_args = array();
+		foreach ($args as $name => $value) {
+			if ($name === '_limit')
+				$count_array_args['limit'] = $value;
+			elseif ($name === '_offset')
+				$count_array_args['offset'] = $value;
+			elseif ($name === '_order')
+				$count_array_args['order'] = $value;
+			else
+				throw new \PaleWhite\InvalidException("invalid list argument: '$name', in model class: " . get_called_class());
+		}
+
+		global $runtime;
+		$query = $runtime->database->count()
+				->table(static::$table_name . '__map_property__' . $map_name)
+				->where(array('parent_id' => $this->_data['id']));
+
+		if (isset($count_array_args['limit']))
+			$query->limit($count_array_args['limit']);
+		if (isset($count_array_args['offset']))
+			$query->offset($count_array_args['offset']);
+		if (isset($count_array_args['order']))
+			$query->order($count_array_args['order']);
+
+		$result = $query->fetch();
+
 		return $result;
 	}
 
