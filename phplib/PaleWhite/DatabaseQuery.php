@@ -172,6 +172,8 @@ class DatabaseQuery {
 						$value = '\'' . $this->db->escape_string($value) . '\'';
 					} elseif (is_numeric($value)) {
 						$value = "$value";
+					} elseif ((is_array($value) || is_object($value)) && isset($value['increment'])) {
+						$value = "$field + " . (int)$value['increment'];
 					} else {
 						throw new \PaleWhite\InvalidException("invalid value type for where field $field: " . gettype($value));
 					}

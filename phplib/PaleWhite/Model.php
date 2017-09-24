@@ -19,8 +19,6 @@ namespace PaleWhite;
 // 	}
 // }
 
-global $runtime;
-
 // base model class which provides a lot of magic methods for compiled models
 abstract class Model {
 	private $_data;
@@ -81,6 +79,29 @@ abstract class Model {
 			throw new \PaleWhite\InvalidException(
 					"attempted to set undefined model property '$name' in model class: " . get_called_class());
 		}
+	}
+
+	public function increment($name, $increment=1) {
+		if ($name === 'id')
+			throw new \PaleWhite\InvalidException(
+					"attempted to increment model property 'id' in model class: " . get_called_class());
+		if (!isset(static::$model_properties[$name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to increment undefined model property '$name' in model class: " . get_called_class());
+		if (static::$model_properties[$name] !== 'int')
+			throw new \PaleWhite\InvalidException(
+					"attempted to increment non-int model property '$name' in model class: " . get_called_class());
+
+
+		global $runtime;
+		$query = $runtime->database->update()
+				->table(static::$table_name)
+				->where(array('id' => $this->_data['id']))
+				->values(array($name => array('increment' => $increment)));
+
+		$result = $query->fetch();
+
+		return $result;
 	}
 
 	public function add($array_name, $value) {
@@ -363,6 +384,22 @@ abstract class Model {
 			$query->offset($count_array_args['offset']);
 		if (isset($count_array_args['order']))
 			$query->order($count_array_args['order']);
+
+		$result = $query->fetch();
+
+		return $result;
+	}
+
+	public function map_increment($map_name, $key, $increment=1) {
+		if (!isset(static::$model_map_properties[$map_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to map_increment() undefined model property '$map_name' in model class: " . get_called_class());
+
+		global $runtime;
+		$query = $runtime->database->update()
+				->table(static::$table_name . '__map_property__' . $map_name)
+				->where(array('parent_id' => $this->_data['id'], 'map_key' => $key))
+				->values(array('value' => array('increment' => $increment)));
 
 		$result = $query->fetch();
 
