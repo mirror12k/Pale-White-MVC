@@ -236,7 +236,7 @@ abstract class Model {
 		if (count($result) > 0) {
 			$value = $result[0]['value'];
 			if (isset(static::$model_submodel_properties[$map_name]))
-				$value = static::get_lazy_loaded_model($name, $value);
+				$value = static::get_lazy_loaded_model($map_name, $value);
 			return $value;
 		} else {
 			return null;
