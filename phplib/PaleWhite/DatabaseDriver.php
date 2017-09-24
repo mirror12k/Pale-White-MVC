@@ -72,7 +72,13 @@ class DatabaseDriver {
 			$this->connect();
 
 		$query_string = $query->compile();
-		error_log("[PaleWhite] executing mysql query: '$query_string'");
+
+		if (strlen($query_string) > 1024)
+			$log_query = substr($query_string, 0, 1024) . '...';
+		else
+			$log_query = $query_string;
+
+		error_log("[PaleWhite] executing mysql query: '$log_query'");
 		$result = $this->mysql_connection->query($query_string);
 		if ($this->mysql_connection->error) {
 			throw new \PaleWhite\DatabaseException('Database query error: ' . $this->mysql_connection->error);

@@ -201,6 +201,11 @@ abstract class Model {
 			throw new \PaleWhite\InvalidException(
 					"attempted to map_get() undefined model property '$map_name' in model class: " . get_called_class());
 
+		// return the cached value if we have it loaded already
+		if (isset($this->_loaded[$map_name]))
+			return isset($this->_data[$map_name][$key]) ? $this->_data[$map_name][$key] : null;
+
+		// query the database for this entry
 		global $runtime;
 		$query = $runtime->database->select()
 				->table(static::$table_name . '__map_property__' . $map_name)
@@ -209,7 +214,7 @@ abstract class Model {
 		$result = $query->fetch();
 		if (count($result) > 0) {
 			$value = $result[0]['value'];
-			if (static::$model_submodel_properties[$map_name])
+			if (isset(static::$model_submodel_properties[$map_name]))
 				$value = static::get_lazy_loaded_model($name, $value);
 			return $value;
 		} else {
@@ -275,6 +280,33 @@ abstract class Model {
 
 		$result = $query->fetch();
 		return $result > 0;
+	}
+
+	public function map_list_keys($map_name, $args = array()) {
+		if (!isset(static::$model_map_properties[$map_name]))
+			throw new \PaleWhite\InvalidException(
+					"attempted to map_list() undefined model property '$map_name' in model class: " . get_called_class());
+
+		// parse args
+		$list_array_args = array();
+		foreach ($args as $name => $value) {
+			if ($name === '_limit')
+				$list_array_args['limit'] = $value;
+			elseif ($name === '_offset')
+				$list_array_args['offset'] = $value;
+			elseif ($name === '_order')
+				$list_array_args['order'] = $value;
+			else
+				throw new \PaleWhite\InvalidException("invalid list argument: '$name', in model class: " . get_called_class());
+		}
+
+		$result_array = static::load_map_data($this->_data['id'], $map_name, $list_array_args);
+
+		$map_keys = array();
+		foreach ($result_array as $key => $value)
+			$map_keys[] = $key;
+
+		return $map_keys;
 	}
 
 	public function map_list($map_name, $args = array()) {

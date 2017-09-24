@@ -28,7 +28,10 @@ pale_white = {
 		this.registered_hooks.forEach(function (hook) {
 			var nodes = dom.querySelectorAll(hook.selector);
 			for (var i = 0; i < nodes.length; i++) {
-				nodes[i].addEventListener(hook.event, hook.callback);
+				if (hook.event === 'load')
+					hook.callback.call(node);
+				else
+					nodes[i].addEventListener(hook.event, hook.callback);
 			}
 		});
 	},
