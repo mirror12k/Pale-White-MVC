@@ -49,6 +49,8 @@ sub compile_property {
 	$suffix .= " DEFAULT $property->{modifiers}{default}" if exists $property->{modifiers}{default};
 	$suffix .= " NOT NULL auto_increment" if exists $property->{modifiers}{auto_increment};
 	$suffix .= ", UNIQUE (`$identifier`)" if exists $property->{modifiers}{unique};
+	$suffix .= ", UNIQUE (" . join (', ', map "`$_`", $identifier, @{$property->{modifiers}{unique_with}}) . ')'
+			if exists $property->{modifiers}{unique_with};
 	$suffix .= ", UNIQUE KEY `$identifier` (`$identifier`)" if exists $property->{modifiers}{unique_key};
 
 	return "$identifier $type$suffix"
@@ -173,6 +175,9 @@ sub compile_map_property {
 		type => 'implicit_model_property',
 		identifier => 'parent_id',
 		property_type => 'int',
+		modifiers => {
+			unique_with => ['map_key'],
+		},
 	});
 	push @property_code, compile_property($property->{modifiers}{map_property});
 
