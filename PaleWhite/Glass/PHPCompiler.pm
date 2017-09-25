@@ -22,6 +22,11 @@ sub new {
 
 
 
+sub format_classname {
+	my ($self, $classname) = @_;
+	return "\\$classname" =~ s/::/\\/gr
+}
+
 sub flush_accumulator {
 	my ($self) = @_;
 
@@ -376,7 +381,9 @@ sub compile_argument_expression {
 			or $expression->{type} eq 'greather_than_or_equal_expression'
 			or $expression->{type} eq 'equals_expression'
 			or $expression->{type} eq 'array_expression'
-			or $expression->{type} eq 'object_expression') {
+			or $expression->{type} eq 'object_expression'
+			or $expression->{type} eq 'native_identifier_expression'
+			or $expression->{type} eq 'model_identifier_expression') {
 		die "error on line $expression->{line_number}: cannot use $expression->{type} directly in html";
 
 	} elsif ($expression->{type} eq 'interpolation_expression') {
@@ -438,10 +445,17 @@ sub compile_value_expression {
 		return "$sub_expression->$expression->{identifier}";
 
 	} elsif ($expression->{type} eq 'method_call_expression') {
-		my $sub_expression = $self->compile_value_expression($expression->{expression});
-		my $arguments_list = $self->compile_value_expression_list($expression->{arguments_list});
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return "$sub_expression->$expression->{identifier}($arguments_list)";
+		if ($expression->{expression}{type} eq 'native_identifier_expression'
+				or $expression->{expression}{type} eq 'model_identifier_expression') {
+			my $sub_expression = $self->format_classname($expression->{expression}{identifier});
+			my $arguments_list = $self->compile_value_expression_list($expression->{arguments_list});
+			return "$sub_expression\::$expression->{identifier}($arguments_list)";
+		} else {
+			my $sub_expression = $self->compile_value_expression($expression->{expression});
+			my $arguments_list = $self->compile_value_expression_list($expression->{arguments_list});
+			# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+			return "$sub_expression->$expression->{identifier}($arguments_list)";
+		}
 
 	} elsif ($expression->{type} eq 'array_expression') {
 		my $expression_list = $self->compile_value_expression_list($expression->{expression_list});

@@ -14,6 +14,9 @@ use feature 'say';
 ##### variables and settings
 ##############################
 
+our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
+our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
+our $var_native_identifier_regex = qr/native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
 our $var_string_interpolation_start_regex = qr/"([^\\"]|\\[\\"])*?\{\{/s;
 our $var_string_interpolation_middle_regex = qr/\}\}([^\\"]|\\[\\"])*?\{\{/s;
@@ -29,9 +32,15 @@ our $var_format_string_substitution = sub { $_[0] =~ s/\A"(.*)"\Z/$1/sr };
 our $var_format_string_interpolation_start_substitution = sub { $_[0] =~ s/\A"(.*)\{\{\Z/$1/sr };
 our $var_format_string_interpolation_middle_substitution = sub { $_[0] =~ s/\A\}\}(.*)\{\{\Z/$1/sr };
 our $var_format_string_interpolation_end_substitution = sub { $_[0] =~ s/\A\}\}(.*)"\Z/$1/sr };
+our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
+our $var_format_file_identifier_substitution = sub { $_[0] =~ s/\Afile:://sr };
+our $var_format_native_identifier_substitution = sub { $_[0] =~ s/\Anative:://sr };
 
 
 our $tokens = [
+	'model_identifier' => $var_model_identifier_regex,
+	'file_identifier' => $var_file_identifier_regex,
+	'native_identifier' => $var_native_identifier_regex,
 	'identifier' => $var_identifier_regex,
 	'string_interpolation_start' => $var_string_interpolation_start_regex,
 	'string_interpolation_middle' => $var_string_interpolation_middle_regex,
@@ -550,6 +559,20 @@ sub context_glass_argument_expression {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')';
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = $self->context_glass_more_expression($context_object);
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_model_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_more_expression({ type => 'model_identifier_expression', line_number => $tokens[0][2], identifier => $var_format_model_identifier_substitution->($tokens[0][1]), });
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_native_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_more_expression({ type => 'native_identifier_expression', line_number => $tokens[0][2], identifier => $var_format_native_identifier_substitution->($tokens[0][1]), });
 			return $context_object;
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
