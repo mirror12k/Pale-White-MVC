@@ -1031,7 +1031,8 @@ sub compile_action {
 		if ($action->{expression}{type} ne 'method_call_expression'
 				and $action->{expression}{type} ne 'shell_execute_expression'
 				and $action->{expression}{type} ne 'plugin_action_expression'
-				and $action->{expression}{type} ne 'controller_action_expression') {
+				and $action->{expression}{type} ne 'controller_action_expression'
+				and $action->{expression}{type} ne 'local_controller_action_expression') {
 			die "expression statement cannot be of type '$action->{expression}{type}'"
 				. " on line $action->{expression}{line_number}";
 		}
@@ -1140,8 +1141,13 @@ sub compile_expression {
 		return "\$runtime->plugins->$expression->{plugin_identifier}\->action('$expression->{action_identifier}', $arguments)"
 
 	} elsif ($expression->{type} eq 'controller_action_expression') {
+		my $class = $self->format_classname($expression->{controller_identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "\$runtime->trigger_action(get_called_class(), '$expression->{identifier}', $arguments)"
+		return "\$runtime->trigger_action('$class', '$expression->{action_identifier}', $arguments)"
+
+	} elsif ($expression->{type} eq 'local_controller_action_expression') {
+		my $arguments = $self->compile_arguments_array($expression->{arguments});
+		return "\$runtime->trigger_action(get_called_class(), '$expression->{action_identifier}', $arguments)"
 
 	} elsif ($expression->{type} eq 'string_expression') {
 		my $string = $expression->{value};

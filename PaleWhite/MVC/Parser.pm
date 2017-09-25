@@ -17,6 +17,7 @@ use feature 'say';
 our $var_native_code_block_regex = qr/\{\{.*?\}\}/s;
 our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\//;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
+our $var_controller_identifier_regex = qr/controller::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_native_identifier_regex = qr/native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_class_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
@@ -31,6 +32,7 @@ our $var_whitespace_regex = qr/\s++/s;
 our $var_event_identifier_regex = qr/create|delete/;
 our $var_format_native_code_substitution = sub { $_[0] =~ s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/sr };
 our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
+our $var_format_controller_identifier_substitution = sub { $_[0] =~ s/\Acontroller:://sr };
 our $var_format_file_identifier_substitution = sub { $_[0] =~ s/\Afile:://sr };
 our $var_format_native_identifier_substitution = sub { $_[0] =~ s/\Anative:://sr };
 our $var_escape_string_substitution = sub { $_[0] =~ s/\\([\\"])/$1/gsr };
@@ -44,6 +46,7 @@ our $var_format_event_identifier_substitution = sub { $_[0] =~ s/\A/on_/sr };
 our $tokens = [
 	'native_code_block' => $var_native_code_block_regex,
 	'model_identifier' => $var_model_identifier_regex,
+	'controller_identifier' => $var_controller_identifier_regex,
 	'file_identifier' => $var_file_identifier_regex,
 	'native_identifier' => $var_native_identifier_regex,
 	'class_identifier' => $var_class_identifier_regex,
@@ -1195,18 +1198,25 @@ sub context_action_expression {
 			$context_object = { type => 'plugin_action_expression', line_number => $tokens[0][2], plugin_identifier => $tokens[3][1], action_identifier => $tokens[5][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_controller_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 2][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			$context_object = { type => 'controller_action_expression', line_number => $tokens[0][2], controller_identifier => $var_format_controller_identifier_substitution->($tokens[1][1]), action_identifier => $tokens[3][1], arguments => $self->context_action_arguments({}), };
+			return $context_object;
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			$context_object = { type => 'controller_action_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
+			$context_object = { type => 'local_controller_action_expression', line_number => $tokens[0][2], action_identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'session' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(3));
-			$context_object = { type => 'session_variable_expression', line_number => $tokens[0][2], identifier => $tokens[2][1], };
+			$context_object = $self->context_more_action_expression({ type => 'session_variable_expression', line_number => $tokens[0][2], identifier => $tokens[2][1], });
 			return $context_object;
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'len' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '(') {

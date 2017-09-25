@@ -5,6 +5,7 @@ native_code_block_regex = /\{\{.*?\}\}/s
 symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\//
 # symbol_regex = /\{|\}|\[|\]|\(|\)|;/
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
+controller_identifier_regex = /controller::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 file_identifier_regex = /file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 native_identifier_regex = /native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 # keyword_regex = /\b(model|int|string|getter|setter|cast|to|from|static|function)\b/
@@ -26,6 +27,7 @@ event_identifier_regex = /create|delete/
 
 format_native_code_substitution = s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/s
 format_model_identifier_substitution = s/\Amodel:://s
+format_controller_identifier_substitution = s/\Acontroller:://s
 format_file_identifier_substitution = s/\Afile:://s
 format_native_identifier_substitution = s/\Anative:://s
 escape_string_substitution = s/\\([\\"])/$1/gs
@@ -41,6 +43,7 @@ tokens {
 	native_code_block => $native_code_block_regex
 
 	model_identifier => $model_identifier_regex
+	controller_identifier => $controller_identifier_regex
 	file_identifier => $file_identifier_regex
 	native_identifier => $native_identifier_regex
 	# keyword => $keyword_regex
@@ -1168,17 +1171,27 @@ object context action_expression {
 			}
 			return
 		}
-		'action', $identifier_regex => {
+		'action', $controller_identifier_regex, '.', $identifier_regex => {
 			$_ = {
 				type => 'controller_action_expression'
 				line_number => $0{line_number}
-				identifier => $1
+				controller_identifier => $format_controller_identifier_substitution->$1
+				action_identifier => $3
+				arguments => !action_arguments->{}
+			}
+			return
+		}
+		'action', $identifier_regex => {
+			$_ = {
+				type => 'local_controller_action_expression'
+				line_number => $0{line_number}
+				action_identifier => $1
 				arguments => !action_arguments->{}
 			}
 			return
 		}
 		'session', '.', $identifier_regex => {
-			$_ = {
+			$_ = !more_action_expression->{
 				type => 'session_variable_expression'
 				line_number => $0{line_number}
 				identifier => $2

@@ -149,7 +149,7 @@ abstract class Model {
 					"attempted to contains() undefined model property '$array_name' in model class: " . get_called_class());
 
 		global $runtime;
-		$query = $runtime->database->select()
+		$query = $runtime->database->count()
 				->table(static::$table_name . '__array_property__' . $array_name)
 				->where(array('parent_id' => $this->_data['id'], 'value' => static::cast_to_store($array_name, $value)));
 
