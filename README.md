@@ -1,7 +1,8 @@
 # Pale-White MVC Framework
 Pale-White is a model-view-controller framework designed to simplify design by abstracting away from php/sql/html.
 PaleWhite models and controllers are compiled to standard php classes to provide easy of support and debugging.
-A database abstraction layer allows full use of database-backed models without writing any database queries, and provides security against injection attacks like SQLi.
+A database abstraction layer allows full use of database-backed models without writing any database queries,
+and provides security against injection attacks like SQLi.
 A templating language based on Jade provides fast and extensible front-end development.
 More goodies are provided along the way.
 
@@ -11,8 +12,9 @@ also requires perl Make::SSH library to compile the example project.make's.
 
 ## Why?
 Standard php-mysql backend development tends to get bogged down quickly with security and conformity.
-Implementing template views, secure logins, file uploads, localization, and plugin apis, are always necessary when a project grows large enough.
-Pale-White provides tools simplify these jobs and prevent reinventing the wheel.
+Implementing template views, secure logins, file uploads, localization, and plugin apis,
+are always necessary when a project grows large enough.
+Pale-White provides tools to simplify these jobs and prevent reinventing the wheel.
 
 The framework also tries to stay away from any language-dependent specifics to allow
 targeted compilation to any standard language/database combination.
@@ -35,8 +37,8 @@ it is crucial that every pale-white application come ready with a plugin api.
 The framework provides seemless support for plugins to come in and interface with your logic,
 as well as serving the role of drag-and-drop logic components.
 
-## Writing Your First Contorller
-Controllers are simple to write, but powerful enough to add logic later:
+## Writing Your First Controller
+Controllers are simple to write, yet easy to expand on later:
 '''
 controller MainController {
 	path "/" {
@@ -55,6 +57,36 @@ Now lets define that template in Glass.
 			h1 "Welcome to my site."
 			p "Hello world!"
 '''
+We can also create a base template to simplify future templates:
+'''
+!template BaseTemplate
+	html
+		head
+			!block head
+		body
+			!block body
 
 
+!template HelloWorldTemplate extends BaseTemplate
+	!block head
+		title "Hello World!"
+	!block body
+		h1 "Welcome to my site."
+		p "Hello world!"
+'''
+We can pass data from controllers to templates by specifying arguments to it:
+'''
+controller MainController {
+	path "/test" {
+		render ArgsTemplate arg1="Hello", arg2="World";
+	}
+}
+'''
+Then we can utilize these values in our template:
+'''
+!template HelloWorldTemplate extends BaseTemplate
+	!block body
+		h1 "Welcome to my site."
+		p "{{arg1}} {{arg2}}!"
+'''
 
