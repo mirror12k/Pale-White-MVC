@@ -199,6 +199,44 @@ sub compile_model_get_virtual_property {
 
 
 
+sub compile_view_controller {
+	my ($self, $view_controller) = @_;
+	die "invalid view_controller: $view_controller->{type}" unless $view_controller->{type} eq 'view_controller_definition';
+
+	my $identifier = $view_controller->{identifier};
+	my @code;
+
+	my $parent = 'PaleWhite::ViewController';
+	$parent = $self->format_classname($parent);
+
+	push @code, $self->compile_view_controller_args_block($view_controller);
+	push @code, $self->compile_controller_action($view_controller);
+	
+	@code = map "\t$_", @code;
+	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_view_controller_args_block {
+	my ($self, $view_controller) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'view_controller_args_block';
+
+	return @code unless defined $view_controller->{args_block};
+
+	push @code, "global \$runtime;\n\n";
+
+	push @code, $self->compile_path($view_controller->{args_block});
+
+	@code = map "\t$_", @code;
+	@code = ("public function load_args (array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
 sub compile_plugin {
 	my ($self, $plugin) = @_;
 	die "invalid plugin: $plugin->{type}" unless $plugin->{type} eq 'plugin_definition';
@@ -726,6 +764,8 @@ sub compile_path {
 		$target = "controller route hook \"$path->{controller_class}\"";
 	} elsif ($path->{type} eq 'controller_ajax_hook') {
 		$target = "controller ajax hook \"$path->{controller_class}\"";
+	} elsif ($path->{type} eq 'args_block') {
+		$target = "args block";
 	} else {
 		$target = "path \"$path->{path}\"";
 	}

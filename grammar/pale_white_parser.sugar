@@ -92,6 +92,15 @@ list context root {
 			}
 			match '}'
 		}
+		'view_controller' => {
+			match $identifier_regex, '{'
+			push !view_controller_block->{
+				type => 'view_controller_definition'
+				line_number => $0{line_number}
+				identifier => $1
+			}
+			match '}'
+		}
 		'plugin' => {
 			match $identifier_regex, '{'
 			push !plugin_block->{
@@ -424,6 +433,35 @@ object context controller_block {
 				line_number => $0{line_number}
 				identifier => $1
 				code => !native_code_block->$2
+			}
+		}
+		default {
+			return
+		}
+	}
+}
+
+
+
+object context view_controller_block {
+	switch {
+		'args' => {
+			$_{args_block} = !path_action_block->{
+				type => 'args_block'
+				line_number => $0{line_number}
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
+		'action' => {
+			match $identifier_regex
+
+			$_{actions}[] = !path_action_block->{
+				type => 'action_block'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !optional_arguments_list->[]
+				block => []
 			}
 		}
 		default {

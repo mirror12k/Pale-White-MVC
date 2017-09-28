@@ -49,10 +49,9 @@ sub compile {
 	return $code
 }
 
-sub map_class_name {
+sub format_classname {
 	my ($self, $classname) = @_;
-
-	return "/$classname" =~ s/\//\\/gr;
+	return "\\$classname" =~ s/::/\\/gr
 }
 
 sub compile_template {
@@ -63,8 +62,16 @@ sub compile_template {
 	my $identifier = $template->{argument};
 	my @code;
 
-	my $parent = $template->{parent_template} // 'PaleWhite/Glass/Template';
-	$parent = $self->map_class_name($parent);
+	my $parent = $template->{parent_template} // 'PaleWhite::Glass::Template';
+	$parent = $self->format_classname($parent);
+
+	my $view_controller = $template->{view_controller};
+	$view_controller = $self->format_classname($view_controller) if defined $view_controller;
+
+	if (defined $view_controller) {
+		push @code, "private \$view_controller;\n";
+	}
+	push @code, "private \$closured_args;\n\n";
 
 	push @code, $self->compile_template_render($template);
 	push @code, $self->compile_template_render_block($template);
@@ -86,10 +93,18 @@ sub compile_template_render {
 			or ($_->{type} eq 'glass_helper' and $_->{identifier} ne 'block')
 		} @{$template->{block}};
 	}
-	return @code unless @tags;
+	# return @code unless @tags or defined $template->{view_controller};
+
+	push @code, "global \$runtime;\n\n";
+	if (defined $template->{view_controller}) {
+		my $view_controller = $self->format_classname($template->{view_controller});
+		push @code, "\$this->view_controller = \$runtime->get_view_controller('$view_controller');\n";
+		push @code, "\$args = (array)\$this->view_controller->load_args(\$args);\n";
+	}
+	push @code, "\$this->closured_args = \$args;\n\n";
+
 
 	push @code, "\$text = parent::render(\$args);\n";
-	push @code, "global \$runtime;\n\n";
 
 	push @code, $self->compile_block(\@tags);
 	# say "debug: $self->{text_accumulator}";
@@ -117,8 +132,10 @@ sub compile_template_render_block {
 
 	return @code unless keys %blocks;
 
+	push @code, "global \$runtime;\n";
+	push @code, "\$args = \$this->closured_args;\n\n";
+
 	push @code, "\$text = parent::render_block(\$block, \$args);\n";
-	push @code, "global \$runtime;\n\n";
 
 	foreach my $block (sort keys %blocks) {
 		my @block_code = $self->compile_block($blocks{$block}{block});

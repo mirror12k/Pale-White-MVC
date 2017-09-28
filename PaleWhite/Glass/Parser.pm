@@ -17,6 +17,7 @@ use feature 'say';
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_native_identifier_regex = qr/native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
+our $var_view_controller_identifier_regex = qr/view_controller::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_identifier_regex = qr/[a-zA-Z_][a-zA-Z0-9_]*+/;
 our $var_string_interpolation_start_regex = qr/"([^\\"]|\\[\\"])*?\{\{/s;
 our $var_string_interpolation_middle_regex = qr/\}\}([^\\"]|\\[\\"])*?\{\{/s;
@@ -35,12 +36,14 @@ our $var_format_string_interpolation_end_substitution = sub { $_[0] =~ s/\A\}\}(
 our $var_format_model_identifier_substitution = sub { $_[0] =~ s/\Amodel:://sr };
 our $var_format_file_identifier_substitution = sub { $_[0] =~ s/\Afile:://sr };
 our $var_format_native_identifier_substitution = sub { $_[0] =~ s/\Anative:://sr };
+our $var_format_view_controller_identifier_substitution = sub { $_[0] =~ s/\Aview_controller:://sr };
 
 
 our $tokens = [
 	'model_identifier' => $var_model_identifier_regex,
 	'file_identifier' => $var_file_identifier_regex,
 	'native_identifier' => $var_native_identifier_regex,
+	'view_controller_identifier' => $var_view_controller_identifier_regex,
 	'identifier' => $var_identifier_regex,
 	'string_interpolation_start' => $var_string_interpolation_start_regex,
 	'string_interpolation_middle' => $var_string_interpolation_middle_regex,
@@ -253,11 +256,25 @@ sub context_glass_item {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'extends' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_newline_regex)\Z/) {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'extends' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] eq 'uses' and $self->{tokens}[$self->{tokens_index} + 4][1] =~ /\A($var_view_controller_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 5][1] =~ /\A($var_newline_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(6));
+			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => $tokens[1][1], argument => $tokens[2][1], parent_template => $tokens[4][1], view_controller => $var_format_view_controller_identifier_substitution->($tokens[6][1]), indent => $context_object, };
+			$context_object = $self->context_glass_block($context_object);
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'extends' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_newline_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(4));
 			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => $tokens[1][1], argument => $tokens[2][1], parent_template => $tokens[4][1], indent => $context_object, };
+			$context_object = $self->context_glass_block($context_object);
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'uses' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_view_controller_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_newline_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => $tokens[1][1], argument => $tokens[2][1], view_controller => $var_format_view_controller_identifier_substitution->($tokens[4][1]), indent => $context_object, };
 			$context_object = $self->context_glass_block($context_object);
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_newline_regex)\Z/) {

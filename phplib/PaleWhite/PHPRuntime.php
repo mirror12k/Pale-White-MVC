@@ -164,6 +164,13 @@ class PHPRuntime {
 		return new $template_class();
 	}
 
+	public function get_view_controller($controller_class) {
+		if (!is_subclass_of($controller_class, '\\PaleWhite\\ViewController'))
+			throw new \PaleWhite\InvalidException("attempt to get non-view-controller class");
+		
+		return new $controller_class();
+	}
+
 	public function route_controller_path($controller_class, $path, array $args, Response $res) {
 		$controller = $this->get_controller($controller_class);
 		$req = new Request($path, $args);

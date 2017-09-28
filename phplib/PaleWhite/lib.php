@@ -11,6 +11,7 @@ require_once 'DatabaseQuery.php';
 require_once 'Model.php';
 require_once 'Glass/Template.php';
 require_once 'Controller.php';
+require_once 'ViewController.php';
 require_once 'Plugin.php';
 require_once 'PHPRuntime.php';
 require_once 'HTTPRequestExecutor.php';

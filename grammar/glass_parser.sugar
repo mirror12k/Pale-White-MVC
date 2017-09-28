@@ -4,6 +4,7 @@ package PaleWhite::Glass::Parser
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 file_identifier_regex = /file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 native_identifier_regex = /native::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
+view_controller_identifier_regex = /view_controller::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 
 identifier_regex = /[a-zA-Z_][a-zA-Z0-9_]*+/
 string_interpolation_start_regex = /"([^\\"]|\\[\\"])*?\{\{/s
@@ -28,6 +29,7 @@ format_string_interpolation_end_substitution = s/\A\}\}(.*)"\Z/$1/s
 format_model_identifier_substitution = s/\Amodel:://s
 format_file_identifier_substitution = s/\Afile:://s
 format_native_identifier_substitution = s/\Anative:://s
+format_view_controller_identifier_substitution = s/\Aview_controller:://s
 
 
 
@@ -35,6 +37,7 @@ tokens {
 	model_identifier => $model_identifier_regex
 	file_identifier => $file_identifier_regex
 	native_identifier => $native_identifier_regex
+	view_controller_identifier => $view_controller_identifier_regex
 
 	identifier => $identifier_regex
 	string_interpolation_start => $string_interpolation_start_regex
@@ -167,13 +170,34 @@ object context glass_item {
 			return
 		}
 		'!', 'template' => {
-			if $identifier_regex, 'extends', $identifier_regex, $newline_regex => {
+			if $identifier_regex, 'extends', $identifier_regex, 'uses', $view_controller_identifier_regex, $newline_regex => {
 				$_ = {
 					type => 'glass_helper'
 					line_number => $0{line_number}
 					identifier => $1
 					argument => $2
 					parent_template => $4
+					view_controller => $format_view_controller_identifier_substitution->$6
+					indent => $_
+				}
+				$_ = !glass_block->$_
+			} elsif $identifier_regex, 'extends', $identifier_regex, $newline_regex => {
+				$_ = {
+					type => 'glass_helper'
+					line_number => $0{line_number}
+					identifier => $1
+					argument => $2
+					parent_template => $4
+					indent => $_
+				}
+				$_ = !glass_block->$_
+			} elsif $identifier_regex, 'uses', $view_controller_identifier_regex, $newline_regex => {
+				$_ = {
+					type => 'glass_helper'
+					line_number => $0{line_number}
+					identifier => $1
+					argument => $2
+					view_controller => $format_view_controller_identifier_substitution->$4
 					indent => $_
 				}
 				$_ = !glass_block->$_

@@ -1,7 +1,5 @@
 <?php
 
-
-
 namespace PaleWhite;
 
 abstract class Controller {
