@@ -22,10 +22,10 @@ abstract class Controller {
 		throw new \PaleWhite\InvalidException("undefined action requested: '$action'");
 	}
 
-	public function render_template($template_class, array $args) {
-		$template = new $template_class();
-		return $template->render($args);
-	}
+	// public function render_template($template_class, array $args) {
+	// 	$template = new $template_class();
+	// 	return $template->render($args);
+	// }
 
 	// public function route_subcontroller($controller_class, $path, array $args, Response $res) {
 	// 	global $runtime;

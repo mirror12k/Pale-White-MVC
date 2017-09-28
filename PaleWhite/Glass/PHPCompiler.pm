@@ -175,7 +175,7 @@ sub compile_item {
 
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'template_call') {
 		my $arguments = $self->compile_arguments($item->{arguments});
-		return $self->flush_accumulator, "\$text .= \$this->render_template('$item->{template}', $arguments);\n"
+		return $self->flush_accumulator, "\$text .= \$runtime->get_template('$item->{template}')->render($arguments);\n"
 
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq '_csrf_token_input') {
 		# equivalent to 'input name="_csrf_token", type="hidden", value={_csrf_token}'

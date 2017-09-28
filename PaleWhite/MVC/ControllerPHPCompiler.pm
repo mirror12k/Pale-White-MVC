@@ -883,7 +883,7 @@ sub compile_action {
 	} elsif ($action->{type} eq 'render_template') {
 		my $class = $self->format_classname($action->{identifier});
 		my $arguments = $self->compile_arguments_array($action->{arguments});
-		return "\$res->body = \$this->render_template('$class', $arguments);\n"
+		return "\$res->body = \$runtime->get_template('$class')->render($arguments);\n"
 
 	} elsif ($action->{type} eq 'render_file') {
 		my $expression = $self->compile_expression($action->{expression});
@@ -1122,7 +1122,7 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'render_template_expression') {
 		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "((new $class())->render($arguments))"
+		return "(\$runtime->get_template('$class')->render($arguments))"
 		
 	} elsif ($expression->{type} eq 'render_file_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});

@@ -157,6 +157,13 @@ class PHPRuntime {
 		return $this->controller_cache[$controller_class];
 	}
 
+	public function get_template($template_class) {
+		if (!is_subclass_of($template_class, '\\PaleWhite\\Glass\\Template'))
+			throw new \PaleWhite\InvalidException("attempt to get non-template class");
+		
+		return new $template_class();
+	}
+
 	public function route_controller_path($controller_class, $path, array $args, Response $res) {
 		$controller = $this->get_controller($controller_class);
 		$req = new Request($path, $args);

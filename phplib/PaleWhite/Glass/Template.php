@@ -13,10 +13,10 @@ abstract class Template {
 		return '';
 	}
 
-	public function render_template ($template_class, array $args) {
-		$template = new $template_class();
-		return $template->render($args);
-	}
+	// public function render_template ($template_class, array $args) {
+	// 	$template = new $template_class();
+	// 	return $template->render($args);
+	// }
 
 	// public function get_site_base() {
 	// 	global $config;
