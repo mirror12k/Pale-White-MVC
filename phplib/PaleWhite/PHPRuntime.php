@@ -21,6 +21,7 @@ class PHPRuntime {
 	public $database;
 
 	public $controller_cache = array();
+	public $plugin_cache = array();
 
 	public $plugins;
 	public $event_hooks = array();
@@ -155,6 +156,17 @@ class PHPRuntime {
 		}
 
 		return $this->controller_cache[$controller_class];
+	}
+
+	public function get_plugin($plugin_class) {
+		if (!isset($this->plugin_cache[$plugin_class])) {
+			if (!is_subclass_of($plugin_class, '\\PaleWhite\\plugin'))
+				throw new \PaleWhite\InvalidException("attempt to get non-plugin class");
+			
+			$this->plugin_cache[$plugin_class] = new $plugin_class();
+		}
+
+		return $this->plugin_cache[$plugin_class];
 	}
 
 	public function get_template($template_class) {
@@ -328,7 +340,12 @@ class PHPRuntime {
 	}
 
 	public function trigger_action($controller_class, $controller_action, array $args) {
-		$controller = $this->get_controller($controller_class);
+		if (is_subclass_of($controller_class, '\\PaleWhite\\Controller'))
+			$controller = $this->get_controller($controller_class);
+		elseif (is_subclass_of($controller_class, '\\PaleWhite\\Plugin'))
+			$controller = $this->get_plugin($controller_class);
+		else
+			throw new \PaleWhite\InvalidException("attempt to trigger action on unknown class: '$controller_class'");
 		$args['result'] = $controller->action($controller_action, $args);
 
 		if (isset($this->action_hooks["$controller_class:$controller_action"]))
@@ -380,6 +397,40 @@ class PHPRuntime {
 			$this->controller_api_hooks["$hook_id"][] = $callback;
 		else
 			$this->controller_api_hooks["$hook_id"] = array($callback);
+	}
+
+	
+
+	public function load_model($model_class, array $args) {
+		$object = $model_class::get_by($args);
+
+		if ($object === null)
+			throw new \PaleWhite\ValidationException("invalid '$model_class'!");
+		
+		return $object;
+	}
+
+	public function create_model($model_class, array $args) {
+		$object = $model_class::create($args);
+
+		if ($object === null)
+			throw new \PaleWhite\ValidationException("failed to create '$model_class'!");
+		
+		return $object;
+	}
+
+	public function load_file($file_directory, array $args) {
+		$file = $file_directory::file($args);
+
+		if ($file === null)
+			throw new \PaleWhite\ValidationException("invalid file!");
+		
+		return $file;
+	}
+
+	public function validate_csrf_token($token) {
+		if (!hash_equals($_SESSION['pale_white_csrf_token'], $token))
+			throw new \PaleWhite\ValidationException("incorrect csrf token");
 	}
 }
 

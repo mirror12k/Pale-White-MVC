@@ -1029,7 +1029,7 @@ sub compile_action {
 				"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" not a file upload');\n"
 
 		} elsif ($action->{validator_identifier} eq '_csrf_token') {
-			push @code, "\$this->validate_csrf_token(\$$action->{identifier});\n"
+			push @code, "\$runtime->validate_csrf_token(\$$action->{identifier});\n"
 
 		} else {
 			push @code, "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
@@ -1137,12 +1137,12 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'load_model_expression') {
 		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "\$this->load_model('$class', $arguments)"
+		return "\$runtime->load_model('$class', $arguments)"
 		
 	} elsif ($expression->{type} eq 'load_file_expression') {
 		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "\$this->load_file('$class', $arguments)"
+		return "\$runtime->load_file('$class', $arguments)"
 		
 	} elsif ($expression->{type} eq 'load_model_list_expression') {
 		my $class = $self->format_classname($expression->{identifier});
@@ -1157,7 +1157,7 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'create_model_expression') {
 		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "\$this->create_model('$class', $arguments)"
+		return "\$runtime->create_model('$class', $arguments)"
 		
 	} elsif ($expression->{type} eq 'render_template_expression') {
 		my $class = $self->format_classname($expression->{identifier});

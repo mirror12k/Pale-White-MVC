@@ -234,5 +234,21 @@ generic template helper parsing:
 	this allows template helper to by dynamically added into the compiler
 	this also allows template helpers to accept variable syntax
 
-
+controller contants
+	declare by:
+		controller asdf {
+			const A = 15;
+		}
+	use them in controller actions:
+		path "/" {
+			render HelloWorldTemplate val=$A;
+		}
+	or use them in string limits:
+		path "/do_stuff" [ string[1:$LIMIT] field ] {
+			# stuff
+		}
+	optionally use them from another controller class:
+		path "/" {
+			render HelloWorldTemplate val=$controller::OtherController.CONSTFIELD;
+		}
 
