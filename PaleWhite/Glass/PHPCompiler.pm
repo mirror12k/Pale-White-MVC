@@ -49,11 +49,6 @@ sub compile {
 	return $code
 }
 
-sub format_classname {
-	my ($self, $classname) = @_;
-	return "\\$classname" =~ s/::/\\/gr
-}
-
 sub compile_template {
 	my ($self, $template) = @_;
 	die "invalid template: $template->{type}:$template->{identifier}"

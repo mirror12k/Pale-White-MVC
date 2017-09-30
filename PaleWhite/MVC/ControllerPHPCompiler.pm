@@ -1228,6 +1228,8 @@ sub compile_expression {
 		# } els
 		if ($expression->{identifier} eq '_time') {
 			return "time()";
+		} elsif ($expression->{identifier} eq 'plugins') {
+			return "\$runtime->plugins";
 		} else {
 			return "\$$expression->{identifier}";
 		}

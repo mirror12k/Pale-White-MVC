@@ -333,7 +333,7 @@ sub compile_project_directory {
 
 sub main {
 
-	die "usage: $0 <src directory> <bin directory>" unless @_ >= 2;
+	die "usage: $0 [--plugin] <src directory> <bin directory>" unless @_ >= 2;
 
 	my %options;
 	while (@_ > 2) {
