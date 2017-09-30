@@ -1232,7 +1232,7 @@ sub context_action_expression {
 			$context_object = { type => 'shell_execute_expression', line_number => $tokens[0][2], arguments_list => $self->context_action_expression_list([]), };
 			return $context_object;
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'plugins' and $self->{tokens}[$self->{tokens_index} + 2][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 4][1] eq ':' and $self->{tokens}[$self->{tokens_index} + 5][1] =~ /\A($var_identifier_regex)\Z/) {
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'plugins' and $self->{tokens}[$self->{tokens_index} + 2][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 4][1] eq '.' and $self->{tokens}[$self->{tokens_index} + 5][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(6));

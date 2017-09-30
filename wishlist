@@ -48,7 +48,6 @@ more wishlist:
 
 
 	optional model and file arguments with a question mark
-	increment/decrement operators for model properties
 	array type validators for controllers
 	jquery like library?
 	script minimization during compilation?
@@ -234,5 +233,6 @@ generic template helper parsing:
 			becomes { 'foreach' [{'expression', 'list'}, 'key', 'value'] }
 	this allows template helper to by dynamically added into the compiler
 	this also allows template helpers to accept variable syntax
+
 
 

@@ -1199,7 +1199,7 @@ object context action_expression {
 			}
 			return
 		}
-		'action', 'plugins', '.', $identifier_regex, ':', $identifier_regex => {
+		'action', 'plugins', '.', $identifier_regex, '.', $identifier_regex => {
 			$_ = {
 				type => 'plugin_action_expression'
 				line_number => $0{line_number}
