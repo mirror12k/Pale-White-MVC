@@ -270,6 +270,9 @@ object context model_property_identifier_modifiers {
 		'auto_increment' => {
 			$_{$0} = 'enabled'
 		}
+		'owned' => {
+			$_{$0} = 'enabled'
+		}
 		default {
 			return
 		}

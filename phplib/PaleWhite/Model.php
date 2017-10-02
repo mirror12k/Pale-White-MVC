@@ -419,16 +419,44 @@ abstract class Model {
 	}
 
 	public function delete() {
+		global $runtime;
 		$this->on_delete();
 
-		global $runtime;
+		foreach (static::$model_owned_properties as $field => $field_type) {
+			// $loaded[$field] = static::load_array_data($data['id'], $field);
+			if (isset(static::$model_submodel_properties[$field])) {
+				if (isset(static::$model_array_properties[$field])) {
+					foreach ($this->$field as $object)
+						$object->delete();
+				} elseif (isset(static::$model_map_properties[$field])) {
+					foreach ($this->$field as $key => $object)
+						$object->delete();
+				} else {
+					if ($this->$field !== null)
+						$this->$field->delete();
+				}
+			} elseif (isset(static::$model_file_properties[$field])) {
+				if (isset(static::$model_array_properties[$field])) {
+					foreach ($this->$field as $object)
+						$object->delete();
+				} elseif (isset(static::$model_map_properties[$field])) {
+					foreach ($this->$field as $key => $object)
+						$object->delete();
+				} else {
+					if ($this->$field !== null)
+						$this->$field->delete();
+				}
+			} else {
+				$runtime->log_message(get_called_class(), "warning: owned property on non-object property '$field'");
+			}
+		}
+
 		$query = $runtime->database->delete()
 				->table(static::$table_name)
 				->where(array('id' => $this->_data['id']));
 		$result = $query->fetch();
 
 		unset(static::$_model_cache['id'][$this->_data['id']]);
-
 		foreach (static::$model_array_properties as $field => $field_type) {
 			// $loaded[$field] = static::load_array_data($data['id'], $field);
 

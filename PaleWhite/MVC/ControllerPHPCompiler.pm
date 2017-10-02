@@ -58,6 +58,7 @@ sub compile_model {
 	my @model_submodel_properties = grep { $_->{type} eq 'model_pointer_property' } @{$model->{properties}};
 	my @model_file_properties = grep { $_->{type} eq 'file_pointer_property' } @{$model->{properties}};
 	my @model_json_properties = grep { $_->{type} eq 'model_property' and $_->{property_type} eq 'json' } @{$model->{properties}};
+	my @model_owned_properties = grep { exists $_->{modifiers}{owned} } @{$model->{properties}};
 
 	if (@model_properties) {
 		push @code, "public static \$model_properties = array(\n";
