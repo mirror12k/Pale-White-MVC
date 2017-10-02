@@ -436,7 +436,7 @@ sub compile_plugin_route_path {
 	my ($self, $plugin) = @_;
 	my @code;
 
-	$self->{context_args_variable} = '$args';
+	$self->{context_args_variable} = '$req->args';
 	$self->{block_context_type} = 'plugin_route_path';
 
 	my @items;
@@ -467,7 +467,7 @@ sub compile_plugin_route_ajax {
 	my ($self, $plugin) = @_;
 	my @code;
 
-	$self->{context_args_variable} = '$args';
+	$self->{context_args_variable} = '$req->args';
 	$self->{block_context_type} = 'plugin_route_ajax';
 
 	my @items;
@@ -498,7 +498,7 @@ sub compile_plugin_route_api {
 	my ($self, $plugin) = @_;
 	my @code;
 
-	$self->{context_args_variable} = '$args';
+	$self->{context_args_variable} = '$req->args';
 	$self->{block_context_type} = 'plugin_route_api';
 
 	my @items;
