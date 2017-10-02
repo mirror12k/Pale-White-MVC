@@ -109,6 +109,14 @@ sub compile_model {
 		push @code, "public static \$model_json_properties = array();\n";
 	}
 
+	if (@model_owned_properties) {
+		push @code, "public static \$model_owned_properties = array(\n";
+		push @code, "\t'$_->{identifier}' => '$_->{property_type}',\n" foreach @model_owned_properties;
+		push @code, ");\n";
+	} else {
+		push @code, "public static \$model_owned_properties = array();\n";
+	}
+
 	if (@{$model->{virtual_properties}}) {
 		push @code, "public static \$model_virtual_properties = array(\n";
 		push @code, "\t'$_->{identifier}' => '1',\n" foreach @{$model->{virtual_properties}};
