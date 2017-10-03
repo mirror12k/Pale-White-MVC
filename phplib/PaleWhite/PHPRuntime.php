@@ -24,6 +24,7 @@ class PHPRuntime {
 	public $plugin_cache = array();
 
 	public $plugins;
+	public $plugins_config;
 	public $event_hooks = array();
 	public $action_hooks = array();
 	public $controller_route_hooks = array();
@@ -38,11 +39,13 @@ class PHPRuntime {
 		global $config;
 
 		$this->plugins = (object)array();
+		$this->plugins_config = (object)array();
 		foreach ($config['plugins'] as $plugin_name => $plugin_config) {
 			$plugin_directory = $config['plugins_folder'] . '/' . $plugin_config['plugin_class'];
 			require_once "$plugin_directory/includes.php";
 
 			$plugin_class = $plugin_config['plugin_class'];
+			$this->plugins_config->$plugin_class = $plugin_config;
 			$this->register_plugin($plugin_name, new $plugin_class());
 		}
 	}
@@ -399,7 +402,7 @@ class PHPRuntime {
 			$this->controller_api_hooks["$hook_id"] = array($callback);
 	}
 
-	
+
 
 	public function load_model($model_class, array $args) {
 		$object = $model_class::get_by($args);

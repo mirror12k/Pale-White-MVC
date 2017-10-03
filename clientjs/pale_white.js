@@ -197,6 +197,6 @@ pale_white = {
 window.addEventListener('load', function () { pale_white.onload(); });
 pale_white.register_hook('form.ajax_trigger', 'submit', function (event) {
 	event.preventDefault();
-	pale_white.ajax(this.getAttribute('action'), pale_white.parse_form_input(this));
+	pale_white.ajax(this.dataset.triggerAction, pale_white.parse_form_input(this));
 });
 
