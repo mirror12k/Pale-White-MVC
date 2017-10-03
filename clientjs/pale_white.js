@@ -104,6 +104,12 @@ pale_white = {
 			if (data.dom_content !== undefined) {
 				pale_white.substitute_dom_content(data.dom_content);
 			}
+			if (data.action === 'redirect' && data.redirect !== undefined) {
+				window.location = data.redirect;
+			}
+			if (data.action === 'refresh') {
+				window.location.reload();
+			}
 
 		} else if (data.status === 'error') {
 			console.log("[PaleWhite] Server Error: ", data.error);
