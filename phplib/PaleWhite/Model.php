@@ -58,6 +58,9 @@ abstract class Model {
 		} elseif (isset(static::$model_virtual_properties[$name])) {
 			return $this->get_virtual_property($name);
 
+		} elseif ($name === 'to_string') {
+			return "<" . get_called_class() . ">(id: " . $this->_data['id'] . ")";
+
 		} else
 			throw new \PaleWhite\InvalidException(
 					"attempted to get undefined model property '$name' in model class: " . get_called_class());
