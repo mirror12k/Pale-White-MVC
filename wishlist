@@ -228,13 +228,15 @@ generic template helper parsing:
 		!template Asdf
 			becomes { 'template', ['Asdf'] }
 		!if {val}
-			becomes { 'if' [{'expression', 'val'}] }
+			becomes { 'if', [{'expression', 'val'}] }
 		!foreach {list} as key => value
-			becomes { 'foreach' [{'expression', 'list'}, 'key', 'value'] }
+			becomes { 'foreach', [{'expression', 'list'}, 'key', 'value'] }
+		!render ExampleTemplate: a=5, b=15
+			becomes { 'render', ['ExampleTemplate'], { a: 5, b: 15 }}
 	this allows template helper to by dynamically added into the compiler
 	this also allows template helpers to accept variable syntax
 
-controller contants
+controller constants
 	declare by:
 		controller asdf {
 			const A = 15;
@@ -251,4 +253,20 @@ controller contants
 		path "/" {
 			render HelloWorldTemplate val=$controller::OtherController.CONSTFIELD;
 		}
+
+
+template calling on view controller actions:
+	# this allows complex logic to happen on-demand in templates
+	!template Test uses view_controller::TestViewController
+		html
+			head
+				!view_controller get_head
+			body
+				!view_controller get_body caller="Test"
+plugin hook default route:
+	# if a controller route defaults, it first goes to any default route hooks,
+	# allowing plugins to parse their own paths from default,
+	# hooks return true if a path matched, false otherwise,
+	# if a hook returned true, searching stops, and the path is considered complete,
+	# otherwise if all hooks return false, the normal default is triggered
 

@@ -162,6 +162,15 @@ pale_white = {
 					data[array_name] = [];
 				}
 				data[array_name].push(pair[1]);
+			} else if (pair[0].endsWith("']") && pair[0].indexOf("['") !== -1) {
+				// append to map
+				var index = pair[0].indexOf("['");
+				var map_name = pair[0].substring(0, index);
+				var map_key = pair[0].substring(index + 2, pair[0].length - 2);
+				if (data[map_name] === undefined) {
+					data[map_name] = {};
+				}
+				data[map_name][map_key] = pair[1];
 			} else {
 				data[pair[0]] = pair[1];
 			}
