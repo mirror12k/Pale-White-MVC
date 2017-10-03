@@ -78,6 +78,9 @@ abstract class Model {
 		} elseif (isset(static::$model_array_properties[$name])) {
 			$this->_data[$name] = $value;
 			$this->update_fields(array($name => $value));
+		} elseif (isset(static::$model_map_properties[$name])) {
+			$this->_data[$name] = $value;
+			$this->update_fields(array($name => $value));
 		} else {
 			throw new \PaleWhite\InvalidException(
 					"attempted to set undefined model property '$name' in model class: " . get_called_class());
@@ -620,11 +623,14 @@ abstract class Model {
 
 		$item_fields = array();
 		$array_fields = array();
+		$map_fields = array();
 		foreach ($data as $field => $value) {
 			if (isset(static::$model_properties[$field]))
 				$item_fields[$field] = $value;
 			elseif (isset(static::$model_array_properties[$field]))
 				$array_fields[$field] = $value;
+			elseif (isset(static::$model_map_properties[$field]))
+				$map_fields[$field] = $value;
 			else
 				throw new \PaleWhite\InvalidException(
 						"attempted to create undefined model property '$field' in model class: " . get_called_class());
@@ -646,8 +652,11 @@ abstract class Model {
 			throw new \PaleWhite\ModelException(get_called_class(),
 					"fatal error creating object (id $obj_id)");
 
-		// have the object update the array fields itself
+		// have the object update the array and map fields itself
 		foreach ($array_fields as $field => $value) {
+			$obj->$field = $value;
+		}
+		foreach ($map_fields as $field => $value) {
 			$obj->$field = $value;
 		}
 
@@ -875,11 +884,14 @@ abstract class Model {
 
 		$item_fields = array();
 		$array_fields = array();
+		$map_fields = array();
 		foreach ($values as $field => $value) {
 			if (isset(static::$model_properties[$field]))
 				$item_fields[$field] = $value;
 			elseif (isset(static::$model_array_properties[$field]))
 				$array_fields[$field] = $value;
+			elseif (isset(static::$model_map_properties[$field]))
+				$map_fields[$field] = $value;
 			else
 				throw new \PaleWhite\InvalidException(
 						"attempted to update undefined model property '$field' in model class: " . get_called_class());
@@ -899,6 +911,9 @@ abstract class Model {
 
 		foreach ($array_fields as $field => $value)
 			$this->update_array_field($field, $value);
+
+		foreach ($map_fields as $field => $value)
+			$this->update_map_field($field, $value);
 	}
 
 	private function update_array_field($field, $value) {
@@ -914,6 +929,27 @@ abstract class Model {
 			$insert_query = $runtime->database->insert()
 					->table(static::$table_name . '__array_property__' . $field)
 					->values(array('parent_id' => $this->_data['id'], 'value' => $item));
+			$insert_query->fetch();
+		}
+	}
+
+	private function update_map_field($field, $value) {
+		$value = static::store_map_data($field, $value);
+
+		global $runtime;
+		$delete_query = $runtime->database->delete()
+				->table(static::$table_name . '__map_property__' . $field)
+				->where(array('parent_id' => $this->_data['id']));
+		$delete_query->fetch();
+
+		foreach ($value as $map_key => $item) {
+			$insert_query = $runtime->database->insert()
+					->table(static::$table_name . '__map_property__' . $field)
+					->values(array(
+						'parent_id' => $this->_data['id'],
+						'map_key' => $map_key,
+						'value' => $item,
+					));
 			$insert_query->fetch();
 		}
 	}
