@@ -155,7 +155,16 @@ pale_white = {
 		// otherwise we parse a JSON-ready object
 		var data = {};
 		for(var pair of form_data.entries()) {
-			data[pair[0]] = pair[1];
+			if (pair[0].endsWith("[]")) {
+				// append to array
+				var array_name = pair[0].substring(0, pair[0].length - 2);
+				if (data[array_name] === undefined) {
+					data[array_name] = [];
+				}
+				data[array_name].push(pair[1]);
+			} else {
+				data[pair[0]] = pair[1];
+			}
 		}
 		return data;
 	},

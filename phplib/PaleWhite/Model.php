@@ -75,6 +75,9 @@ abstract class Model {
 		} elseif (isset(static::$model_properties[$name])) {
 			$this->_data[$name] = $value;
 			$this->update_fields(array($name => $value));
+		} elseif (isset(static::$model_array_properties[$name])) {
+			$this->_data[$name] = $value;
+			$this->update_fields(array($name => $value));
 		} else {
 			throw new \PaleWhite\InvalidException(
 					"attempted to set undefined model property '$name' in model class: " . get_called_class());
