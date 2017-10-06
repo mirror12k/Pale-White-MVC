@@ -1333,6 +1333,11 @@ sub compile_expression {
 		my $right_expression = $self->compile_expression($expression->{right_expression});
 		return "( $left_expression / $right_expression )";
 
+	} elsif ($expression->{type} eq 'modulo_expression') {
+		my $left_expression = $self->compile_expression($expression->{left_expression});
+		my $right_expression = $self->compile_expression($expression->{right_expression});
+		return "( $left_expression % $right_expression )";
+
 	} else {
 		die "unknown expression: $expression->{type}";
 	}

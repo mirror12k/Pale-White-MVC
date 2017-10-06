@@ -1534,6 +1534,12 @@ sub context_more_action_expression {
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = { type => 'division_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '%') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'modulo_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			}
 			else {
 			return $context_object;
 			}

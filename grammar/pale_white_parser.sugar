@@ -1514,6 +1514,14 @@ object context more_action_expression {
 				right_expression => !action_expression
 			}
 		}
+		'%' => {
+			$_ = {
+				type => 'modulo_expression'
+				line_number => $0{line_number}
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
 		default {
 			return
 		}
