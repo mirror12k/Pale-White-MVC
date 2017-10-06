@@ -92,7 +92,7 @@ our $contexts = {
 	object_constructor_dynamic_expression => 'context_object_constructor_dynamic_expression',
 	object_constructor_expression => 'context_object_constructor_expression',
 	optional_arguments_list => 'context_optional_arguments_list',
-	parenthesis_arguments_list => 'context_parenthesis_arguments_list',
+	parentheses_arguments_list => 'context_parentheses_arguments_list',
 	path_action_block => 'context_path_action_block',
 	path_action_block_list => 'context_path_action_block_list',
 	plugin_block => 'context_plugin_block',
@@ -682,7 +682,7 @@ sub context_optional_arguments_list {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_list = $self->context_parenthesis_arguments_list($context_list);
+			$context_list = $self->context_parentheses_arguments_list($context_list);
 			}
 			return $context_list;
 }
@@ -716,7 +716,7 @@ sub context_bracket_arguments_list {
 	return $context_list;
 }
 
-sub context_parenthesis_arguments_list {
+sub context_parentheses_arguments_list {
 	my ($self, $context_list) = @_;
 
 	while ($self->more_tokens) {
@@ -1386,6 +1386,16 @@ sub context_action_expression {
 			$context_object = { type => 'array_expression', line_number => $tokens[0][2], value => $self->context_action_array_expression_list([]), };
 			return $context_object;
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '(') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'parentheses_expression', line_number => $tokens[0][2], value => $self->context_action_expression, };
+			$self->confess_at_current_offset('expected \')\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')';
+			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_object;
+			}
 			else {
 			$self->confess_at_current_offset('expression expected');
 			}
@@ -1468,37 +1478,61 @@ sub context_more_action_expression {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'less_than_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			$context_object = { type => 'less_than_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '>') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'greather_than_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			$context_object = { type => 'greather_than_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '<=') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'less_than_or_equal_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			$context_object = { type => 'less_than_or_equal_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '>=') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'greather_than_or_equal_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			$context_object = { type => 'greather_than_or_equal_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '==') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'equals_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			$context_object = { type => 'equals_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '!=') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'not_equals_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			$context_object = { type => 'not_equals_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '+') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'addition_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '-') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'subtraction_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '*') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'multiplication_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '/') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'division_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_action_expression, };
 			}
 			else {
 			return $context_object;

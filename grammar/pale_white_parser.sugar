@@ -620,7 +620,7 @@ list context optional_arguments_list {
 	if '[' => {
 		$_ = !bracket_arguments_list->$_
 	} elsif '(' => {
-		$_ = !parenthesis_arguments_list->$_
+		$_ = !parentheses_arguments_list->$_
 	}
 	return
 }
@@ -638,7 +638,7 @@ list context bracket_arguments_list {
 	}
 }
 
-list context parenthesis_arguments_list {
+list context parentheses_arguments_list {
 	if ')' => {
 		return
 	} else {
@@ -1346,6 +1346,15 @@ object context action_expression {
 			}
 			return
 		}
+		'(' => {
+			$_ = {
+				type => 'parentheses_expression'
+				line_number => $0{line_number}
+				value => !action_expression
+			}
+			match ')'
+			return
+		}
 		default {
 			die 'expression expected'
 		}
@@ -1429,7 +1438,6 @@ object context more_action_expression {
 			$_ = {
 				type => 'less_than_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !action_expression
 			}
@@ -1438,7 +1446,6 @@ object context more_action_expression {
 			$_ = {
 				type => 'greather_than_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !action_expression
 			}
@@ -1447,7 +1454,6 @@ object context more_action_expression {
 			$_ = {
 				type => 'less_than_or_equal_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !action_expression
 			}
@@ -1456,7 +1462,6 @@ object context more_action_expression {
 			$_ = {
 				type => 'greather_than_or_equal_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !action_expression
 			}
@@ -1465,7 +1470,6 @@ object context more_action_expression {
 			$_ = {
 				type => 'equals_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !action_expression
 			}
@@ -1474,7 +1478,38 @@ object context more_action_expression {
 			$_ = {
 				type => 'not_equals_expression'
 				line_number => $0{line_number}
-				identifier => $1
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'+' => {
+			$_ = {
+				type => 'addition_expression'
+				line_number => $0{line_number}
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'-' => {
+			$_ = {
+				type => 'subtraction_expression'
+				line_number => $0{line_number}
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'*' => {
+			$_ = {
+				type => 'multiplication_expression'
+				line_number => $0{line_number}
+				left_expression => $_
+				right_expression => !action_expression
+			}
+		}
+		'/' => {
+			$_ = {
+				type => 'division_expression'
+				line_number => $0{line_number}
 				left_expression => $_
 				right_expression => !action_expression
 			}
