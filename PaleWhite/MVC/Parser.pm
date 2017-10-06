@@ -71,8 +71,8 @@ our $contexts = {
 	action_array_expression_list => 'context_action_array_expression_list',
 	action_expression => 'context_action_expression',
 	action_expression_list => 'context_action_expression_list',
-	arguments_list => 'context_arguments_list',
 	arguments_list_item => 'context_arguments_list_item',
+	bracket_arguments_list => 'context_bracket_arguments_list',
 	branch_action_expression => 'context_branch_action_expression',
 	controller_block => 'context_controller_block',
 	file_directory_block => 'context_file_directory_block',
@@ -92,6 +92,7 @@ our $contexts = {
 	object_constructor_dynamic_expression => 'context_object_constructor_dynamic_expression',
 	object_constructor_expression => 'context_object_constructor_expression',
 	optional_arguments_list => 'context_optional_arguments_list',
+	parenthesis_arguments_list => 'context_parenthesis_arguments_list',
 	path_action_block => 'context_path_action_block',
 	path_action_block_list => 'context_path_action_block_list',
 	plugin_block => 'context_plugin_block',
@@ -675,12 +676,18 @@ sub context_optional_arguments_list {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_list = $self->context_arguments_list($context_list);
+			$context_list = $self->context_bracket_arguments_list($context_list);
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '(') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_list = $self->context_parenthesis_arguments_list($context_list);
 			}
 			return $context_list;
 }
 
-sub context_arguments_list {
+sub context_bracket_arguments_list {
 	my ($self, $context_list) = @_;
 
 	while ($self->more_tokens) {
@@ -702,6 +709,35 @@ sub context_arguments_list {
 			}
 			$self->confess_at_current_offset('expected \']\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ']';
+			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_list;
+			}
+	}
+	return $context_list;
+}
+
+sub context_parenthesis_arguments_list {
+	my ($self, $context_list) = @_;
+
+	while ($self->more_tokens) {
+	my @tokens;
+
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			return $context_list;
+			}
+			else {
+			$context_list = $self->context_arguments_list_item($context_list);
+			while ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ',') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_list = $self->context_arguments_list_item($context_list);
+			}
+			$self->confess_at_current_offset('expected \')\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')';
 			@tokens = (@tokens, $self->step_tokens(1));
 			return $context_list;
 			}

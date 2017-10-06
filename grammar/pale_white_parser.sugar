@@ -618,12 +618,14 @@ object context interpolated_string_path_expression {
 
 list context optional_arguments_list {
 	if '[' => {
-		$_ = !arguments_list->$_
+		$_ = !bracket_arguments_list->$_
+	} elsif '(' => {
+		$_ = !parenthesis_arguments_list->$_
 	}
 	return
 }
 
-list context arguments_list {
+list context bracket_arguments_list {
 	if ']' => {
 		return
 	} else {
@@ -632,6 +634,19 @@ list context arguments_list {
 			$_ = !arguments_list_item->$_
 		}
 		match ']'
+		return
+	}
+}
+
+list context parenthesis_arguments_list {
+	if ')' => {
+		return
+	} else {
+		$_ = !arguments_list_item->$_
+		while ',' => {
+			$_ = !arguments_list_item->$_
+		}
+		match ')'
 		return
 	}
 }
