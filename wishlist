@@ -2,26 +2,24 @@
 
 
 
-wishlist:
-	meta objects for models
-	an admin backend for viewing/editting models as listed items
-
-further wishlist:
-	passing templates as arguments and values
-		!template SuperTemplate
-			div.super_container
-				// invoke template from variable
-				!template $dynamic_template
-				// pass the name of a template
-				!template RenderContainerTemplate template="UserContainerTemplate"
-
+model wishlist:
 	extensible helper plugins
-	optional compilation to a big javascript package to allow client-side sites
 
-controlled wishlist:
+	abstract models to serve as references to other models
+		this would allow easily extending allowable values
+	
+	caching results from model getters:
+		model ExampleModel {
+			get: expensive_field !cached {
+				return [ 1, 2, 3, 4 ];
+			}
+		}
+
+controller wishlist:
 	regex path arguments
 		path "/page/{{page=/\d+/}}" {}
 
+	optional compilation to a big javascript package to allow client-side sites
 	websockets/ajax client-heavy site
 		load all glass templates as client-side javascript files
 		and have all actions exposed via websockets or ajax
@@ -42,12 +40,6 @@ controlled wishlist:
 		doesnt render templates fully, just returns the template names and arguments passed as the test status
 		this way controller logic can be checked without depending on templating output
 
-more wishlist:
-	abstract models to serve as references to other models
-		this would allow easily extending allowable values
-
-
-	optional model and file arguments with a question mark
 	array type validators for controllers
 	jquery like library?
 	script minimization during compilation?
@@ -63,10 +55,6 @@ more wishlist:
 
 
 	filedirectory file listing
-
-
-	javascript on timer
-	javascript on scroll
 
 	rate limited download?
 	interface for sendable stuff?
@@ -156,25 +144,7 @@ more wishlist:
 		stored under libs folder
 		they extend the functionality of the active runtime object to add their own apis
 
-	parenthesis expressions
-	controller referencing
-	fail2ban extension/plugin with easy interface
-		on failed login, can call plugins.fail2ban.failed_login()
-		on successful login, can call plugins.fail2ban.successful_login()
-		test whether the ip is banned: plugins.fail2ban.is_banned()
 
-		use ip-indexed model counting strikes against it
-			success resets strikes to zero
-		settings set in config.php for ban-threshold
-
-
-
-caching results from model getters:
-	model ExampleModel {
-		get: expensive_field !cached {
-			return [ 1, 2, 3, 4 ];
-		}
-	}
 
 generic template helper parsing:
 	parse tokens or expressions
@@ -188,24 +158,6 @@ generic template helper parsing:
 			becomes { 'render', ['ExampleTemplate'], { a: 5, b: 15 }}
 	this allows template helper to by dynamically added into the compiler
 	this also allows template helpers to accept variable syntax
-
-controller constants
-	declare by:
-		controller asdf {
-			const A = 15;
-		}
-	use them in controller actions:
-		path "/" {
-			render HelloWorldTemplate val=$A;
-		}
-	or use them in string limits:
-		path "/do_stuff" [ string[1:$LIMIT] field ] {
-			# stuff
-		}
-	optionally use them from another controller class:
-		path "/" {
-			render HelloWorldTemplate val=$controller::OtherController.CONSTFIELD;
-		}
 
 
 template calling on view controller actions:
@@ -224,4 +176,3 @@ plugin hook default route:
 	# otherwise if all hooks return false, the normal default is triggered
 
 
-file size validation
