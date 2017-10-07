@@ -1,6 +1,6 @@
 package PaleWhite::MVC::Parser
 
-native_code_block_regex = /\{\{.*?\}\}/s
+# native_code_block_regex = /\{\{.*?\}\}/s
 
 symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\//
 # symbol_regex = /\{|\}|\[|\]|\(|\)|;/
@@ -25,7 +25,7 @@ whitespace_regex = /\s++/s
 event_identifier_regex = /create|delete/
 
 
-format_native_code_substitution = s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/s
+# format_native_code_substitution = s/\A\{\{\s*\n(.*?)\s*\}\}\Z/$1/s
 format_model_identifier_substitution = s/\Amodel:://s
 format_controller_identifier_substitution = s/\Acontroller:://s
 format_file_identifier_substitution = s/\Afile:://s
@@ -40,7 +40,7 @@ format_event_identifier_substitution = s/\A/on_/s
 
 
 tokens {
-	native_code_block => $native_code_block_regex
+	# native_code_block => $native_code_block_regex
 
 	model_identifier => $model_identifier_regex
 	controller_identifier => $controller_identifier_regex
@@ -428,16 +428,16 @@ object context controller_block {
 				block => []
 			}
 		}
-		'validator' => {
-			match $identifier_regex
+		# 'validator' => {
+		# 	match $identifier_regex
 
-			$_{validators}[] = {
-				type => 'validator'
-				line_number => $0{line_number}
-				identifier => $1
-				code => !native_code_block->$2
-			}
-		}
+		# 	$_{validators}[] = {
+		# 		type => 'validator'
+		# 		line_number => $0{line_number}
+		# 		identifier => $1
+		# 		code => !native_code_block->$2
+		# 	}
+		# }
 		default {
 			return
 		}
@@ -546,11 +546,11 @@ object context plugin_block {
 
 
 
-item context native_code_block {
-	match $native_code_block_regex
-	$_ = !format_native_code->$0
-	return
-}
+# item context native_code_block {
+# 	match $native_code_block_regex
+# 	$_ = !format_native_code->$0
+# 	return
+# }
 
 
 list context interpolated_string_path {
@@ -1550,10 +1550,10 @@ item context format_string {
 			$format_string_substitution->$_
 	return
 }
-item context format_native_code {
-	$_ = $format_native_code_substitution->$_
-	return
-}
+# item context format_native_code {
+# 	$_ = $format_native_code_substitution->$_
+# 	return
+# }
 
 
 
