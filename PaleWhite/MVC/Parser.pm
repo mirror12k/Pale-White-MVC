@@ -217,7 +217,19 @@ sub context_model_block {
 	while ($self->more_tokens) {
 	my @tokens;
 
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'get' and $self->{tokens}[$self->{tokens_index} + 1][1] eq ':') {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] eq ';') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @{$context_object->{constants}}, { type => 'model_constant', line_number => $tokens[0][2], identifier => $tokens[0][1], expression => { type => 'integer_expression', line_number => $tokens[0][2], value => $tokens[2][1], }, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_string_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] eq ';') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @{$context_object->{constants}}, { type => 'model_constant', line_number => $tokens[0][2], identifier => $tokens[0][1], expression => { type => 'string_expression', line_number => $tokens[0][2], value => $self->context_format_string($tokens[2][1]), }, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'get' and $self->{tokens}[$self->{tokens_index} + 1][1] eq ':') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));

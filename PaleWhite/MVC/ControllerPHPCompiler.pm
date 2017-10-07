@@ -126,6 +126,7 @@ sub compile_model {
 	}
 
 	push @code, "\n";
+	push @code, $self->compile_controller_constants($controller);
 	push @code, $self->compile_model_get_virtual_property($model);
 	push @code, "\n";
 

@@ -138,6 +138,30 @@ list context root {
 
 object context model_block {
 	switch {
+		$identifier_regex, '=', $integer_regex, ';' => {
+			$_{constants}[] = {
+				type => 'model_constant'
+				line_number => $0{line_number}
+				identifier => $0
+				expression => {
+					type => 'integer_expression'
+					line_number => $0{line_number}
+					value => $2
+				}
+			}
+		}
+		$identifier_regex, '=', $string_regex, ';' => {
+			$_{constants}[] = {
+				type => 'model_constant'
+				line_number => $0{line_number}
+				identifier => $0
+				expression => {
+					type => 'string_expression'
+					line_number => $0{line_number}
+					value => !format_string->$2
+				}
+			}
+		}
 		'get', ':' => {
 			match $identifier_regex
 			$_{virtual_properties}[] = !path_action_block->{
