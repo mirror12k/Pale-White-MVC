@@ -9,6 +9,7 @@ use Data::Dumper;
 
 
 
+our $identifier_regex = qr/\A[a-zA-Z_][a-zA-Z0-9_]*+\Z/s;
 our $model_identifier_regex = qr/\Amodel::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*\Z/s;
 
 
@@ -126,7 +127,7 @@ sub compile_model {
 	}
 
 	push @code, "\n";
-	push @code, $self->compile_controller_constants($controller);
+	push @code, $self->compile_controller_constants($model);
 	push @code, $self->compile_model_get_virtual_property($model);
 	push @code, "\n";
 
@@ -1037,14 +1038,22 @@ sub compile_action {
 		} elsif ($action->{validator_identifier} eq 'string') {
 			push @code, "\$$action->{identifier} = (string)\$$action->{identifier};\n";
 			if (exists $action->{validator_max_size}) {
-				push @code, "if (strlen(\$$action->{identifier}) > $action->{validator_max_size})\n",
+				my $max_size = $action->{validator_max_size};
+				# if max_size is a constant reference, compile it as such
+				$max_size = "self::\$$max_size" if $max_size =~ $identifier_regex;
+
+				push @code, "if (strlen(\$$action->{identifier}) > $max_size)\n",
 					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
-							. "exceeded max length of $action->{validator_max_size}');\n"
+							. "exceeded max length of ' . $max_size);\n"
 			}
 			if (exists $action->{validator_min_size}) {
-				push @code, "if (strlen(\$$action->{identifier}) < $action->{validator_min_size})\n",
+				my $min_size = $action->{validator_min_size};
+				# if min_size is a constant reference, compile it as such
+				$min_size = "self::\$$min_size" if $min_size =~ $identifier_regex;
+
+				push @code, "if (strlen(\$$action->{identifier}) < $min_size)\n",
 					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
-							. "doesnt reach min length of $action->{validator_min_size}');\n"
+							. "doesnt reach min length of ' . $min_size);\n"
 			}
 
 		} elsif ($action->{validator_identifier} =~ $model_identifier_regex) {

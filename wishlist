@@ -169,59 +169,12 @@ more wishlist:
 
 
 
-dynamic template rendering
-	"\n" => br
-	"\n---\n" => hr
-	"[[link: http://www.example.org/: asdf]]" => a href="http://www.eaxmple.org/" "asdf"
-	"[[image: /example.jpg]]" => img src="{{runtime.site_base}}/example.jpg"
-	"[[b: asdf]]" => span style="font-weight: bold;" "asdf"
-	"[[i: asdf]]" => span style="font-style: italic;" "asdf"
-
-	images and links would not allow any other tags inside
-
-swiss-army-knife backend model editor
-	view lists of items
-	edit fields and push changes to the database
-	secure login
-
-view controller which automagically attach to their declared template/super-template:
-	complex logic for the associated template
-	also retrieves any arguments that are difficult or tedious to do in normal controllers
-	allow event based hooks which plugins can come in and dynamically edit page values
-
-		view_controller MainPageViewController {
-			# primary function setting arguments, can optionally list a list of arguments
-			# the returned list of arguments overrides any previous list of arguments
-			args {
-				user = action controller::MainController.get_user;
-				special = action get_my_special;
-
-				return {user=user, special=special}
-			}
-
-			# action hookable by plugins
-			action get_my_special {
-				return "yes";
-			}
-		}
-
-	templates declare whether they are using a view controller or not:
-		!template MainPageTemplate extends BaseTemplate uses view_controller::MainPageViewController
-
 caching results from model getters:
 	model ExampleModel {
 		get: expensive_field !cached {
 			return [ 1, 2, 3, 4 ];
 		}
 	}
-
-'owned' properties in models:
-	model or file properties which need to be deleted along with the parent model
-	model ExampleModel {
-		model::SubModel stuff owned;
-		file::ExampleFileDirectory file owned;
-	}
-	when an ExampleModel is deleted, it's submodel and file are deleted along with it
 
 generic template helper parsing:
 	parse tokens or expressions
@@ -270,3 +223,5 @@ plugin hook default route:
 	# if a hook returned true, searching stops, and the path is considered complete,
 	# otherwise if all hooks return false, the normal default is triggered
 
+
+file size validation

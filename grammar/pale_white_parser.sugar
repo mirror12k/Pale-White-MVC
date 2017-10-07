@@ -716,6 +716,21 @@ list context arguments_list_item {
 				identifier => $4
 			}
 			
+		} elsif '[', '$', $identifier_regex, ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $5
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				validator_min_size => $3
+				validator_max_size => $3
+				identifier => $5
+			}
+			
 		} elsif '[', $integer_regex, ':', ']', $identifier_regex => {
 			push {
 				type => 'argument_specifier'
@@ -728,6 +743,21 @@ list context arguments_list_item {
 				validator_identifier => $0
 				validator_min_size => $2
 				identifier => $5
+			}
+			
+			
+		} elsif '[', '$', $identifier_regex, ':', ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $6
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				validator_min_size => $3
+				identifier => $6
 			}
 			
 		} elsif '[', ':', $integer_regex, ']', $identifier_regex => {
@@ -744,6 +774,20 @@ list context arguments_list_item {
 				identifier => $5
 			}
 			
+		} elsif '[', ':', '$', $identifier_regex, ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $6
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				validator_max_size => $4
+				identifier => $6
+			}
+			
 		} elsif '[', $integer_regex, ':', $integer_regex, ']', $identifier_regex => {
 			push {
 				type => 'argument_specifier'
@@ -757,6 +801,48 @@ list context arguments_list_item {
 				validator_min_size => $2
 				validator_max_size => $4
 				identifier => $6
+			}
+		# } elsif '[', '$', $identifier_regex, ':', $integer_regex, ']', $identifier_regex => {
+		# 	push {
+		# 		type => 'argument_specifier'
+		# 		line_number => $0{line_number}
+		# 		identifier => $7
+		# 	}
+		# 	push {
+		# 		type => 'validate_variable'
+		# 		line_number => $0{line_number}
+		# 		validator_identifier => $0
+		# 		validator_min_size => $3
+		# 		validator_max_size => $5
+		# 		identifier => $7
+		# 	}
+		# } elsif '[', $integer_regex, ':', '$', $identifier_regex, ']', $identifier_regex => {
+		# 	push {
+		# 		type => 'argument_specifier'
+		# 		line_number => $0{line_number}
+		# 		identifier => $7
+		# 	}
+		# 	push {
+		# 		type => 'validate_variable'
+		# 		line_number => $0{line_number}
+		# 		validator_identifier => $0
+		# 		validator_min_size => $2
+		# 		validator_max_size => $5
+		# 		identifier => $7
+		# 	}
+		} elsif '[', '$', $identifier_regex, ':', '$', $identifier_regex, ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $8
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				validator_min_size => $3
+				validator_max_size => $6
+				identifier => $8
 			}
 			
 		} elsif '?', $identifier_regex => {
