@@ -542,6 +542,7 @@ sub compile_controller {
 
 	push @code, $self->compile_controller_events_list($controller);
 
+	push @code, $self->compile_controller_constants($controller);
 	push @code, $self->compile_controller_route($controller);
 	push @code, $self->compile_controller_route_ajax($controller);
 	push @code, $self->compile_controller_route_api($controller);
@@ -569,6 +570,25 @@ sub compile_controller_events_list {
 		push @code, ");\n";
 	} else {
 		push @code, "public static \$events = array();\n";
+	}
+
+	push @code, "\n";
+
+	return @code
+}
+
+sub compile_controller_constants {
+	my ($self, $controller) = @_;
+
+	my @code;
+
+	$controller->{constants} //= [];
+	if (@{$controller->{constants}}) {
+		foreach my $constant (@{$controller->{constants}}) {
+			my $expression = $self->compile_expression($constant->{expression});
+			push @code, "\tpublic static \$$constant->{identifier} = $expression;\n";
+		}
+		push @code, "\n";
 	}
 
 	push @code, "\n";
@@ -764,6 +784,8 @@ sub compile_path {
 	} elsif ($path->{type} eq 'action_block') {
 		$target = "action \"$path->{identifier}\"";
 	} elsif ($path->{type} eq 'default_path') {
+		$target = "path default";
+	} elsif ($path->{type} eq 'global_path') {
 		$target = "path default";
 	} elsif ($path->{type} eq 'event_hook') {
 		$target = "event hook \"$path->{controller_class}:$path->{identifier}\"";
@@ -1251,6 +1273,10 @@ sub compile_expression {
 		my $class = $self->format_classname($expression->{identifier});
 		return $class
 
+	} elsif ($expression->{type} eq 'controller_expression') {
+		my $class = $self->format_classname($expression->{identifier});
+		return $class
+
 	} elsif ($expression->{type} eq 'method_call_expression') {
 		my $sub_expression = $self->compile_expression($expression->{expression});
 		my $arguments_list = $self->compile_expression_list($expression->{arguments_list});
@@ -1262,6 +1288,8 @@ sub compile_expression {
 		} elsif ($expression->{expression}{type} eq 'model_class_expression') {
 			return "$sub_expression\::$expression->{identifier}($arguments_list)";
 		} elsif ($expression->{expression}{type} eq 'native_library_expression') {
+			return "$sub_expression\::$expression->{identifier}($arguments_list)";
+		} elsif ($expression->{expression}{type} eq 'controller_expression') {
 			return "$sub_expression\::$expression->{identifier}($arguments_list)";
 		} else {
 			die "invalid method call on a '$expression->{expression}{type}' on line $expression->{line_number}";
@@ -1278,6 +1306,8 @@ sub compile_expression {
 		} elsif ($expression->{expression}{type} eq 'model_class_expression') {
 			return "$sub_expression\::\$$expression->{identifier}";
 		} elsif ($expression->{expression}{type} eq 'native_library_expression') {
+			return "$sub_expression\::\$$expression->{identifier}";
+		} elsif ($expression->{expression}{type} eq 'controller_expression') {
 			return "$sub_expression\::\$$expression->{identifier}";
 		} else {
 			die "invalid access on a '$expression->{expression}{type}' on line $expression->{line_number}";

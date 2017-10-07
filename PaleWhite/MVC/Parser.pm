@@ -14,7 +14,7 @@ use feature 'say';
 ##### variables and settings
 ##############################
 
-our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\//;
+our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\$|\//;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_controller_identifier_regex = qr/controller::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
@@ -376,7 +376,19 @@ sub context_controller_block {
 	while ($self->more_tokens) {
 	my @tokens;
 
-			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'global') {
+			if ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_integer_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] eq ';') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @{$context_object->{constants}}, { type => 'controller_constant', line_number => $tokens[0][2], identifier => $tokens[0][1], expression => { type => 'integer_expression', line_number => $tokens[0][2], value => $tokens[2][1], }, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '=' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_string_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 3][1] eq ';') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @{$context_object->{constants}}, { type => 'controller_constant', line_number => $tokens[0][2], identifier => $tokens[0][1], expression => { type => 'string_expression', line_number => $tokens[0][2], value => $self->context_format_string($tokens[2][1]), }, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'path' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'global') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
@@ -1300,6 +1312,13 @@ sub context_action_expression {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object = $self->context_more_action_expression({ type => 'native_library_expression', line_number => $tokens[0][2], identifier => $var_format_native_identifier_substitution->($tokens[0][1]), });
+			return $context_object;
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_controller_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_more_action_expression({ type => 'controller_expression', line_number => $tokens[0][2], identifier => $var_format_controller_identifier_substitution->($tokens[0][1]), });
 			return $context_object;
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
