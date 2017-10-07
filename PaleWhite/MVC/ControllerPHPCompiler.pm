@@ -1032,25 +1032,29 @@ sub compile_action {
 	} elsif ($action->{type} eq 'validate_variable' or $action->{type} eq 'optional_validate_variable') {
 		my @code;
 
+		my ($min_size, $max_size);
+		if (exists $action->{validator_max_size}) {
+			$max_size = $action->{validator_max_size};
+			# if max_size is a constant reference, compile it as such
+			$max_size = "self::\$$max_size" if $max_size =~ $identifier_regex;
+		}
+		if (exists $action->{validator_min_size}) {
+			$min_size = $action->{validator_min_size};
+			# if min_size is a constant reference, compile it as such
+			$min_size = "self::\$$min_size" if $min_size =~ $identifier_regex;
+		}
+
 		if ($action->{validator_identifier} eq 'int') {
 			push @code, "\$$action->{identifier} = (int)\$$action->{identifier};\n"
 
 		} elsif ($action->{validator_identifier} eq 'string') {
 			push @code, "\$$action->{identifier} = (string)\$$action->{identifier};\n";
-			if (exists $action->{validator_max_size}) {
-				my $max_size = $action->{validator_max_size};
-				# if max_size is a constant reference, compile it as such
-				$max_size = "self::\$$max_size" if $max_size =~ $identifier_regex;
-
+			if (defined $max_size) {
 				push @code, "if (strlen(\$$action->{identifier}) > $max_size)\n",
 					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
 							. "exceeded max length of ' . $max_size);\n"
 			}
-			if (exists $action->{validator_min_size}) {
-				my $min_size = $action->{validator_min_size};
-				# if min_size is a constant reference, compile it as such
-				$min_size = "self::\$$min_size" if $min_size =~ $identifier_regex;
-
+			if (defined $min_size) {
 				push @code, "if (strlen(\$$action->{identifier}) < $min_size)\n",
 					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
 							. "doesnt reach min length of ' . $min_size);\n"
@@ -1068,6 +1072,16 @@ sub compile_action {
 		} elsif ($action->{validator_identifier} eq '_file_upload') {
 			push @code, "if (! \$$action->{identifier} instanceof \\PaleWhite\\FileUpload)\n",
 				"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" not a file upload');\n"
+			if (defined $max_size) {
+				push @code, "if (\$$action->{identifier}->file_size > $max_size)\n",
+					"\tthrow new \\PaleWhite\\ValidationException('file argument \"$action->{identifier}\" "
+							. "exceeded max length of ' . $max_size);\n"
+			}
+			if (defined $min_size) {
+				push @code, "if (\$$action->{identifier}->file_size < $min_size)\n",
+					"\tthrow new \\PaleWhite\\ValidationException('file argument \"$action->{identifier}\" "
+							. "doesnt reach min length of ' . $min_size);\n"
+			}
 
 		} elsif ($action->{validator_identifier} eq '_csrf_token') {
 			push @code, "\$runtime->validate_csrf_token(\$$action->{identifier});\n"
