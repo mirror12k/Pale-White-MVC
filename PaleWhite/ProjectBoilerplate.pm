@@ -95,20 +95,22 @@ sub default_paged_item_controller {
 
 
 controller $controller_name {
+	PAGE_SIZE = 10;
+
 	action list_page (int page, string? order) {
-		offset = page * 20;
+		offset = page * controller::$controller_name.PAGE_SIZE;
 
 		if (order) {
-			page_items = list $item_model_name _limit=20, _offset=offset, _order=order;
+			page_items = list $item_model_name _limit=controller::$controller_name.PAGE_SIZE, _offset=offset, _order=order;
 		} else {
-			page_items = list $item_model_name _limit=20, _offset=offset;
+			page_items = list $item_model_name _limit=controller::$controller_name.PAGE_SIZE, _offset=offset;
 		}
 
 		return page_items;
 	}
 
 	action has_next_page (int page) {
-		offset = (page + 1) * 20;
+		offset = (page + 1) * controller::$controller_name.PAGE_SIZE;
 
 		model_count = count $item_model_name;
 		return model_count > offset;
@@ -123,7 +125,7 @@ controller $controller_name {
 
 		validate page_count as int;
 		# round up if there is a remainder
-		if (model_count % 20) {
+		if (model_count % controller::$controller_name.PAGE_SIZE) {
 			page_count = page_count + 1;
 		}
 
@@ -133,9 +135,9 @@ controller $controller_name {
 
 	# +search
 	action list_search_page (int page, query, string? order) {
-		offset = page * 20;
+		offset = page * controller::$controller_name.PAGE_SIZE;
 
-		query._limit = 20;
+		query._limit = controller::$controller_name.PAGE_SIZE;
 		query._offset = offset;
 		if (order) {
 			query._order = order;
@@ -147,7 +149,7 @@ controller $controller_name {
 	}
 
 	action has_next_search_page (int page, query) {
-		offset = (page + 1) * 20;
+		offset = (page + 1) * controller::$controller_name.PAGE_SIZE;
 
 		model_count = model::$item_model_name.count(query);
 		return model_count > offset;
@@ -162,7 +164,7 @@ controller $controller_name {
 
 		validate page_count as int;
 		# round up if there is a remainder
-		if (model_count % 20) {
+		if (model_count % controller::$controller_name.PAGE_SIZE) {
 			page_count = page_count + 1;
 		}
 
