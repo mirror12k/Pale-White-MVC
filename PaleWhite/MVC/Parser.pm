@@ -14,7 +14,7 @@ use feature 'say';
 ##### variables and settings
 ##############################
 
-our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\$|\//;
+our $var_symbol_regex = qr/\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\$|\/|\+|\-|\*|\%/;
 our $var_model_identifier_regex = qr/model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_controller_identifier_regex = qr/controller::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
 our $var_file_identifier_regex = qr/file::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/;
@@ -1259,6 +1259,13 @@ sub context_action_expression {
 			$context_object = { type => 'load_model_list_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
 			return $context_object;
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'count' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_class_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object = { type => 'load_model_count_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => $self->context_action_arguments({}), };
+			return $context_object;
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'create' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '?' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_class_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -1424,10 +1431,11 @@ sub context_action_expression {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'parentheses_expression', line_number => $tokens[0][2], value => $self->context_action_expression, };
+			$context_object = { type => 'parentheses_expression', line_number => $tokens[0][2], expression => $self->context_action_expression, };
 			$self->confess_at_current_offset('expected \')\'')
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ')';
 			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_more_action_expression($context_object);
 			return $context_object;
 			}
 			else {

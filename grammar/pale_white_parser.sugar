@@ -2,7 +2,7 @@ package PaleWhite::MVC::Parser
 
 # native_code_block_regex = /\{\{.*?\}\}/s
 
-symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\$|\//
+symbol_regex = /\{|\}|\[|\]|\(|\)|;|:|=>|<|>|<=|>=|==|!=|=|,|\.|\?|!|\@|\$|\/|\+|\-|\*|\%/
 # symbol_regex = /\{|\}|\[|\]|\(|\)|;/
 model_identifier_regex = /model::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
 controller_identifier_regex = /controller::[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/
@@ -1282,6 +1282,15 @@ object context action_expression {
 			}
 			return
 		}
+		'count', $class_identifier_regex => {
+			$_ = {
+				type => 'load_model_count_expression'
+				line_number => $0{line_number}
+				identifier => $1
+				arguments => !action_arguments->{}
+			}
+			return
+		}
 		'create', '?', $class_identifier_regex => {
 			$_ = {
 				type => 'create_optional_model_expression'
@@ -1474,9 +1483,10 @@ object context action_expression {
 			$_ = {
 				type => 'parentheses_expression'
 				line_number => $0{line_number}
-				value => !action_expression
+				expression => !action_expression
 			}
 			match ')'
+			$_ = !more_action_expression->$_
 			return
 		}
 		default {
