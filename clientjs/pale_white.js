@@ -79,7 +79,7 @@ pale_white = {
 				} else {
 					response = JSON.parse(xhr.response);
 				}
-				pale_white.on_ajax_trigger_response(response);
+				pale_white.on_ajax_response(response);
 
 				if (callback)
 					callback(response);
@@ -97,7 +97,7 @@ pale_white = {
 			xhr.send(JSON.stringify(args));
 		}
 	},
-	on_ajax_trigger_response: function (data) {
+	on_ajax_response: function (data) {
 		console.log("[PaleWhite] got response: ", data);
 
 		if (data.status === 'success') {
@@ -221,6 +221,16 @@ pale_white = {
 window.addEventListener('load', function () { pale_white.onload(); });
 pale_white.register_hook('form.ajax_trigger', 'submit', function (event) {
 	event.preventDefault();
-	pale_white.ajax(this.dataset.triggerAction, pale_white.parse_form_input(this));
+	var form = this;
+	pale_white.ajax(this.dataset.triggerAction, pale_white.parse_form_input(this), function (data) {
+		// if the response is an error, and the form has an on_error attribute
+		if (data.status === 'error') {
+			if (form.getAttribute('on_error') !== undefined) {
+				var selector = form.getAttribute('on_error');
+				var error_container = document.body.querySelector(selector);
+				error_container.innerText = data.error;
+			}
+		}
+	});
 });
 
