@@ -1202,12 +1202,12 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'load_model_list_expression') {
 		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "$class\::get_list($arguments)"
+		return "$class\::array_list($arguments)"
 		
 	} elsif ($expression->{type} eq 'load_model_count_expression') {
 		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "$class\::count($arguments)"
+		return "$class\::array_count($arguments)"
 		
 	} elsif ($expression->{type} eq 'create_optional_model_expression') {
 		my $class = $self->format_classname($expression->{identifier});

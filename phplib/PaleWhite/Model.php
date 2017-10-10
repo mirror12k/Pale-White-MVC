@@ -113,7 +113,7 @@ abstract class Model {
 		return $result;
 	}
 
-	public function add($array_name, $value) {
+	public function array_add($array_name, $value) {
 		if (!isset(static::$model_array_properties[$array_name]))
 			throw new \PaleWhite\InvalidException(
 					"attempted to add() undefined model property '$array_name' in model class: " . get_called_class());
@@ -135,7 +135,7 @@ abstract class Model {
 		}
 	}
 
-	public function remove($array_name, $value, $limit=null) {
+	public function array_remove($array_name, $value, $limit=null) {
 		if (!isset(static::$model_array_properties[$array_name]))
 			throw new \PaleWhite\InvalidException(
 					"attempted to remove() undefined model property '$array_name' in model class: " . get_called_class());
@@ -152,7 +152,7 @@ abstract class Model {
 		return $result;
 	}
 
-	public function contains($array_name, $value) {
+	public function array_contains($array_name, $value) {
 		if (!isset(static::$model_array_properties[$array_name]))
 			throw new \PaleWhite\InvalidException(
 					"attempted to contains() undefined model property '$array_name' in model class: " . get_called_class());
@@ -166,7 +166,7 @@ abstract class Model {
 		return $result > 0;
 	}
 
-	public function list_array($array_name, $args = array()) {
+	public function array_list($array_name, $args = array()) {
 		if (!isset(static::$model_array_properties[$array_name]))
 			throw new \PaleWhite\InvalidException(
 					"attempted to list_array() undefined model property '$array_name' in model class: " . get_called_class());
@@ -191,7 +191,7 @@ abstract class Model {
 		return $result_array;
 	}
 
-	public function count_array($array_name, $args = array()) {
+	public function array_count($array_name, $args = array()) {
 		if (!isset(static::$model_array_properties[$array_name]))
 			throw new \PaleWhite\InvalidException(
 					"attempted to count_array() undefined model property '$array_name' in model class: " . get_called_class());
