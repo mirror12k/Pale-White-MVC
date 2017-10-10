@@ -436,10 +436,12 @@ abstract class Model {
 			if (isset(static::$model_submodel_properties[$field])) {
 				if (isset(static::$model_array_properties[$field])) {
 					foreach ($this->$field as $object)
-						$object->delete();
+						if ($object !== null)
+							$object->delete();
 				} elseif (isset(static::$model_map_properties[$field])) {
 					foreach ($this->$field as $key => $object)
-						$object->delete();
+						if ($object !== null)
+							$object->delete();
 				} else {
 					if ($this->$field !== null)
 						$this->$field->delete();
@@ -447,10 +449,12 @@ abstract class Model {
 			} elseif (isset(static::$model_file_properties[$field])) {
 				if (isset(static::$model_array_properties[$field])) {
 					foreach ($this->$field as $object)
-						$object->delete();
+						if ($object !== null)
+							$object->delete();
 				} elseif (isset(static::$model_map_properties[$field])) {
 					foreach ($this->$field as $key => $object)
-						$object->delete();
+						if ($object !== null)
+							$object->delete();
 				} else {
 					if ($this->$field !== null)
 						$this->$field->delete();
