@@ -1207,7 +1207,7 @@ sub compile_expression {
 	} elsif ($expression->{type} eq 'load_model_count_expression') {
 		my $class = $self->format_classname($expression->{identifier});
 		my $arguments = $self->compile_arguments_array($expression->{arguments});
-		return "$class\::array_count($arguments)"
+		return "$class\::count($arguments)"
 		
 	} elsif ($expression->{type} eq 'create_optional_model_expression') {
 		my $class = $self->format_classname($expression->{identifier});
