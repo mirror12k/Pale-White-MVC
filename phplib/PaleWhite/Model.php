@@ -578,7 +578,7 @@ abstract class Model {
 		return $result;
 	}
 
-	public static function count(array $values = array()) {
+	public static function get_count(array $values = array()) {
 		// parse out any special values
 		$where_values = array();
 		foreach ($values as $name => $value) {
