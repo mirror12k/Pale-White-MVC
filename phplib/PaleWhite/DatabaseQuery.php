@@ -49,9 +49,10 @@ class DatabaseQuery {
 	}
 
 	public function order($order) {
-		$order = (string)$order;
 
 		if ($order === 'ascending' || $order === 'descending')
+			$this->query_args['order'] = (string)$order;
+		elseif (is_object($order) || is_array($order))
 			$this->query_args['order'] = $order;
 		else
 			throw new \PaleWhite\InvalidException('invalid row order: "$order"');
@@ -60,40 +61,35 @@ class DatabaseQuery {
 	}
 
 	public function compile() {
+		if (!isset($this->query_args['table']))
+			throw new \PaleWhite\InvalidException("'table' property not set in database query");
+
+		$table_name = '`' . $this->db->escape_string($this->query_args['table']) . '`';
+
 		if ($this->query_type === 'select') {
 			$query = 'SELECT';
 
 			if (isset($this->query_args['fields'])) {
 				$fields = array();
 				foreach ($this->query_args['fields'] as $field) {
-					$fields[] = '`' . $this->db->escape_string($field) . '`';
+					$fields[] = "$table_name.`" . $this->db->escape_string($field) . '`';
 				}
 			} else {
-				$fields = array('*');
+				$fields = array("$table_name.*");
 			}
 			$query .= ' ' . implode(', ', $fields);
 
-			if (isset($this->query_args['table'])) {
-				$query .= ' FROM `' . $this->db->escape_string($this->query_args['table']) . '`';
-			}
+			$query .= " FROM $table_name";
 
 			if (isset($this->query_args['where'])) {
-				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
+				$query .= $this->compile_where_clause($this->query_args['where']);
 			}
 
 			if (isset($this->query_args['order'])) {
-				if ($this->query_args['order'] === 'ascending')
-					$query .= ' ORDER BY id ASC';
-				else
-					$query .= ' ORDER BY id DESC';
+				$query .= $this->compile_order_clause($this->query_args['order']);
 			}
 
-			if (isset($this->query_args['limit'])) {
-				if (isset($this->query_args['offset']))
-					$query .= ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'];
-				else
-					$query .= ' LIMIT ' . $this->query_args['limit'];
-			}
+			$query .= $this->compile_limit_clause();
 
 			return $query;
 
@@ -103,36 +99,24 @@ class DatabaseQuery {
 			$fields = array('COUNT(*)');
 			$query .= ' ' . implode(', ', $fields);
 
-			if (isset($this->query_args['table'])) {
-				$query .= ' FROM `' . $this->db->escape_string($this->query_args['table']) . '`';
-			}
+			$query .= " FROM $table_name";
 
 			if (isset($this->query_args['where'])) {
-				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
+				$query .= $this->compile_where_clause($this->query_args['where']);
 			}
 
 			if (isset($this->query_args['order'])) {
-				if ($this->query_args['order'] === 'ascending')
-					$query .= ' ORDER BY id ASC';
-				else
-					$query .= ' ORDER BY id DESC';
+				$query .= $this->compile_order_clause($this->query_args['order']);
 			}
 
-			if (isset($this->query_args['limit'])) {
-				if (isset($this->query_args['offset']))
-					$query .= ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'];
-				else
-					$query .= ' LIMIT ' . $this->query_args['limit'];
-			}
+			$query .= $this->compile_limit_clause();
 
 			return $query;
 
 		} elseif ($this->query_type === 'insert') {
 			$query = 'INSERT';
 
-			if (isset($this->query_args['table'])) {
-				$query .= ' INTO `' . $this->db->escape_string($this->query_args['table']) . '`';
-			}
+			$query .= " INTO $table_name";
 
 			if (isset($this->query_args['values'])) {
 				$fields = array();
@@ -158,11 +142,7 @@ class DatabaseQuery {
 			return $query;
 
 		} elseif ($this->query_type === 'update') {
-			$query = 'UPDATE';
-
-			if (isset($this->query_args['table'])) {
-				$query .= ' `' . $this->db->escape_string($this->query_args['table']) . '`';
-			}
+			$query = "UPDATE $table_name";
 
 			if (isset($this->query_args['values'])) {
 				$values = array();
@@ -183,49 +163,30 @@ class DatabaseQuery {
 			}
 
 			if (isset($this->query_args['where'])) {
-				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
+				$query .= $this->compile_where_clause($this->query_args['where']);
 			}
 
 			if (isset($this->query_args['order'])) {
-				if ($this->query_args['order'] === 'ascending')
-					$query .= ' ORDER BY id ASC';
-				else
-					$query .= ' ORDER BY id DESC';
+				$query .= $this->compile_order_clause($this->query_args['order']);
 			}
 
-			if (isset($this->query_args['limit'])) {
-				if (isset($this->query_args['offset']))
-					$query .= ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'];
-				else
-					$query .= ' LIMIT ' . $this->query_args['limit'];
-			}
+			$query .= $this->compile_limit_clause();
 
 			return $query;
 		} elseif ($this->query_type === 'delete') {
 			$query = 'DELETE';
 
-
-			if (isset($this->query_args['table'])) {
-				$query .= ' FROM `' . $this->db->escape_string($this->query_args['table']) . '`';
-			}
+			$query .= " FROM $table_name";
 
 			if (isset($this->query_args['where'])) {
-				$query .= ' ' . $this->compile_where_clause($this->query_args['where']);
+				$query .= $this->compile_where_clause($this->query_args['where']);
 			}
 
 			if (isset($this->query_args['order'])) {
-				if ($this->query_args['order'] === 'ascending')
-					$query .= ' ORDER BY id ASC';
-				else
-					$query .= ' ORDER BY id DESC';
+				$query .= $this->compile_order_clause($this->query_args['order']);
 			}
 
-			if (isset($this->query_args['limit'])) {
-				if (isset($this->query_args['offset']))
-					$query .= ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'];
-				else
-					$query .= ' LIMIT ' . $this->query_args['limit'];
-			}
+			$query .= $this->compile_limit_clause();
 
 			return $query;
 
@@ -236,10 +197,26 @@ class DatabaseQuery {
 
 	public function compile_where_clause($where_clause)
 	{
+		# parse out inner joins first
+		$inner_joins = array();
+		foreach ($where_clause as $field => $value) {
+			if ((is_array($value) || is_object($value)) && isset($value['on'])) {
+				if (count($value['on']))
+					throw new \PaleWhite\InvalidException("empty 'on' clause for where join '$field'");
+
+				$inner_joins[$field] = $value['on'];
+			}
+		}
+
+		if (count($inner_joins) > 0)
+			$prefix = '`' . $this->db->escape_string($this->query_args['table']) . '`.';
+		else
+			$prefix = '';
+
 		$fields = array();
 		foreach ($where_clause as $field => $value) {
 			$field = '`' . $this->db->escape_string($field) . '`';
-			if (is_array($value) && (
+			if ((is_array($value) || is_object($value)) && (
 					isset($value['lt']) ||
 					isset($value['le']) ||
 					isset($value['gt']) ||
@@ -266,7 +243,11 @@ class DatabaseQuery {
 				} else {
 					throw new \PaleWhite\InvalidException("invalid value type for where field $field: " . gettype($value));
 				}
-				$fields[] = "$field $comparison $value";
+				$fields[] = "$prefix$field $comparison $value";
+
+			} elseif ((is_array($value) || is_object($value)) && isset($value['on'])) {
+				# ignore
+				$inner_joins[$field] = $value['on'];
 
 			} elseif (is_array($value)) {
 				$escaped_values = array();
@@ -283,7 +264,7 @@ class DatabaseQuery {
 					throw new \PaleWhite\InvalidException("empty value list for where field $field!");
 
 				$escaped_values = implode(",", $escaped_values);
-				$fields[] = "$field IN ($escaped_values)";
+				$fields[] = "$prefix$field IN ($escaped_values)";
 
 			} else {
 				if (is_string($value)) {
@@ -293,14 +274,61 @@ class DatabaseQuery {
 				} else {
 					throw new \PaleWhite\InvalidException("invalid value type for where field $field: " . gettype($value));
 				}
-				$fields[] = "$field = $value";
+				$fields[] = "$prefix$field = $value";
 			}
+		}
+		$inner_join_clause = ' ';
+		foreach ($inner_joins as $join_table => $join_conditions) {
+			$join_table_escaped = '`' . $this->db->escape_string($join_table) . '`';
+
+			$compiled_join_conditions = array();
+			foreach ($join_conditions as $join_field => $table_field) {
+				$left = $join_table_escaped . '.' . '`' . $this->db->escape_string($join_field) . '`';
+				$right = $prefix . '`' . $this->db->escape_string($table_field) . '`';
+
+				$compiled_join_conditions[] = "$left = $right";
+			}
+
+			$inner_join_clause .= 'INNER JOIN $join_table_escaped ON $join_fields ';
 		}
 
 		if (count($fields) > 0)
-			return 'WHERE ' . implode(' AND ', $fields);
+			return " $inner_join_clause WHERE " . implode(' AND ', $fields) . ' ';
 		else
-			return '';
+			return ' ';
+	}
+
+	public function compile_order_clause ($order_clause) {
+
+		if ($order_clause === 'ascending' || $order_clause === 'descending') {
+			$field = 'id';
+			$order = $order_clause;
+		} else {
+			foreach ($order_clause as $key => $value)
+			{
+				$field = $key;
+				$order = $value;
+			}
+		}
+		$table_name = '`' . $this->db->escape_string($this->query_args['table']) . '`';
+		$field = "$table_name.`" . $this->db->escape_string($field) . '`';
+		if ($order === 'ascending')
+			$order = "ASC";
+		else
+			$order = "DESC";
+
+		return " ORDER BY $field $order ";
+	}
+
+	public function compile_limit_clause () {
+		if (isset($this->query_args['limit'])) {
+			if (isset($this->query_args['offset']))
+				return ' LIMIT ' . $this->query_args['offset'] . ',' . $this->query_args['limit'] . ' ';
+			else
+				return ' LIMIT ' . $this->query_args['limit'] . ' ';
+		} else {
+			return ' ';
+		}
 	}
 
 	public function fetch() {
