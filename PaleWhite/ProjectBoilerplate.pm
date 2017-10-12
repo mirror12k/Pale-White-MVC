@@ -171,7 +171,38 @@ controller $controller_name {
 		return page_count;
 	}" : '') .
 	"
-}
+
+}" .
+($options{view_controller} ? "
+
+# +view_controller
+view_controller $options{view_controller} {
+	args (int page) {
+		# shift back from zero-based to one-based
+		view_page = page + 1;
+
+		items_list = action controller::$controller_name.list_page page=page;
+		view_args = {
+			page=view_page,
+			items_list=items_list,
+		};
+
+		# compute if there is a next_page and previous_page
+		if (action controller::$controller_name.has_next_page board_model=board_model, page=page) {
+			view_args.next_page = view_page + 1;
+		} else {
+			view_args.next_page = 0;
+		}
+		if (action controller::$controller_name.has_previous_page board_model=board_model, page=page) {
+			view_args.previous_page = view_page - 1;
+		} else {
+			view_args.previous_page = 0;
+		}
+		
+		return view_args;
+	}
+}" : '') .
+"
 
 
 "
@@ -201,7 +232,7 @@ sub main {
 	die "usage: $0 <options...> <project directory name>\n
 	options:
 		--user-controller <user_model_name> <controller_name> [+login] [+registration]
-		--paged-list-controller <item_model_name> <controller_name> [+search]" unless @_;
+		--paged-list-controller <item_model_name> <controller_name> [+search] [+view_controller <view_controller_name>]" unless @_;
 
 	my %options;
 
@@ -224,6 +255,8 @@ sub main {
 			$options{registration} = 1;
 		} elsif ($arg eq '+search') {
 			$options{search} = 1;
+		} elsif ($arg eq '+view_controller') {
+			$options{view_controller} = shift;
 
 		} else {
 			die "invalid option: $arg";
