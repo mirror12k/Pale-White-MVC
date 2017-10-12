@@ -619,7 +619,10 @@ abstract class Model {
 		$objects = array();
 		foreach ($result as $data) {
 			$data = static::load_data($data);
-			$objects[] = new static($data);
+			if ($data['id'] !== null)
+				$objects[] = new static($data);
+			else
+				$objects[] = null;
 		}
 
 		return $objects;
@@ -695,8 +698,18 @@ abstract class Model {
 			$query->limit($args['limit']);
 		if (isset($args['offset']))
 			$query->offset($args['offset']);
-		if (isset($args['order']))
-			$query->order($args['order']);
+		if (isset($args['order'])) {
+			if (is_array($args['order']) || is_object($args['order'])) {
+				if (!isset(static::$model_submodel_properties[$field]))
+					throw new \PaleWhite\InvalidException(get_called_class(),
+							"invalid order by property for non-model field '$field'");
+				
+				$query->order(array(static::$model_submodel_properties[$field] => $args['order']));
+				$query->where(array(static::$model_submodel_properties[$field] => array('on' => array('id' => 'value'))));
+			} else {
+				$query->order($args['order']);
+			}
+		}
 
 		$result = $query->fetch();
 

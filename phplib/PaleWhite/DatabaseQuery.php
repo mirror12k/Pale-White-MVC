@@ -197,18 +197,18 @@ class DatabaseQuery {
 
 	public function compile_where_clause($where_clause)
 	{
-		# parse out inner joins first
-		$inner_joins = array();
+		# parse out joins first
+		$joins = array();
 		foreach ($where_clause as $field => $value) {
 			if ((is_array($value) || is_object($value)) && isset($value['on'])) {
-				if (count($value['on']))
+				if (count($value['on']) < 1)
 					throw new \PaleWhite\InvalidException("empty 'on' clause for where join '$field'");
 
-				$inner_joins[$field] = $value['on'];
+				$joins[$field] = $value['on'];
 			}
 		}
 
-		if (count($inner_joins) > 0)
+		if (count($joins) > 0)
 			$prefix = '`' . $this->db->escape_string($this->query_args['table']) . '`.';
 		else
 			$prefix = '';
@@ -247,7 +247,6 @@ class DatabaseQuery {
 
 			} elseif ((is_array($value) || is_object($value)) && isset($value['on'])) {
 				# ignore
-				$inner_joins[$field] = $value['on'];
 
 			} elseif (is_array($value)) {
 				$escaped_values = array();
@@ -278,7 +277,7 @@ class DatabaseQuery {
 			}
 		}
 		$inner_join_clause = ' ';
-		foreach ($inner_joins as $join_table => $join_conditions) {
+		foreach ($joins as $join_table => $join_conditions) {
 			$join_table_escaped = '`' . $this->db->escape_string($join_table) . '`';
 
 			$compiled_join_conditions = array();
@@ -288,8 +287,9 @@ class DatabaseQuery {
 
 				$compiled_join_conditions[] = "$left = $right";
 			}
+			$compiled_join_conditions = implode(' AND ', $compiled_join_conditions);
 
-			$inner_join_clause .= 'INNER JOIN $join_table_escaped ON $join_fields ';
+			$inner_join_clause .= "LEFT JOIN $join_table_escaped ON $compiled_join_conditions ";
 		}
 
 		if (count($fields) > 0)
@@ -301,23 +301,34 @@ class DatabaseQuery {
 	public function compile_order_clause ($order_clause) {
 
 		if ($order_clause === 'ascending' || $order_clause === 'descending') {
+			$table_name = $this->query_args['table'];
 			$field = 'id';
 			$order = $order_clause;
 		} else {
 			foreach ($order_clause as $key => $value)
 			{
-				$field = $key;
-				$order = $value;
+				if (is_array($value) || is_object($value)) {
+					foreach ($value as $key2 => $value2) {
+						$table_name = $key;
+						$field = $key2;
+						$order = $value2;
+					}
+				} else {
+					$table_name = $this->query_args['table'];
+					$field = $key;
+					$order = $value;
+				}
 			}
 		}
-		$table_name = '`' . $this->db->escape_string($this->query_args['table']) . '`';
-		$field = "$table_name.`" . $this->db->escape_string($field) . '`';
+
+		$compiled_field = '`' . $this->db->escape_string($table_name) . '`.`' . $this->db->escape_string($field) . '`';
+
 		if ($order === 'ascending')
 			$order = "ASC";
 		else
 			$order = "DESC";
 
-		return " ORDER BY $field $order ";
+		return " ORDER BY $compiled_field $order ";
 	}
 
 	public function compile_limit_clause () {
