@@ -348,19 +348,6 @@ sub context_glass_item {
 			@tokens = (@tokens, $self->step_tokens(1));
 			return $context_object;
 			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '<') {
-			my @tokens_freeze = @tokens;
-			my @tokens = @tokens_freeze;
-			@tokens = (@tokens, $self->step_tokens(2));
-			$context_object = { type => 'raw_html_expression_node', line_number => $tokens[0][2], expression => $self->context_glass_argument_expression, };
-			$self->confess_at_current_offset('expected \'>\', \'}\'')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '>' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '}';
-			@tokens = (@tokens, $self->step_tokens(2));
-			$self->confess_at_current_offset('expected qr/\\s*(\\#[^\\n]*+\\s*)*\\n/s')
-				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_newline_regex)\Z/;
-			@tokens = (@tokens, $self->step_tokens(1));
-			return $context_object;
-			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '{' and $self->{tokens}[$self->{tokens_index} + 1][1] eq '{' and $self->{tokens}[$self->{tokens_index} + 2][1] eq '{') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
