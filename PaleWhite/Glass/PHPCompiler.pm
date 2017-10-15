@@ -84,8 +84,8 @@ sub compile_template_render {
 	my @tags;
 	if (exists $template->{block}) {
 		@tags = grep {
-			$_->{type} eq 'html_tag'
-			or ($_->{type} eq 'glass_helper' and $_->{identifier} ne 'block')
+			$_->{type} ne 'glass_helper' or
+			($_->{type} eq 'glass_helper' and $_->{identifier} ne 'block')
 		} @{$template->{block}};
 	}
 	# return @code unless @tags or defined $template->{view_controller};
@@ -173,6 +173,7 @@ sub compile_block {
 		push @code, $self->compile_item($item);
 		$prev = $item;
 	}
+	# warn "debug here compile_block: ", $self->{text_accumulator};
 
 	return @code
 }
