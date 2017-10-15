@@ -413,6 +413,15 @@ object context controller_block {
 				block => []
 			}
 		}
+		'reroute' => {
+			$_{reroute_paths}[] = {
+				type => 'match_path'
+				line_number => $0{line_number}
+				path => !interpolated_string_path->[]
+				# arguments => !optional_arguments_list->[]
+				block => !controller_reroute_block->[]
+			}
+		}
 		'api', 'global' => {
 			$_{global_api_paths}[] = !path_action_block->{
 				type => 'global_path'
@@ -622,6 +631,21 @@ list context interpolated_string_path {
 		type => 'string_token'
 		value => !format_string_interpolation_end->$1
 	}
+
+	return
+}
+
+list context controller_reroute_block {
+	match '=>', $class_identifier_regex
+	push {
+		type => 'route_controller'
+		line_number => $0{line_number}
+		identifier => $1
+		arguments => {}
+		# arguments => !action_arguments->{}
+	}
+
+	match ';'
 
 	return
 }

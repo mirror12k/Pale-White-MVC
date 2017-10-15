@@ -72,6 +72,7 @@ our $contexts = {
 	bracket_arguments_list => 'context_bracket_arguments_list',
 	branch_action_expression => 'context_branch_action_expression',
 	controller_block => 'context_controller_block',
+	controller_reroute_block => 'context_controller_reroute_block',
 	file_directory_block => 'context_file_directory_block',
 	format_string => 'context_format_string',
 	format_string_interpolation_end => 'context_format_string_interpolation_end',
@@ -460,6 +461,12 @@ sub context_controller_block {
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{ajax_paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_interpolated_string_path([]), arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'reroute') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			push @{$context_object->{reroute_paths}}, { type => 'match_path', line_number => $tokens[0][2], path => $self->context_interpolated_string_path([]), block => $self->context_controller_reroute_block([]), };
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'api' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'global') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -630,6 +637,20 @@ sub context_interpolated_string_path {
 				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_string_interpolation_end_regex)\Z/;
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @$context_list, { type => 'string_token', value => $self->context_format_string_interpolation_end($tokens[1][1]), };
+			return $context_list;
+}
+
+sub context_controller_reroute_block {
+	my ($self, $context_list) = @_;
+	my @tokens;
+
+			$self->confess_at_current_offset('expected \'=>\', qr/[a-zA-Z_][a-zA-Z0-9_]*+(?:::[a-zA-Z_][a-zA-Z0-9_]*+)*/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '=>' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_class_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(2));
+			push @$context_list, { type => 'route_controller', line_number => $tokens[0][2], identifier => $tokens[1][1], arguments => {}, };
+			$self->confess_at_current_offset('expected \';\'')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq ';';
+			@tokens = (@tokens, $self->step_tokens(1));
 			return $context_list;
 }
 

@@ -607,6 +607,7 @@ sub compile_controller_route {
 
 	my @paths;
 	@paths = (@paths, @{$controller->{global_paths}}) if exists $controller->{global_paths};
+	@paths = (@paths, @{$controller->{reroute_paths}}) if exists $controller->{reroute_paths};
 	@paths = (@paths, @{$controller->{paths}}) if exists $controller->{paths};
 	return @code unless @paths;
 
@@ -648,6 +649,7 @@ sub compile_controller_route_ajax {
 
 	my @paths;
 	@paths = (@paths, @{$controller->{global_ajax_paths}}) if exists $controller->{global_ajax_paths};
+	@paths = (@paths, @{$controller->{reroute_paths}}) if exists $controller->{reroute_paths};
 	@paths = (@paths, @{$controller->{ajax_paths}}) if exists $controller->{ajax_paths};
 	return @code unless @paths;
 
@@ -687,6 +689,7 @@ sub compile_controller_route_api {
 
 	my @paths;
 	@paths = (@paths, @{$controller->{global_api_paths}}) if exists $controller->{global_api_paths};
+	@paths = (@paths, @{$controller->{reroute_paths}}) if exists $controller->{reroute_paths};
 	@paths = (@paths, @{$controller->{api_paths}}) if exists $controller->{api_paths};
 	return @code unless @paths;
 
