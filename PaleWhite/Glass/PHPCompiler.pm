@@ -220,6 +220,11 @@ sub compile_item {
 			},
 		}),
 
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'doctype') {
+		return $self->compile_argument_expression({
+			type => 'string_expression', string => '<!doctype html>',
+		}, 'html')
+
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
 		my @code;
 		push @code, $self->flush_accumulator;
