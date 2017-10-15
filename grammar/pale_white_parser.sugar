@@ -413,6 +413,14 @@ object context controller_block {
 				block => []
 			}
 		}
+		'reroute', 'default' => {
+			$_{reroute_default} = {
+				type => 'default_path'
+				line_number => $0{line_number}
+				# arguments => !optional_arguments_list->[]
+				block => !controller_reroute_block->[]
+			}
+		}
 		'reroute' => {
 			$_{reroute_paths}[] = {
 				type => 'match_path'

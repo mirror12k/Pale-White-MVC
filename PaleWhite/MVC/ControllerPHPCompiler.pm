@@ -623,6 +623,9 @@ sub compile_controller_route {
 	if (exists $controller->{default_path}) {
 		push @code, "} else {\n";
 		push @code, map "\t$_", $self->compile_path($controller->{default_path});
+	} elsif (exists $controller->{reroute_default}) {
+		push @code, "} else {\n";
+		push @code, map "\t$_", $self->compile_path($controller->{reroute_default});
 	}
 	push @code, "}\n";
 
@@ -665,6 +668,9 @@ sub compile_controller_route_ajax {
 	if (exists $controller->{default_ajax_path}) {
 		push @code, "} else {\n";
 		push @code, map "\t$_", $self->compile_path($controller->{default_ajax_path});
+	} elsif (exists $controller->{reroute_default}) {
+		push @code, "} else {\n";
+		push @code, map "\t$_", $self->compile_path($controller->{reroute_default});
 	}
 	push @code, "}\n";
 
@@ -705,6 +711,9 @@ sub compile_controller_route_api {
 	if (exists $controller->{default_api_path}) {
 		push @code, "} else {\n";
 		push @code, map "\t$_", $self->compile_path($controller->{default_api_path});
+	} elsif (exists $controller->{reroute_default}) {
+		push @code, "} else {\n";
+		push @code, map "\t$_", $self->compile_path($controller->{reroute_default});
 	}
 	push @code, "}\n";
 

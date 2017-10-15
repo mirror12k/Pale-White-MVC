@@ -461,6 +461,12 @@ sub context_controller_block {
 			@tokens = (@tokens, $self->step_tokens(1));
 			push @{$context_object->{ajax_paths}}, $self->context_path_action_block({ type => 'match_path', line_number => $tokens[0][2], path => $self->context_interpolated_string_path([]), arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'reroute' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'default') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$context_object->{reroute_default} = { type => 'default_path', line_number => $tokens[0][2], block => $self->context_controller_reroute_block([]), };
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'reroute') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
