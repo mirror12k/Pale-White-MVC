@@ -50,6 +50,13 @@ sub compile_js {
 			push @code, "window.addEventListener('load', function (event) {\n";
 			push @code, @block;
 			push @code, "});\n\n";
+		} elsif ($line =~ /\A\s*on\s+DOMContentLoaded\s*\Z/s) {
+			# event hook on selector
+			my ($selector, $event) = ($1, $2);
+			my @block = $self->read_js_block(\@text);
+			push @code, "document.addEventListener('DOMContentLoaded', function (event) {\n";
+			push @code, @block;
+			push @code, "});\n\n";
 
 		} elsif ($line =~ /\A\s*function\s+([a-zA-Z_][a-zA-Z_0-9]*+)\s*\((.*?)\)\s*\Z/s) {
 			# event hook on selector
