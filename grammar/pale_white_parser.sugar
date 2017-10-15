@@ -903,6 +903,20 @@ list context arguments_list_item {
 				identifier => $1
 			}
 			
+		} elsif '[', ']', $identifier_regex => {
+			push {
+				type => 'argument_specifier'
+				line_number => $0{line_number}
+				identifier => $3
+			}
+			push {
+				type => 'validate_variable'
+				line_number => $0{line_number}
+				validator_identifier => $0
+				identifier => $3
+				as_array => '1'
+			}
+			
 		} else {
 			push {
 				type => 'argument_specifier'
@@ -921,6 +935,19 @@ list context arguments_list_item {
 			line_number => $0{line_number}
 			validator_identifier => $0
 			identifier => $1
+		}
+	} elsif $model_identifier_regex, '[', ']', $identifier_regex => {
+		push {
+			type => 'argument_specifier'
+			line_number => $0{line_number}
+			identifier => $3
+		}
+		push {
+			type => 'validate_variable'
+			line_number => $0{line_number}
+			validator_identifier => $0
+			identifier => $3
+			as_array => '1'
 		}
 	} elsif '!', $identifier_regex => {
 		push {

@@ -1056,50 +1056,18 @@ sub compile_action {
 			$min_size = "self::\$$min_size" if $min_size =~ $identifier_regex;
 		}
 
-		if ($action->{validator_identifier} eq 'int') {
-			push @code, "\$$action->{identifier} = (int)\$$action->{identifier};\n";
-
-		} elsif ($action->{validator_identifier} eq 'string') {
-			push @code, "\$$action->{identifier} = (string)\$$action->{identifier};\n";
-			if (defined $max_size) {
-				push @code, "if (strlen(\$$action->{identifier}) > $max_size)\n",
-					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
-							. "exceeded max length of ' . $max_size);\n";
-			}
-			if (defined $min_size) {
-				push @code, "if (strlen(\$$action->{identifier}) < $min_size)\n",
-					"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" "
-							. "doesnt reach min length of ' . $min_size);\n";
-			}
-
-		} elsif ($action->{validator_identifier} =~ $model_identifier_regex) {
-			my $model_class = $action->{validator_identifier};
-			$model_class =~ s/\Amodel::/\\/s;
-			$model_class =~ s/::/\\/s;
-			push @code, "if (! (\$$action->{identifier} instanceof \\PaleWhite\\Model "
-					. "&& \$$action->{identifier} instanceof $model_class))\n",
-				"\tthrow new \\PaleWhite\\ValidationException"
-					. "('argument \"$action->{identifier}\" not an instance of \"$model_class\" model');\n";
-
-		} elsif ($action->{validator_identifier} eq '_file_upload') {
-			push @code, "if (! \$$action->{identifier} instanceof \\PaleWhite\\FileUpload)\n",
-				"\tthrow new \\PaleWhite\\ValidationException('argument \"$action->{identifier}\" not a file upload');\n";
-			if (defined $max_size) {
-				push @code, "if (\$$action->{identifier}->file_size > $max_size)\n",
-					"\tthrow new \\PaleWhite\\ValidationException('file argument \"$action->{identifier}\" "
-							. "exceeded max length of ' . $max_size);\n";
-			}
-			if (defined $min_size) {
-				push @code, "if (\$$action->{identifier}->file_size < $min_size)\n",
-					"\tthrow new \\PaleWhite\\ValidationException('file argument \"$action->{identifier}\" "
-							. "doesnt reach min length of ' . $min_size);\n";
-			}
-
-		} elsif ($action->{validator_identifier} eq '_csrf_token') {
-			push @code, "\$runtime->validate_csrf_token(\$$action->{identifier});\n"
+		if ($action->{as_array}) {
+			@code = $self->compile_vaidate_variable("\$_", "$action->{identifier}",
+					$action->{validator_identifier}, $min_size, $max_size);
+			push @code, "return \$_;\n";
+			
+			@code = map "\t$_", @code;
+			@code = ("\$$action->{identifier} = array_map(function (\$_) {\n", @code, "}, \$$action->{identifier});\n");
+			# @code = ("foreach (\$$action->{identifier} as \$_) {\n", @code, "}\n");
 
 		} else {
-			push @code, "\$$action->{identifier} = \$this->validate('$action->{validator_identifier}', \$$action->{identifier});\n"
+			@code = $self->compile_vaidate_variable("\$$action->{identifier}", "$action->{identifier}",
+					$action->{validator_identifier}, $min_size, $max_size);
 		}
 
 		if ($action->{type} eq 'optional_validate_variable') {
@@ -1150,6 +1118,59 @@ sub compile_action {
 	} else {
 		die "invalid action: $action->{type}";
 	}
+}
+
+sub compile_vaidate_variable {
+	my ($self, $identifier, $identifier_name, $type, $min_size, $max_size) = @_;
+	my @code;
+
+	if ($type eq 'int') {
+		push @code, "$identifier = (int)$identifier;\n";
+
+	} elsif ($type eq 'string') {
+		push @code, "$identifier = (string)$identifier;\n";
+		if (defined $max_size) {
+			push @code, "if (strlen($identifier) > $max_size)\n",
+				"\tthrow new \\PaleWhite\\ValidationException('argument \"$identifier_name\" "
+						. "exceeded max length of ' . $max_size);\n";
+		}
+		if (defined $min_size) {
+			push @code, "if (strlen($identifier) < $min_size)\n",
+				"\tthrow new \\PaleWhite\\ValidationException('argument \"$identifier_name\" "
+						. "doesnt reach min length of ' . $min_size);\n";
+		}
+
+	} elsif ($type =~ $model_identifier_regex) {
+		my $model_class = $type;
+		$model_class =~ s/\Amodel::/\\/s;
+		$model_class =~ s/::/\\/s;
+		push @code, "if (! ($identifier instanceof \\PaleWhite\\Model "
+				. "&& $identifier instanceof $model_class))\n",
+			"\tthrow new \\PaleWhite\\ValidationException"
+				. "('argument \"$identifier_name\" not an instance of \"$model_class\" model');\n";
+
+	} elsif ($type eq '_file_upload') {
+		push @code, "if (! $identifier instanceof \\PaleWhite\\FileUpload)\n",
+			"\tthrow new \\PaleWhite\\ValidationException('argument \"$identifier_name\" not a file upload');\n";
+		if (defined $max_size) {
+			push @code, "if ($identifier->file_size > $max_size)\n",
+				"\tthrow new \\PaleWhite\\ValidationException('file argument \"$identifier_name\" "
+						. "exceeded max length of ' . $max_size);\n";
+		}
+		if (defined $min_size) {
+			push @code, "if ($identifier->file_size < $min_size)\n",
+				"\tthrow new \\PaleWhite\\ValidationException('file argument \"$identifier_name\" "
+						. "doesnt reach min length of ' . $min_size);\n";
+		}
+
+	} elsif ($type eq '_csrf_token') {
+		push @code, "\$runtime->validate_csrf_token($identifier);\n"
+
+	} else {
+		push @code, "$identifier = \$this->validate('$type', $identifier);\n"
+	}
+
+	return @code
 }
 
 sub compile_arguments_array {

@@ -849,6 +849,13 @@ sub context_arguments_list_item {
 			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[1][1], };
 			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], identifier => $tokens[1][1], };
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 1][1] eq ']' and $self->{tokens}[$self->{tokens_index} + 2][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(3));
+			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[3][1], };
+			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], identifier => $tokens[3][1], as_array => '1', };
+			}
 			else {
 			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[0][1], };
 			}
@@ -859,6 +866,13 @@ sub context_arguments_list_item {
 			@tokens = (@tokens, $self->step_tokens(2));
 			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[1][1], };
 			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], identifier => $tokens[1][1], };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_model_identifier_regex)\Z/ and $self->{tokens}[$self->{tokens_index} + 1][1] eq '[' and $self->{tokens}[$self->{tokens_index} + 2][1] eq ']' and $self->{tokens}[$self->{tokens_index} + 3][1] =~ /\A($var_identifier_regex)\Z/) {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(4));
+			push @$context_list, { type => 'argument_specifier', line_number => $tokens[0][2], identifier => $tokens[3][1], };
+			push @$context_list, { type => 'validate_variable', line_number => $tokens[0][2], validator_identifier => $tokens[0][1], identifier => $tokens[3][1], as_array => '1', };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '!' and $self->{tokens}[$self->{tokens_index} + 1][1] =~ /\A($var_identifier_regex)\Z/) {
 			my @tokens_freeze = @tokens;
