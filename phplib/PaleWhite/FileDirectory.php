@@ -81,6 +81,32 @@ abstract class FileDirectory {
 			throw new \PaleWhite\InvalidException('invalid arguments to file');
 		}
 	}
+
+	public static function get_file_list($args = array()) {
+		if (isset($args['_order']) && $args['order'] === 'descending') {
+			$file_list = scandir(static::$directory, SCANDIR_SORT_DESCENDING);
+		} else {
+			$file_list = scandir(static::$directory, SCANDIR_SORT_ASCENDING);
+		}
+
+		$file_list = array_filter($file_list, function ($filename) {
+			return $filename !== '.' && $filename !== '..';
+		});
+
+		if (isset($args['_offset'])) {
+			$file_list = array_slice($file_list, (int)$args['_offset']);
+		}
+		if (isset($args['_limit'])) {
+			$file_list = array_slice($file_list, 0, (int)$args['_limit']);
+		}
+
+		$file_objects = array();
+		foreach ($file_list as $filename) {
+			$file_objects[] = static::load_file($filename);
+		}
+
+		return $file_objects;
+	}
 }
 
 class FileDirectoryFile {
