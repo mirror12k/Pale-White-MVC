@@ -213,8 +213,50 @@ class DatabaseQuery {
 		else
 			$prefix = '';
 
-		$fields = array();
+		$fields = $this->compile_where_clause_fields($prefix, $where_clause);
+
 		foreach ($where_clause as $field => $value) {
+			if ((is_array($value) || is_object($value)) && isset($value['on']) && isset($value['where'])) {
+				$join_table_prefix = '`' . $this->db->escape_string($field) . '`.';
+				$fields = array_merge($fields, $this->compile_where_clause_fields($join_table_prefix, $value['where']));
+			}
+		}
+
+		$inner_join_clause = ' ';
+		foreach ($joins as $join_table => $join_conditions) {
+			$join_table_escaped = '`' . $this->db->escape_string($join_table) . '`';
+
+			$compiled_join_conditions = array();
+			foreach ($join_conditions as $join_field => $compare_value) {
+				$left = $join_table_escaped . '.' . '`' . $this->db->escape_string($join_field) . '`';
+				if ((is_array($compare_value) || is_object($compare_value)) && isset($compare_value['field'])) {
+					$right = $prefix . '`' . $this->db->escape_string($compare_value['field']) . '`';
+				} elseif (is_string($compare_value)) {
+					$right = '\'' . $this->db->escape_string($compare_value) . '\'';
+				} elseif (is_numeric($compare_value)) {
+					$right = "$compare_value";
+				} else {
+					throw new \PaleWhite\InvalidException("invalid value type for where field $join_table.$join_field: " . gettype($compare_value));
+				}
+
+				$compiled_join_conditions[] = "$left = $right";
+			}
+			$compiled_join_conditions = implode(' AND ', $compiled_join_conditions);
+
+			$inner_join_clause .= "LEFT JOIN $join_table_escaped ON $compiled_join_conditions ";
+		}
+
+		if (count($fields) > 0)
+			return " $inner_join_clause WHERE " . implode(' AND ', $fields) . ' ';
+		elseif (count($joins) > 0)
+			return " $inner_join_clause ";
+		else
+			return ' ';
+	}
+
+	public function compile_where_clause_fields($prefix, $where_fields) {
+		$fields = array();
+		foreach ($where_fields as $field => $value) {
 			$field = '`' . $this->db->escape_string($field) . '`';
 			if ((is_array($value) || is_object($value)) && (
 					isset($value['lt']) ||
@@ -276,26 +318,8 @@ class DatabaseQuery {
 				$fields[] = "$prefix$field = $value";
 			}
 		}
-		$inner_join_clause = ' ';
-		foreach ($joins as $join_table => $join_conditions) {
-			$join_table_escaped = '`' . $this->db->escape_string($join_table) . '`';
 
-			$compiled_join_conditions = array();
-			foreach ($join_conditions as $join_field => $table_field) {
-				$left = $join_table_escaped . '.' . '`' . $this->db->escape_string($join_field) . '`';
-				$right = $prefix . '`' . $this->db->escape_string($table_field) . '`';
-
-				$compiled_join_conditions[] = "$left = $right";
-			}
-			$compiled_join_conditions = implode(' AND ', $compiled_join_conditions);
-
-			$inner_join_clause .= "LEFT JOIN $join_table_escaped ON $compiled_join_conditions ";
-		}
-
-		if (count($fields) > 0)
-			return " $inner_join_clause WHERE " . implode(' AND ', $fields) . ' ';
-		else
-			return ' ';
+		return $fields;
 	}
 
 	public function compile_order_clause ($order_clause) {

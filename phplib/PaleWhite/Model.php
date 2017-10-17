@@ -705,7 +705,8 @@ abstract class Model {
 							"invalid order by property for non-model field '$field'");
 				
 				$query->order(array(static::$model_submodel_properties[$field] => $args['order']));
-				$query->where(array(static::$model_submodel_properties[$field] => array('on' => array('id' => 'value'))));
+				$query->where(array(static::$model_submodel_properties[$field] => array('on' => 
+						array('id' => array('field' => 'value')))));
 			} else {
 				$query->order($args['order']);
 			}
@@ -762,13 +763,23 @@ abstract class Model {
 					foreach ($value as $sub_value) {
 						$array_value[] = static::cast_to_store($field, $sub_value);
 					}
-					$stored[$field] = array('on' => array(
-						static::$table_name . '__array_property__' . $field => $array_value
-					));
+					$stored[static::$table_name . '__array_property__' . $field] = array(
+						'on' => array(
+							'parent_id' => array('field' => 'id'),
+						),
+						'where' => array(
+							'value' => $array_value,
+						),
+					);
 				} else {
-					$stored[$field] = array('on' => array(
-						static::$table_name . '__array_property__' . $field => static::cast_to_store($field, $value)
-					));
+					$stored[static::$table_name . '__array_property__' . $field] = array(
+						'on' => array(
+							'parent_id' => array('field' => 'id'),
+						),
+						'where' => array(
+							'value' => static::cast_to_store($field, $value),
+						),
+					);
 				}
 			} else
 				throw new \PaleWhite\InvalidException(
