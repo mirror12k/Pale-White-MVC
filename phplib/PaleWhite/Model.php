@@ -527,7 +527,7 @@ abstract class Model {
 	}
 
 	public static function get_by(array $values) {
-		$values = static::store_data($values);
+		$values = static::store_data_to_where_query($values);
 
 		global $runtime;
 		$query = $runtime->database->select()
@@ -558,7 +558,7 @@ abstract class Model {
 		}
 
 		// convert to database-safe format
-		$where_values = static::store_data($where_values);
+		$where_values = static::store_data_to_where_query($where_values);
 
 		global $runtime;
 		// build the query
@@ -593,7 +593,7 @@ abstract class Model {
 		}
 
 		// convert to database-safe format
-		$where_values = static::store_data($where_values);
+		$where_values = static::store_data_to_where_query($where_values);
 
 		global $runtime;
 		// build the query
@@ -741,6 +741,40 @@ abstract class Model {
 			$array[$row['map_key']] = static::cast_from_store($field, $row['value']);
 
 		return $array;
+	}
+
+	private static function store_data_to_where_query(array $data) {
+		$stored = array();
+		foreach ($data as $field => $value) {
+			if (isset(static::$model_properties[$field])) {
+				if (is_array($value)) {
+					$array_value = array();
+					foreach ($value as $sub_value) {
+						$array_value[] = static::cast_to_store($field, $sub_value);
+					}
+					$stored[$field] = $array_value;
+				} else {
+					$stored[$field] = static::cast_to_store($field, $value);
+				}
+			} elseif (isset(static::$model_array_properties[$field])) {
+				if (is_array($value)) {
+					$array_value = array();
+					foreach ($value as $sub_value) {
+						$array_value[] = static::cast_to_store($field, $sub_value);
+					}
+					$stored[$field] = array('on' => array(
+						static::$table_name . '__array_property__' . $field => $array_value
+					));
+				} else {
+					$stored[$field] = array('on' => array(
+						static::$table_name . '__array_property__' . $field => static::cast_to_store($field, $value)
+					));
+				}
+			} else
+				throw new \PaleWhite\InvalidException(
+						"attempted to cast undefined model property '$field' in model class: " . get_called_class());
+		}
+		return $stored;
 	}
 
 	private static function store_data(array $data) {
