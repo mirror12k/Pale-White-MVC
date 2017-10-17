@@ -13,6 +13,7 @@ class PHPRuntime {
 	public $is_ajax;
 	public $is_api;
 	public $remote_address;
+	public $remote_headers;
 
 	public $request;
 	public $response;
@@ -68,6 +69,15 @@ class PHPRuntime {
 		$this->site_url = $protocol.$domain;
 
 		$this->remote_address = $_SERVER['REMOTE_ADDR'];
+
+		$this->remote_headers = array();
+		foreach (getallheaders() as $key => $value) {
+			$filtered_key = strtolower($key);
+			$filtered_key = str_replace('-', '_', $filtered_key);
+			$this->remote_headers[$filtered_key] = $value;
+		}
+		// $this->log_message("request headers: " . json_encode($this->remote_headers));
+		$this->remote_headers = (object)$this->remote_headers;
 
 		$this->is_ajax = false;
 		$this->is_api = false;
