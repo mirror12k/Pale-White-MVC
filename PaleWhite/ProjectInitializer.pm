@@ -108,6 +108,10 @@ button.hello_world => on click
 '
 }
 
+sub default_jquery_file {
+	return Sugar::IO::File->new('external/jquery.3.2.1.js')->read;
+}
+
 sub default_font_include_file {
 	return "
 
@@ -147,9 +151,14 @@ sub initilize_project {
 	}
 	$src_dir->new_dir('css')->mk;
 	$src_dir->dir('css')->new_file('style.css')->write(default_style_file);
-	if ($options{js}) {
+	if ($options{js} or $options{jquery}) {
 		$src_dir->new_dir('js')->mk;
+	}
+	if ($options{js}) {
 		$src_dir->dir('js')->new_file('app.white_js')->write(default_js_file);
+	}
+	if ($options{jquery}) {
+		$src_dir->dir('js')->new_file('jquery.js')->write(default_jquery_file);
 	}
 	if ($options{fonts}) {
 		$src_dir->new_dir('fonts')->mk;
@@ -159,7 +168,7 @@ sub initilize_project {
 
 sub main {
 
-	die "usage: $0 [+js] [+fonts] [+local] [+models] <project directory name>" unless @_;
+	die "usage: $0 [+js] [+jquery] [+fonts] [+local] [+models] <project directory name>" unless @_;
 
 	my %options;
 
@@ -167,6 +176,8 @@ sub main {
 		my $arg = shift;
 		if ($arg eq '+js') {
 			$options{js} = 1;
+		} elsif ($arg eq '+jquery') {
+			$options{jquery} = 1;
 		} elsif ($arg eq '+fonts') {
 			$options{fonts} = 1;
 		} elsif ($arg eq '+local') {
