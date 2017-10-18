@@ -76,14 +76,6 @@ abstract class Model {
 			throw new \PaleWhite\InvalidException(
 					"attempted to set model property 'id' in model class: " . get_called_class());
 		} elseif (isset(static::$model_properties[$name])) {
-			// if it's an owned property, delete the previous value
-			if (isset(static::$model_owned_properties[$name])) {
-				if (isset(static::$model_submodel_properties[$name]) || isset(static::$model_file_properties[$name])) {
-					if ($this->_data[$name]) {
-						$this->_data[$name]->delete();
-					}
-				}
-			}
 			$this->_data[$name] = $value;
 			$this->update_fields(array($name => $value));
 		} elseif (isset(static::$model_array_properties[$name])) {
