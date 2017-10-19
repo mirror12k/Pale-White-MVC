@@ -221,6 +221,7 @@ sub compile_view_controller {
 	$parent = $self->format_classname($parent);
 
 	push @code, $self->compile_view_controller_args_block($view_controller);
+	push @code, $self->compile_view_controller_more_args_block($view_controller);
 	push @code, $self->compile_controller_action($view_controller);
 	
 	@code = map "\t$_", @code;
@@ -243,7 +244,26 @@ sub compile_view_controller_args_block {
 	push @code, $self->compile_path($view_controller->{args_block});
 
 	@code = map "\t$_", @code;
-	@code = ("public function load_args (array \$args) {\n", @code, "}\n", "\n");
+	@code = ("public function args_block (array \$args) {\n", @code, "}\n", "\n");
+
+	return @code
+}
+
+sub compile_view_controller_more_args_block {
+	my ($self, $view_controller) = @_;
+	my @code;
+
+	$self->{context_args_variable} = '$args';
+	$self->{block_context_type} = 'view_controller_args_block';
+
+	return @code unless defined $view_controller->{more_args_block};
+
+	push @code, "global \$runtime;\n\n";
+
+	push @code, $self->compile_path($view_controller->{more_args_block});
+
+	@code = map "\t$_", @code;
+	@code = ("public function more_args_block (array \$args) {\n", @code, "}\n", "\n");
 
 	return @code
 }

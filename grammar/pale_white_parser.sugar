@@ -521,6 +521,14 @@ object context view_controller_block {
 				block => []
 			}
 		}
+		'more_args' => {
+			$_{more_args_block} = !path_action_block->{
+				type => 'args_block'
+				line_number => $0{line_number}
+				arguments => !optional_arguments_list->[]
+				block => []
+			}
+		}
 		'action' => {
 			match $identifier_regex
 

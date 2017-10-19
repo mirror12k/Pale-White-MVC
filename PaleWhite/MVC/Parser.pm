@@ -540,6 +540,12 @@ sub context_view_controller_block {
 			@tokens = (@tokens, $self->step_tokens(1));
 			$context_object->{args_block} = $self->context_path_action_block({ type => 'args_block', line_number => $tokens[0][2], arguments => $self->context_optional_arguments_list([]), block => [], });
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'more_args') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object->{more_args_block} = $self->context_path_action_block({ type => 'args_block', line_number => $tokens[0][2], arguments => $self->context_optional_arguments_list([]), block => [], });
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq 'action') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
