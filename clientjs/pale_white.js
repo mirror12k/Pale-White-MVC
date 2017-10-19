@@ -136,8 +136,9 @@ pale_white = {
 				pale_white.add_hooks(newdom);
 				newdom = newdom.firstChild;
 
-				// replace the target with it
-				node.parentNode.replaceChild(newdom, node);
+				node.appendChild(newdom);
+				// // replace the target with it
+				// node.parentNode.replaceChild(newdom, node);
 			}
 		});
 	},
@@ -335,12 +336,13 @@ pale_white = {
 window.addEventListener('load', function () { pale_white.onload(); });
 pale_white.register_hook('form.ajax_trigger', 'submit', function (event) {
 	event.preventDefault();
+	event.stopPropagation();
 	var form = this;
 	pale_white.ajax(this.dataset.triggerAction, pale_white.parse_form_input(this), function (data) {
 		// if the response is an error, and the form has an on_error attribute
 		if (data.status === 'error') {
-			if (form.getAttribute('on_error') !== undefined) {
-				var selector = form.getAttribute('on_error');
+			if (form.dataset.onTriggerError) {
+				var selector = form.dataset.onTriggerError;
 				var error_container = document.body.querySelector(selector);
 				error_container.innerText = data.error;
 			}
@@ -349,6 +351,7 @@ pale_white.register_hook('form.ajax_trigger', 'submit', function (event) {
 });
 pale_white.register_hook('.pwa-clickable', 'click', function (event) {
 	event.preventDefault();
+	event.stopPropagation();
 	pale_white.execute_pwa_command(this.dataset.pwaCommand);
 });
 
