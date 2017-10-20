@@ -73,6 +73,7 @@ pale_white = {
 		xhr.setRequestHeader("X-Requested-With", "pale_white/ajax");
 		xhr.addEventListener('readystatechange', function () {
 			if (xhr.readyState == 4) {
+				var response;
 				if (xhr.response === "") {
 					console.log("[PaleWhite] empty response!");
 					response = {};
@@ -179,16 +180,20 @@ pale_white = {
 		return data;
 	},
 	api_request: function (url, args, callback) {
+		url = this.get_site_base() + url;
+
 		var xhr = new XMLHttpRequest();
 		xhr.open("POST", url, true);
 		xhr.setRequestHeader("X-Requested-With", "pale_white/api");
 		xhr.addEventListener('readystatechange', function () {
 			if (xhr.readyState == 4) {
+				var response;
 				if (xhr.response === "") {
 					console.log("[PaleWhite] empty response!");
 					response = {};
 				} else {
 					response = JSON.parse(xhr.response);
+					console.log("[PaleWhite] got api response: ", response);
 				}
 				if (callback)
 					callback(response);

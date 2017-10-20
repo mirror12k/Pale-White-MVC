@@ -88,7 +88,7 @@ class HTTPRequestExecutor {
 			$response = new \PaleWhite\Response();
 			$runtime->response = $response;
 			$response->status = "500 Server Error";
-			if ($runtime->is_ajax) {
+			if ($runtime->is_ajax || $runtime->is_api) {
 				if ($config['show_exception_trace']) {
 					// show a detailed dump of data if show_exception_trace is enabled
 					$exception_trace = array(
