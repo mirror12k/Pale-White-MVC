@@ -445,6 +445,13 @@ class PHPRuntime {
 		if (!hash_equals($_SESSION['pale_white_csrf_token'], $token))
 			throw new \PaleWhite\ValidationException("incorrect csrf token");
 	}
+
+	public function secure_token($length) {
+		$token = openssl_random_pseudo_bytes($length);
+		if ($token === false)
+			throw new \PaleWhite\PaleWhiteException("failed to generate secure token, not enough entropy");
+		return bin2hex($token);
+	}
 }
 
 
