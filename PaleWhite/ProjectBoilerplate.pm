@@ -42,6 +42,10 @@ sub default_user_controller {
 
 
 controller $controller_name {
+	action is_logged_in {
+		return action get_current_user;
+	}
+
 	action get_current_user {
 		if (session.${controller_name}_login_token) {
 			user = model? $user_model_name id=session.${controller_name}_login_token;
@@ -58,6 +62,46 @@ controller $controller_name {
 	action clear_current_user {
 		session.${controller_name}_login_token = 0;
 	}" .
+	($options{api} ? "
+
+	# +api
+	ajax \"/login\" (string[1:255] username, string[1:255] password) {
+		# action check_create_default;
+		
+		user = action verify_user_login username=username, password=password;
+		if (user) {
+			action set_current_user user=user;
+			render_json status=\"success\", action=\"refresh\";
+		} else {
+			render_json status=\"error\", error=\"incorrect login\";
+		}
+	}
+	
+	ajax \"/logout\" {
+		action clear_current_user;
+		render_json status=\"success\", action=\"refresh\";
+	}
+
+	ajax \"/edit/password\" (string[1:255] old_password, string[1:255] new_password1, string[1:255] new_password2) {
+		user = action get_current_user;
+		if (!user) {
+			render_json status=\"error\", error=\"not logged in\";
+			return;
+		}
+
+		if (new_password1 != new_password2) {
+			render_json status=\"error\", error=\"new passwords dont match\";
+			return;
+		}
+
+		if (!user.matches_hashed_field(\"password\", old_password)) {
+			render_json status=\"error\", error=\"incorrect password\";
+			return;
+		}
+
+		user.password = new_password1;
+		render_json status=\"success\", action=\"refresh\";
+	}" : '') .
 	($options{login} ? "
 
 	# +login
@@ -80,6 +124,17 @@ controller $controller_name {
 	action register_user (string[1:255] username, string[1:255] password) {
 		user = create $user_model_name username=username, password=password, registration_timestamp=_time;
 		return user;
+	}" : '') .
+	($options{create_default} ? "
+
+	# +create_default
+	action check_create_default {
+		count_users = count $user_model_name;
+		if (count_users == 0) {
+			default_user = create $user_model_name username=\"admin\", password=\"password\";
+			return default_user;
+		}
+		return 0;
 	}" : '') .
 	"
 }
@@ -231,7 +286,7 @@ sub main {
 
 	die "usage: $0 <options...> <project directory name>\n
 	options:
-		--user-controller <user_model_name> <controller_name> [+login] [+registration]
+		--user-controller <user_model_name> <controller_name> [+api] [+login] [+registration] [+create_default]
 		--paged-list-controller <item_model_name> <controller_name> [+search] [+view_controller <view_controller_name>]" unless @_;
 
 	my %options;
@@ -249,6 +304,10 @@ sub main {
 			push @target_args, shift // die "item model name argument required";
 			push @target_args, shift // die "controller name argument required";
 
+		} elsif ($arg eq '+api') {
+			$options{api} = 1;
+		} elsif ($arg eq '+create_default') {
+			$options{create_default} = 1;
 		} elsif ($arg eq '+login') {
 			$options{login} = 1;
 		} elsif ($arg eq '+registration') {
