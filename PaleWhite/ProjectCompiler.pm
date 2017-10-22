@@ -78,6 +78,10 @@ global \$config;
 	// location where plugins are stored
 	// plugins must be stored by their full plugin class name
 	'plugins_folder' => 'plugins',
+
+	// application-specific config properties
+	// accessible by runtime.application_config
+	'application_config' => array(),
 );
 
 "

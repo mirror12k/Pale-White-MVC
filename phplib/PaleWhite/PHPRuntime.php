@@ -24,6 +24,9 @@ class PHPRuntime {
 	public $controller_cache = array();
 	public $plugin_cache = array();
 
+	public $config;
+	public $application_config;
+
 	public $plugins;
 	public $plugins_config;
 	public $event_hooks = array();
@@ -36,13 +39,18 @@ class PHPRuntime {
 	// initialization functions to setup the runtime environment
 	// ------------------------------------------
 
-	public function initialize_plugins() {
+	public function initialize_config() {
 		global $config;
+		
+		$this->config = $config;
+		$this->application_config = (object)$this->config['application_config'];
+	}
 
+	public function initialize_plugins() {
 		$this->plugins = (object)array();
 		$this->plugins_config = (object)array();
-		foreach ($config['plugins'] as $plugin_name => $plugin_config) {
-			$plugin_directory = $config['plugins_folder'] . '/' . $plugin_config['plugin_class'];
+		foreach ($this->config['plugins'] as $plugin_name => $plugin_config) {
+			$plugin_directory = $this->config['plugins_folder'] . '/' . $plugin_config['plugin_class'];
 			require_once "$plugin_directory/includes.php";
 
 			$plugin_class = $plugin_config['plugin_class'];
@@ -52,14 +60,12 @@ class PHPRuntime {
 	}
 
 	public function initialize_http() {
-		global $config;
-
-		$this->current_localization = (string)$config['default_localization'];
-		$this->site_base = (string)$config['site_base'];
+		$this->current_localization = (string)$this->config['default_localization'];
+		$this->site_base = (string)$this->config['site_base'];
 
 		$url = parse_url(urldecode($_SERVER['REQUEST_URI']));
 		$path = $url['path'];
-		$path = substr($path, strlen($config['site_base']));
+		$path = substr($path, strlen($this->config['site_base']));
 
 		$this->path = $path;
 
@@ -135,13 +141,11 @@ class PHPRuntime {
 	}
 
 	public function initialize_database() {
-		global $config;
-		$this->database = new \PaleWhite\DatabaseDriver($config['database_config']);
+
+		$this->database = new \PaleWhite\DatabaseDriver($this->config['database_config']);
 	}
 
 	public function initialize_session() {
-		global $config;
-
 		// enable the session
 		session_start();
 		// $this->log_message("_SESSION: " . json_encode($_SESSION));
@@ -230,11 +234,9 @@ class PHPRuntime {
 		$message = (string)$message;
 		$message = "[$context] $message";
 
-		global $config;
-
 		error_log($message);
-		if ($config['log_file'] !== '')
-			error_log(date("[Y-m-d H:i:s]") . " [" . $_SERVER['REMOTE_ADDR'] . "] $message\n", 3, $config['log_file']);
+		if ($this->config['log_file'] !== '')
+			error_log(date("[Y-m-d H:i:s]") . " [" . $_SERVER['REMOTE_ADDR'] . "] $message\n", 3, $this->config['log_file']);
 	}
 
 	public function log_exception($context, $exception) {
@@ -269,8 +271,7 @@ class PHPRuntime {
 	}
 
 	public function schedule_event($context, $controller_class, $controller_event, array $args) {
-		global $config;
-		if (!$config['enable_events'])
+		if (!$this->config['enable_events'])
 			throw new \PaleWhite\InvalidException("attempt to schedule event while events are disabled in config");
 
 		if (isset($args['offset']))

@@ -22,7 +22,6 @@ if(!function_exists('hash_equals')) {
 class HTTPRequestExecutor {
 
 	public function execute () {
-		global $config;
 
 		// setup runtime
 		global $runtime;
@@ -30,6 +29,7 @@ class HTTPRequestExecutor {
 
 		try {
 			// set up the global environment
+			$runtime->initialize_config();
 			$runtime->initialize_plugins();
 			$runtime->initialize_http();
 			$runtime->initialize_session();
@@ -37,12 +37,12 @@ class HTTPRequestExecutor {
 
 			$runtime->trigger_event('Runtime', 'init', array());
 
-			if ($config['maintenance_mode']) {
+			if ($runtime->config['maintenance_mode']) {
 				// call the maintenance controller
-				$controller_class = $config['maintenance_mode_controller'];
+				$controller_class = $runtime->config['maintenance_mode_controller'];
 			} else {
 				// call the main controller and try to route through it
-				$controller_class = $config['main_controller'];
+				$controller_class = $runtime->config['main_controller'];
 			}
 
 			// $controller = $runtime->get_controller($controller_class);
@@ -89,7 +89,7 @@ class HTTPRequestExecutor {
 			$runtime->response = $response;
 			$response->status = "500 Server Error";
 			if ($runtime->is_ajax || $runtime->is_api) {
-				if ($config['show_exception_trace']) {
+				if ($runtime->config['show_exception_trace']) {
 					// show a detailed dump of data if show_exception_trace is enabled
 					$exception_trace = array(
 						'exception_class' => get_class($e),
@@ -119,7 +119,7 @@ class HTTPRequestExecutor {
 					$response->body = array('status' => 'error', 'error' => 'Server Exception Occurred');
 				}
 			} else {
-				if ($config['show_exception_trace']) {
+				if ($runtime->config['show_exception_trace']) {
 					// show a detailed dump of data if show_exception_trace is enabled
 					$response->body = "<!doctype html><html><head><title>Server Error</title></head><body>";
 
@@ -151,14 +151,13 @@ class HTTPRequestExecutor {
 		$this->send_http_response($runtime->response);
 
 		// after sending the response, we can process scheduled events in the queue
-		if ($config['enable_events'])
+		if ($runtime->config['enable_events'])
 			$this->process_event_queue();
 
 		$runtime->trigger_event('Runtime', 'end', array());
 	}
 
 	public function send_http_response(Response $response) {
-		global $config;
 		global $runtime;
 
 		// if the response has a status, send it
@@ -174,7 +173,7 @@ class HTTPRequestExecutor {
 		// if the response has a redirect, send it
 		if ($response->redirect !== null) {
 			if (substr($response->redirect, 0, 1) === '/') {
-				header("Location: " . $config['site_base'] . $response->redirect);
+				header("Location: " . $runtime->config['site_base'] . $response->redirect);
 			} else {
 				header("Location: " . $response->redirect);
 			}

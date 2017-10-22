@@ -141,9 +141,8 @@ class FileDirectoryFile {
 		} elseif ($name === 'url') {
 			if (strpos($this->filepath, "./") !== 0)
 				throw new \PaleWhite\InvalidException("file directory path isnt relative for a url path");
-			global $config;
-
-			return $config['site_base'] . substr($this->filepath, 1);
+			global $runtime;
+			return $runtime->site_base . substr($this->filepath, 1);
 
 		} else {
 			throw new \PaleWhite\InvalidException("attempt to get unknown field $name");
