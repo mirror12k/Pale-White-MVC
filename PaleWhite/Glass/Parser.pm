@@ -252,6 +252,20 @@ sub context_glass_item {
 			$context_object = $self->context_glass_block($context_object);
 			return $context_object;
 			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '!' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'render') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(2));
+			$self->confess_at_current_offset('expected qr/[a-zA-Z_][a-zA-Z0-9_]*+/')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => $tokens[1][1], template => $tokens[2][1], arguments => $self->context_glass_arguments({}), indent => $context_object, };
+			$self->confess_at_current_offset('expected qr/\\s*(\\#[^\\n]*+\\s*)*\\n/s')
+				unless $self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_newline_regex)\Z/;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = $self->context_glass_block($context_object);
+			return $context_object;
+			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '!' and $self->{tokens}[$self->{tokens_index} + 1][1] eq 'template') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
@@ -282,13 +296,6 @@ sub context_glass_item {
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(2));
 			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => $tokens[1][1], argument => $tokens[2][1], indent => $context_object, };
-			$context_object = $self->context_glass_block($context_object);
-			}
-			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] =~ /\A($var_identifier_regex)\Z/) {
-			my @tokens_freeze = @tokens;
-			my @tokens = @tokens_freeze;
-			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'glass_helper', line_number => $tokens[0][2], identifier => 'template_call', template => $tokens[2][1], arguments => $self->context_glass_arguments({}), indent => $context_object, };
 			$context_object = $self->context_glass_block($context_object);
 			}
 			else {

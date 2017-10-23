@@ -186,7 +186,7 @@ sub compile_item {
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
 		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{argument}', \$args);\n"
 
-	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'template_call') {
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'render') {
 		my $arguments = $self->compile_arguments($item->{arguments});
 		return $self->flush_accumulator, "\$text .= \$runtime->get_template('$item->{template}')->render($arguments);\n"
 
