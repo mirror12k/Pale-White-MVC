@@ -579,3 +579,37 @@ templated and pre-compiled mvc
 		// which will test the current runtime localization setting
 			$class = "\\Localization\\$current_localization\\$localization_namespace";
 			return $class::$$field;
+
+
+glass templates in javascript
+
+
+model views for animation by javascript
+	// call model views in glass templates
+		!model_view PostModelTemplate={my_post}
+	// compiles to:
+		!render PostModelTemplate model=my_post
+
+	// ModelTemplates are declared just like templates and are interchangable with them
+	// only difference is the presense of an argument list
+	// any data object fitting these argument requirements is allowed to render
+		!model_template PostModelTemplate model={string author, string text}
+			div.my-class
+				div.title {model.author}
+				div.text {model.text}
+	// compiles to:
+		div.my-class.pw-model-template "data-model-template"="PostModelTemplate" "data-model-data"={PostModelTemplate.encode_data(my_post)}
+			div.title {model.author}
+			div.text {model.text}
+
+	// model templates are hooked by the pale-white js and have properties and functions injected
+		var my_mt = $('.my-class')[0];
+		// retrieving data model in this template:
+		console.log("my data model: ", my_mt.pw_model);
+		// editting data model properties: (this will re-render the model template)
+		my_mt.pw_model.text = "???";
+		// replacing data model: (this will re-render the model template)
+		my_mt.pw_model = {author: 'anon', text: 'lel'};
+
+	// model views editting their own values?
+
