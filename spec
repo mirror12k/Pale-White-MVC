@@ -582,7 +582,45 @@ templated and pre-compiled mvc
 
 
 glass templates in javascript
-	// base template:
+	// api:
+		PaleWhite = {
+			get_class: function (class_name) {
+				var class_parts = class_name.split('::');
+				var class_obj = window[class_parts[0]];
+				for (int i = 1; i < class_parts.length; i++) {
+					class_obj = class_obj[class_parts[i]];
+				}
+				return class_obj;
+			},
+			get_template: function (template_class) {
+				var class_obj = this.get_class(template_class);
+				if (!(class_obj.prototype instanceof PaleWhite.Glass.Template))
+					throw new PaleWhite.InvalidException("attempt to get non-template class");
+		
+				return new class_obj(this);
+			},
+		};
+
+		// exceptions:
+		PaleWhite.PaleWhiteException = function (message) {
+			this.message = "[PaleWhite]: " + message;
+			this.stack = (new Error()).stack;
+		}
+		PaleWhite.PaleWhiteException.prototype = Object.create(Error, {});
+
+		PaleWhite.InvalidException = function (message) {
+			this.message = message;
+			this.stack = (new Error()).stack;
+		}
+		PaleWhite.InvalidException.prototype = Object.create(Error, {});
+
+		PaleWhite.ValidationException = function (message) {
+			this.message = message;
+			this.stack = (new Error()).stack;
+		}
+		PaleWhite.ValidationException.prototype = Object.create(Error, {});
+
+		// base template:
 		PaleWhite.Glass.Template = function () {};
 		PaleWhite.Glass.Template.prototype = {
 			render: function (args) {
@@ -590,6 +628,10 @@ glass templates in javascript
 			},
 			render_block: function (block, args) {
 				return '';
+			},
+			htmlspecialchars: function (text) {
+				var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+				return text.replace(/[&<>"'"]/g, function(m) { return map[m]; });
 			},
 		};
 
@@ -634,6 +676,51 @@ glass templates in javascript
 				if (block === 'content') {
 					text += "<p>hello!</p>";
 				}
+				return text;
+			},
+		});
+
+	// reference 4
+		!template AsdfTemplate
+			div "content"
+				!if value
+					p {value}
+	// compiles to:
+		function AsdfTemplate() {}
+		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template, {
+			render: function (args) {
+				var text = PaleWhite.Glass.Template.render.call(this, args);
+				text += "<div class='content'>";
+				if (args.value) {
+					text += "<p>";
+					text += this.htmlspecialchars(args.value);
+					text += "</p>";
+				}
+				text += "</div>";
+				return text;
+			},
+		});
+
+	// reference 5
+		!template AsdfTemplate
+			div "content"
+				!foreach values_list as key => value
+					p "{{key}} = {{value}}"
+	// compiles to:
+		function AsdfTemplate() {}
+		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template, {
+			render: function (args) {
+				var text = PaleWhite.Glass.Template.render.call(this, args);
+				text += "<div class='content'>";
+				Object.keys(values_list).forEach(function(key) {
+					value = values_list[key];
+					text += "<p>";
+					text += this.htmlspecialchars(key);
+					text += " = ";
+					text += this.htmlspecialchars(value);
+					text += "</p>";
+				});
+				text += "</div>";
 				return text;
 			},
 		});
