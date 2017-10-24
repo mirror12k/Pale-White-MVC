@@ -582,7 +582,61 @@ templated and pre-compiled mvc
 
 
 glass templates in javascript
+	// base template:
+		PaleWhite.Glass.Template = function () {};
+		PaleWhite.Glass.Template.prototype = {
+			render: function (args) {
+				return '';
+			},
+			render_block: function (block, args) {
+				return '';
+			},
+		};
 
+	// reference
+		!template AsdfTemplate
+			div "test"
+	// compiles to:
+		function AsdfTemplate() {}
+		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template, {
+			render: function (args) {
+				var text = PaleWhite.Glass.Template.render.call(this, args);
+				text += "<div>test</div>";
+				return text;
+			},
+		});
+
+	// reference 2
+		!template AsdfTemplate
+			div "content"
+				!block content
+	// compiles to:
+		function AsdfTemplate() {}
+		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template, {
+			render: function (args) {
+				var text = PaleWhite.Glass.Template.render.call(this, args);
+				text += "<div class='content'>";
+				text += this.render_block('content', args);
+				text += "</div>";
+				return text;
+			},
+		});
+
+	// reference 3
+		!template AsdfTemplate extends BaseTemplate
+			!block content
+				p "hello!"
+	// compiles to:
+		function AsdfTemplate() {}
+		AsdfTemplate.prototype = Object.create(BaseTemplate, {
+			render_block: function (block, args) {
+				var text = BaseTemplate.render_block.call(this, block, args);
+				if (block === 'content') {
+					text += "<p>hello!</p>";
+				}
+				return text;
+			},
+		});
 
 model views for animation by javascript
 	// call model views in glass templates
