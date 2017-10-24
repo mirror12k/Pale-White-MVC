@@ -732,9 +732,9 @@ model views for animation by javascript
 		!render PostModelTemplate model=my_post
 
 	// ModelTemplates are declared just like templates and are interchangable with them
-	// only difference is the presense of an argument list
+	// only difference is the presense of an argument list with only a single object
 	// any data object fitting these argument requirements is allowed to render
-		!model_template PostModelTemplate model={string author, string text}
+		!model_template PostModelTemplate (string author, string text)
 			div.my-class
 				div.title {model.author}
 				div.text {model.text}
@@ -753,4 +753,26 @@ model views for animation by javascript
 		my_mt.pw_model = {author: 'anon', text: 'lel'};
 
 	// model views editting their own values?
+
+	// model view lists
+		!model_view_list.my-class PostModelTemplate foreach {my_post_list}
+	// compiles to:
+		div.my-class.pw-model-template-list "data-model-template"="PostModelTemplate"
+			!foreach my_post_list as model
+				!render PostModelTemplate model=model
+
+	// editable by javascript
+		var my_list = $('.my-class')[0];
+		// adding models to the list
+		my_list.pw_model_list.insert_model(0, {author: 'anon', text: 'bump'});
+		my_list.pw_model_list.prepend_model({author: 'anon', text: 'bump'});
+		my_list.pw_model_list.append_model({author: 'anon', text: 'bump'});
+		// removing models:
+		my_list.pw_model_list.remove_model(0);
+		my_list.pw_model_list.pop_model();
+		my_list.pw_model_list.clear_models();
+		// iterating models list:
+		for (int i = 0; i < my_list.children; i++) {
+			console.log("model at " + i + ": ", my_list.children[i].pw_model);
+		}
 
