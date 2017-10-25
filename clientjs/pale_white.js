@@ -45,7 +45,7 @@ PaleWhite = {
 			var nodes = dom.querySelectorAll(hook.selector);
 			for (var i = 0; i < nodes.length; i++) {
 				if (hook.event === 'load')
-					hook.callback.call(node);
+					hook.callback.call(nodes[i]);
 				else
 					nodes[i].addEventListener(hook.event, hook.callback);
 			}
@@ -403,9 +403,43 @@ PaleWhite.Glass.Template.prototype = {
 	},
 	htmlspecialchars: function (text) {
 		var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-		return text.replace(/[&<>"'"]/g, function(m) { return map[m]; });
+		return String(text).replace(/[&<>"'"]/g, function(m) { return map[m]; });
 	},
 };
+
+// object for storing model template data and allowing easy rerendering
+PaleWhite.Glass.ModelTemplateData = function (node, fields, data) {
+	this._node = node;
+	this._data = data;
+	this._fields = fields;
+
+	var getter = function (field) {
+		return this._data[field];
+	};
+	var setter = function (field, value) {
+		this._data[field] = value;
+		this._rerender();
+	};
+
+	var properties = {};
+	for (var i = 0; i < fields.length; i++) {
+		properties[fields[i]] = {
+			get: getter.bind(this, fields[i]),
+			set: setter.bind(this, fields[i]),
+		};
+	}
+
+	Object.defineProperties(this, properties);
+};
+PaleWhite.Glass.ModelTemplateData.prototype._rerender = function () {
+	var template_class = PaleWhite.get_template(this._node.dataset.modelTemplate);
+	var rendered_html = template_class.render({ model: this._data });
+	var new_node = PaleWhite.html_nodes(rendered_html)[0];
+	PaleWhite.add_hooks(new_node);
+
+	this._node.parentNode.replaceChild(new_node, this._node);
+};
+
 
 window.addEventListener('load', function () { PaleWhite.onload(); });
 PaleWhite.register_hook('form.ajax_trigger', 'submit', function (event) {
@@ -427,5 +461,16 @@ PaleWhite.register_hook('.pwa-clickable', 'click', function (event) {
 	event.preventDefault();
 	event.stopPropagation();
 	PaleWhite.execute_pwa_command(this, this.dataset.pwaCommand);
+});
+PaleWhite.register_hook('.pw-model-template', 'load', function () {
+	var data = JSON.parse(this.dataset.modelData);
+	var model_template = this.dataset.modelTemplate;
+	var fields = PaleWhite.get_class(model_template).fields;
+	this._pw_model = new PaleWhite.Glass.ModelTemplateData(this, fields, data);
+
+	Object.defineProperty(this, 'pw_model', {
+		get: (function () { return this._pw_model; }).bind(this),
+		set: (function (value) { this._pw_model._data = value; this._pw_model._rerender(); }).bind(this),
+	});
 });
 
