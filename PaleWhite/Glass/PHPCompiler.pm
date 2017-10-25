@@ -52,7 +52,8 @@ sub compile {
 sub compile_template {
 	my ($self, $template) = @_;
 	die "invalid template: $template->{type}:$template->{identifier}"
-			unless $template->{type} eq 'glass_helper' and $template->{identifier} eq 'template';
+			unless $template->{type} eq 'glass_helper' and
+			($template->{identifier} eq 'template' or $template->{identifier} eq 'model_template');
 
 	my $identifier = $template->{argument};
 	my @code;
@@ -101,7 +102,28 @@ sub compile_template_render {
 
 	push @code, "\$text = parent::render(\$args);\n";
 
-	push @code, $self->compile_block(\@tags);
+	if ($template->{identifier} eq 'model_template') {
+		push @code, $self->compile_block([{
+			type => 'html_tag',
+			identifier => 'div',
+			attributes => {
+				class => {
+					type => 'interpolation_expression',
+					expressions => [
+						{ type => 'string_expression', string => 'pw-model-template ', },
+						{ type => 'optional_argument_expression', identifier => 'class' },
+					],
+				},
+				id => { type => 'optional_argument_expression', identifier => 'id' },
+				"data-model-template" => { type => 'string_expression', string => $template->{argument}, },
+				"data-model-data" => { type => 'encode_json_expression',
+					expression => { type => 'variable_expression', identifier => 'model' } },
+			},
+			block => \@tags,
+		}]);
+	} else {
+		push @code, $self->compile_block(\@tags);
+	}
 	# say "debug: $self->{text_accumulator}";
 	push @code, $self->flush_accumulator;
 	push @code, "\n";
@@ -364,10 +386,12 @@ sub compile_argument_expression {
 		return
 		
 	} elsif ($expression->{type} eq 'variable_expression'
+			or $expression->{type} eq 'optional_argument_expression'
 			or $expression->{type} eq '_site_base_expression'
 			or $expression->{type} eq '_csrf_token_expression'
 			or $expression->{type} eq 'access_expression'
 			or $expression->{type} eq 'length_expression'
+			or $expression->{type} eq 'encode_json_expression'
 			or $expression->{type} eq 'method_call_expression'
 			or $expression->{type} eq 'localized_string_expression') {
 		if ($context eq 'html_attribute' or $context eq 'text') {
@@ -423,13 +447,10 @@ sub compile_value_expression {
 	} elsif ($expression->{type} eq '_csrf_token_expression') {
 		return "\$runtime->csrf_token";
 
+	} elsif ($expression->{type} eq 'optional_argument_expression') {
+			return "(isset(\$args[\"$expression->{identifier}\"]) ? \$args[\"$expression->{identifier}\"] : '')";
+
 	} elsif ($expression->{type} eq 'variable_expression') {
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		# if ($expression->{identifier} eq '_site_base') {
-		# 	return "\$runtime->site_base";
-		# } elsif ($expression->{identifier} eq '_csrf_token') {
-		# 	return "\$runtime->csrf_token";
-		# } els
 		if ($expression->{identifier} eq '_time') {
 			return "time()";
 		} elsif ($expression->{identifier} eq 'runtime') {
@@ -472,6 +493,11 @@ sub compile_value_expression {
 		my $sub_expression = $self->compile_value_expression($expression->{expression});
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "count($sub_expression)";
+
+	} elsif ($expression->{type} eq 'encode_json_expression') {
+		my $sub_expression = $self->compile_value_expression($expression->{expression});
+		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
+		return "json_encode($sub_expression)";
 
 	} elsif ($expression->{type} eq 'less_than_expression') {
 		my $left_expression = $self->compile_value_expression($expression->{left_expression});

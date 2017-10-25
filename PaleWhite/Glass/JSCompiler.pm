@@ -57,8 +57,8 @@ sub compile_template {
 	$self->{current_template} = $template;
 
 	die "invalid template: $template->{type}:$template->{identifier}"
-			unless $template->{type} eq 'glass_helper' and ($template->{identifier} eq 'template' or
-				$template->{identifier} eq 'model_template');
+			unless $template->{type} eq 'glass_helper' and
+			($template->{identifier} eq 'template' or $template->{identifier} eq 'model_template');
 
 	my @code;
 
