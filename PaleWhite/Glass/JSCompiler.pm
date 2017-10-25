@@ -10,6 +10,8 @@ use Data::Dumper;
 use HTML::Entities;
 
 
+# todo: localization strings
+
 
 sub new {
 	my ($class, %args) = @_;
@@ -55,7 +57,8 @@ sub compile_template {
 	$self->{current_template} = $template;
 
 	die "invalid template: $template->{type}:$template->{identifier}"
-			unless $template->{type} eq 'glass_helper' and $template->{identifier} eq 'template';
+			unless $template->{type} eq 'glass_helper' and ($template->{identifier} eq 'template' or
+				$template->{identifier} eq 'model_template');
 
 	my @code;
 
@@ -76,6 +79,8 @@ sub compile_template {
 	@code = (
 		"function $class_name() {}\n",
 		"$class_name.prototype = Object.create($parent.prototype);\n",
+		($template->{identifier} eq 'model_template' ? "$class_name.fields = [" .
+			join (', ', map "'$_'", @{$template->{arguments_list}}) .  "];\n" : ()),
 		@code,
 		"\n"
 	);
@@ -109,8 +114,29 @@ sub compile_template_render {
 
 	push @code, "var text = $parent.prototype.render.call(this, args);\n";
 
-	push @code, $self->compile_block(\@tags);
-	# say "debug: $self->{text_accumulator}";
+	if ($template->{identifier} eq 'model_template') {
+		push @code, $self->compile_block([{
+			type => 'html_tag',
+			identifier => 'div',
+			attributes => {
+				class => {
+					type => 'interpolation_expression',
+					expressions => [
+						{ type => 'string_expression', string => 'pw-model-template ', },
+						{ type => 'optional_argument_expression', identifier => 'class' },
+					],
+				},
+				id => { type => 'optional_argument_expression', identifier => 'id' },
+				"data-model-template" => { type => 'string_expression', string => $template->{argument}, },
+				"data-model-data" => { type => 'encode_json_expression',
+					expression => { type => 'variable_expression', identifier => 'model' } },
+			},
+			block => \@tags,
+		}]);
+	} else {
+		push @code, $self->compile_block(\@tags);
+	}
+
 	push @code, $self->flush_accumulator;
 	push @code, "\n";
 
@@ -385,10 +411,12 @@ sub compile_argument_expression {
 		return
 		
 	} elsif ($expression->{type} eq 'variable_expression'
+			or $expression->{type} eq 'optional_argument_expression'
 			or $expression->{type} eq '_site_base_expression'
 			or $expression->{type} eq '_csrf_token_expression'
 			or $expression->{type} eq 'access_expression'
 			or $expression->{type} eq 'length_expression'
+			or $expression->{type} eq 'encode_json_expression'
 			or $expression->{type} eq 'method_call_expression'
 			or $expression->{type} eq 'localized_string_expression') {
 		if ($context eq 'html_attribute' or $context eq 'text') {
@@ -443,13 +471,10 @@ sub compile_value_expression {
 	} elsif ($expression->{type} eq '_csrf_token_expression') {
 		return "PaleWhite.get_csrf_token()";
 
+	} elsif ($expression->{type} eq 'optional_argument_expression') {
+		return "(args.$expression->{identifier} ? args.$expression->{identifier} : '')";
+
 	} elsif ($expression->{type} eq 'variable_expression') {
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		# if ($expression->{identifier} eq '_site_base') {
-		# 	return "\$runtime->site_base";
-		# } elsif ($expression->{identifier} eq '_csrf_token') {
-		# 	return "\$runtime->csrf_token";
-		# } els
 		if ($expression->{identifier} eq '_time') {
 			return "Math.floor(Date.now() / 1000)";
 		} elsif ($expression->{identifier} eq 'runtime') {
@@ -462,7 +487,6 @@ sub compile_value_expression {
 
 	} elsif ($expression->{type} eq 'access_expression') {
 		my $sub_expression = $self->compile_value_expression($expression->{expression});
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "$sub_expression.$expression->{identifier}";
 
 	} elsif ($expression->{type} eq 'method_call_expression') {
@@ -474,24 +498,24 @@ sub compile_value_expression {
 		} else {
 			my $sub_expression = $self->compile_value_expression($expression->{expression});
 			my $arguments_list = $self->compile_value_expression_list($expression->{arguments_list});
-			# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 			return "$sub_expression.$expression->{identifier}($arguments_list)";
 		}
 
 	} elsif ($expression->{type} eq 'array_expression') {
 		my $expression_list = $self->compile_value_expression_list($expression->{expression_list});
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "[$expression_list]";
 
 	} elsif ($expression->{type} eq 'object_expression') {
 		my $object = $self->compile_arguments($expression->{object_fields});
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "$object";
 
 	} elsif ($expression->{type} eq 'length_expression') {
 		my $sub_expression = $self->compile_value_expression($expression->{expression});
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
 		return "$sub_expression.length";
+
+	} elsif ($expression->{type} eq 'encode_json_expression') {
+		my $sub_expression = $self->compile_value_expression($expression->{expression});
+		return "JSON.stringify($sub_expression)";
 
 	} elsif ($expression->{type} eq 'less_than_expression') {
 		my $left_expression = $self->compile_value_expression($expression->{left_expression});

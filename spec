@@ -763,21 +763,21 @@ glass templates in javascript
 
 model views for animation by javascript
 	// call model views in glass templates
-		!model_view PostModelTemplate={my_post}
+		!model_view.my-class PostModelTemplate={my_post}
 	// compiles to:
-		!render PostModelTemplate model=my_post
+		!render PostModelTemplate model=my_post, classes=["my-class"]
 
 	// ModelTemplates are declared just like templates and are interchangable with them
 	// only difference is the presense of an argument list with only a single object
 	// any data object fitting these argument requirements is allowed to render
 		!model_template PostModelTemplate (string author, string text)
-			div.my-class
-				div.title {model.author}
-				div.text {model.text}
-	// compiles to:
-		div.my-class.pw-model-template "data-model-template"="PostModelTemplate" "data-model-data"={PostModelTemplate.encode_data(my_post)}
 			div.title {model.author}
 			div.text {model.text}
+	// compiles to:
+		div class="pw-model-template {{join(classes)}}" "data-model-template"="PostModelTemplate" "data-model-data"={PostModelTemplate.encode_data(my_post)}
+			div.title {model.author}
+			div.text {model.text}
+	// javascript varient compilies with a fields list
 
 	// model templates are hooked by the pale-white js and have properties and functions injected
 		var my_mt = $('.my-class')[0];

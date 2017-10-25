@@ -184,6 +184,34 @@ object context glass_item {
 			$_ = !glass_block->$_
 			return
 		}
+		'!', 'model_template' => {
+			match $identifier_regex, '('
+			if ')' => {
+				$_ = {
+					type => 'glass_helper'
+					line_number => $0{line_number}
+					identifier => $1
+					argument => $2
+					arguments_list => []
+					indent => $_
+				}
+			} else {
+				$_ = {
+					type => 'glass_helper'
+					line_number => $0{line_number}
+					identifier => $1
+					argument => $2
+					arguments_list => !glass_model_template_args->[]
+					indent => $_
+				}
+				match ')'
+			}
+
+			match $newline_regex
+			$_ = !glass_block->$_
+			return
+
+		}
 		'!', 'template' => {
 			if $identifier_regex, 'extends', $identifier_regex, 'uses', $view_controller_identifier_regex, $newline_regex => {
 				$_ = {
@@ -615,6 +643,19 @@ list context glass_expression_list {
 	push !glass_argument_expression
 	while ',' => {
 		push !glass_argument_expression
+	}
+	return
+}
+
+list context glass_model_template_args {
+	match $identifier_regex
+	push $0
+	while ',' => {
+		if $identifier_regex => {
+			push $2
+		} else {
+			return
+		}
 	}
 	return
 }
