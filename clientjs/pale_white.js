@@ -315,6 +315,15 @@ PaleWhite = {
 			}
 		}
 	},
+
+
+	object_pairs: function (obj) {
+		var pairs = [];
+		Object.keys(obj).forEach(function (key) {
+			pairs.push([key, obj[key]]);
+		});
+		return pairs;
+	}
 };
 
 

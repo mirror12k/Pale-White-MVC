@@ -235,59 +235,70 @@ sub compile_item {
 			type => 'string_expression', string => '<!doctype html>',
 		}, 'html')
 
-	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
-	# 	my @code;
-	# 	push @code, $self->flush_accumulator;
-	# 	push @code, "foreach (" . $self->compile_value_expression($item->{expression}) . " as " . (
-	# 				exists $item->{key_identifier}
-	# 					? "\$$item->{key_identifier} => \$$item->{value_identifier}"
-	# 					: "\$$item->{value_identifier}"
-	# 			) . ") {\n";
-	# 	my $prev_scope = $self->{local_variable_scope};
-	# 	$self->{local_variable_scope} = { %$prev_scope };
-	# 	$self->{local_variable_scope}{$item->{value_identifier}} = 1;
-	# 	$self->{local_variable_scope}{$item->{key_identifier}} = 1 if exists $item->{key_identifier};
-	# 	push @code, map "\t$_", $self->compile_block($item->{block});
-	# 	push @code, map "\t$_", $self->flush_accumulator;
-	# 	$self->{local_variable_scope} = $prev_scope;
-	# 	push @code, "}\n";
-	# 	return @code
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
+		my @code;
+		push @code, $self->flush_accumulator;
 
-	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'if') {
-	# 	my @code;
-	# 	push @code, $self->flush_accumulator;
-	# 	push @code, "if (" . $self->compile_value_expression($item->{expression}) . ") {\n";
-	# 	my $prev_scope = $self->{local_variable_scope};
-	# 	$self->{local_variable_scope} = { %$prev_scope };
-	# 	push @code, map "\t$_", $self->compile_block($item->{block});
-	# 	push @code, map "\t$_", $self->flush_accumulator;
-	# 	$self->{local_variable_scope} = $prev_scope;
-	# 	push @code, "}\n";
-	# 	return @code
+		if (exists $item->{key_identifier}) {
+			push @code, "for (var _pair of PaleWhite.object_pairs(" .
+					$self->compile_value_expression($item->{expression}) . ")) {\n";
+			push @code, "\tvar $item->{key_identifier} = _pair[0];\n";
+			push @code, "\tvar $item->{value_identifier} = _pair[1];\n";
 
-	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'elseif') {
-	# 	my @code;
-	# 	push @code, $self->flush_accumulator;
-	# 	push @code, "} elseif (" . $self->compile_value_expression($item->{expression}) . ") {\n";
-	# 	my $prev_scope = $self->{local_variable_scope};
-	# 	$self->{local_variable_scope} = { %$prev_scope };
-	# 	push @code, map "\t$_", $self->compile_block($item->{block});
-	# 	push @code, map "\t$_", $self->flush_accumulator;
-	# 	$self->{local_variable_scope} = $prev_scope;
-	# 	push @code, "}\n";
-	# 	return @code
+		} else {
+			push @code, "for (var $item->{value_identifier} of " .
+					$self->compile_value_expression($item->{expression}) . ") {\n";
 
-	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'else') {
-	# 	my @code;
-	# 	push @code, $self->flush_accumulator;
-	# 	push @code, "} else {\n";
-	# 	my $prev_scope = $self->{local_variable_scope};
-	# 	$self->{local_variable_scope} = { %$prev_scope };
-	# 	push @code, map "\t$_", $self->compile_block($item->{block});
-	# 	push @code, map "\t$_", $self->flush_accumulator;
-	# 	$self->{local_variable_scope} = $prev_scope;
-	# 	push @code, "}\n";
-	# 	return @code
+		}
+
+		my $prev_scope = $self->{local_variable_scope};
+		$self->{local_variable_scope} = { %$prev_scope };
+		$self->{local_variable_scope}{$item->{value_identifier}} = 1;
+		$self->{local_variable_scope}{$item->{key_identifier}} = 1 if exists $item->{key_identifier};
+
+		push @code, map "\t$_", $self->compile_block($item->{block});
+		push @code, map "\t$_", $self->flush_accumulator;
+		$self->{local_variable_scope} = $prev_scope;
+		
+		push @code, "}\n";
+
+		return @code
+
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'if') {
+		my @code;
+		push @code, $self->flush_accumulator;
+		push @code, "if (" . $self->compile_value_expression($item->{expression}) . ") {\n";
+		my $prev_scope = $self->{local_variable_scope};
+		$self->{local_variable_scope} = { %$prev_scope };
+		push @code, map "\t$_", $self->compile_block($item->{block});
+		push @code, map "\t$_", $self->flush_accumulator;
+		$self->{local_variable_scope} = $prev_scope;
+		push @code, "}\n";
+		return @code
+
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'elseif') {
+		my @code;
+		push @code, $self->flush_accumulator;
+		push @code, "} else if (" . $self->compile_value_expression($item->{expression}) . ") {\n";
+		my $prev_scope = $self->{local_variable_scope};
+		$self->{local_variable_scope} = { %$prev_scope };
+		push @code, map "\t$_", $self->compile_block($item->{block});
+		push @code, map "\t$_", $self->flush_accumulator;
+		$self->{local_variable_scope} = $prev_scope;
+		push @code, "}\n";
+		return @code
+
+	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'else') {
+		my @code;
+		push @code, $self->flush_accumulator;
+		push @code, "} else {\n";
+		my $prev_scope = $self->{local_variable_scope};
+		$self->{local_variable_scope} = { %$prev_scope };
+		push @code, map "\t$_", $self->compile_block($item->{block});
+		push @code, map "\t$_", $self->flush_accumulator;
+		$self->{local_variable_scope} = $prev_scope;
+		push @code, "}\n";
+		return @code
 
 	} elsif ($item->{type} eq 'raw_html_expression_node') {
 		return $self->compile_argument_expression($item->{expression}, 'html')
