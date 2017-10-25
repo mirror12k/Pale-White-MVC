@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-package PaleWhite::Glass::PHPCompiler;
+package PaleWhite::Glass::JSCompiler;
 use strict;
 use warnings;
 
@@ -24,7 +24,7 @@ sub new {
 
 sub format_classname {
 	my ($self, $classname) = @_;
-	return "\\$classname" =~ s/::/\\/gr
+	return $classname =~ s/::/\./gr
 }
 
 sub flush_accumulator {
@@ -33,7 +33,7 @@ sub flush_accumulator {
 	my @code;
 	if (length $self->{text_accumulator} > 0) {
 		my $text = $self->{text_accumulator} =~ s/([\\'])/\\$1/gr;
-		push @code, "\$text .= '$text';\n";
+		push @code, "text += '$text';\n";
 		$self->{text_accumulator} = '';
 	}
 
@@ -43,7 +43,7 @@ sub flush_accumulator {
 sub compile {
 	my ($self, $tree) = @_;
 
-	my $code = "<?php\n\n";
+	my $code = "\n";
 	$code .= join '', $self->compile_template($_) foreach @{$tree->{block}};
 
 	return $code
@@ -51,28 +51,34 @@ sub compile {
 
 sub compile_template {
 	my ($self, $template) = @_;
+
+	$self->{current_template} = $template;
+
 	die "invalid template: $template->{type}:$template->{identifier}"
 			unless $template->{type} eq 'glass_helper' and $template->{identifier} eq 'template';
 
-	my $identifier = $template->{argument};
 	my @code;
 
-	my $parent = $template->{parent_template} // 'PaleWhite::Glass::Template';
-	$parent = $self->format_classname($parent);
+	my $class_name = $self->format_classname($template->{argument});
+	my $parent = $self->format_classname($template->{parent_template} // 'PaleWhite::Glass::Template');
 
-	my $view_controller = $template->{view_controller};
-	$view_controller = $self->format_classname($view_controller) if defined $view_controller;
-
-	if (defined $view_controller) {
-		push @code, "private \$view_controller;\n";
-	}
-	push @code, "private \$closured_args;\n\n";
+	# my $view_controller = $template->{view_controller};
+	# $view_controller = $self->format_classname($view_controller) if defined $view_controller;
+	# if (defined $view_controller) {
+	# 	push @code, "private \$view_controller;\n";
+	# }
+	# push @code, "private \$closured_args;\n\n";
 
 	push @code, $self->compile_template_render($template);
 	push @code, $self->compile_template_render_block($template);
 	
-	@code = map "\t$_", @code;
-	@code = ("class $identifier extends $parent {\n", @code, "}\n", "\n");
+	# @code = map "\t$_", @code;
+	@code = (
+		"function $class_name() {}\n",
+		"$class_name.prototype = Object.create($parent.prototype);\n",
+		@code,
+		"\n"
+	);
 
 	return @code
 }
@@ -88,28 +94,30 @@ sub compile_template_render {
 			($_->{type} eq 'glass_helper' and $_->{identifier} ne 'block')
 		} @{$template->{block}};
 	}
-	# return @code unless @tags or defined $template->{view_controller};
+	return @code unless @tags or defined $template->{view_controller};
 
-	push @code, "global \$runtime;\n\n";
-	if (defined $template->{view_controller}) {
-		my $view_controller = $self->format_classname($template->{view_controller});
-		push @code, "\$this->view_controller = \$runtime->get_view_controller('$view_controller');\n";
-		push @code, "\$args = (array)\$this->view_controller->load_args(\$args);\n";
-	}
-	push @code, "\$this->closured_args = \$args;\n\n";
+	# push @code, "global \$runtime;\n\n";
+	# if (defined $template->{view_controller}) {
+	# 	my $view_controller = $self->format_classname($template->{view_controller});
+	# 	push @code, "this.view_controller = \$runtime->get_view_controller('$view_controller');\n";
+	# 	push @code, "\$args = (array)this.view_controller->load_args(\$args);\n";
+	# }
+	# push @code, "this.closured_args = \$args;\n\n";
 
+	my $class_name = $self->format_classname($template->{argument});
+	my $parent = $self->format_classname($template->{parent_template} // 'PaleWhite::Glass::Template');
 
-	push @code, "\$text = parent::render(\$args);\n";
+	push @code, "var text = $parent.prototype.render.call(this, args);\n";
 
 	push @code, $self->compile_block(\@tags);
 	# say "debug: $self->{text_accumulator}";
 	push @code, $self->flush_accumulator;
 	push @code, "\n";
 
-	push @code, "return \$text;\n";
+	push @code, "return text;\n";
 
 	@code = map "\t$_", @code;
-	@code = ("public function render (array \$args) {\n", @code, "}\n", "\n");
+	@code = ("$class_name.prototype.render = function (args) {\n", @code, "};\n", "\n");
 
 	return @code
 }
@@ -124,28 +132,30 @@ sub compile_template_render_block {
 			$blocks{$item->{argument}} = $item;
 		}
 	}
-
 	return @code unless keys %blocks;
 
-	push @code, "global \$runtime;\n";
-	push @code, "\$args = \$this->closured_args;\n\n";
+	# push @code, "global \$runtime;\n";
+	# push @code, "\$args = this.closured_args;\n\n";
 
-	push @code, "\$text = parent::render_block(\$block, \$args);\n";
+	my $class_name = $self->format_classname($template->{argument});
+	my $parent = $self->format_classname($template->{parent_template} // 'PaleWhite::Glass::Template');
+
+	push @code, "var text = $parent.prototype.render_block.call(this, block, args);\n";
 
 	foreach my $block (sort keys %blocks) {
 		my @block_code = $self->compile_block($blocks{$block}{block});
 		push @block_code, $self->flush_accumulator;
 
-		push @code, "if (\$block === '$block') {\n";
+		push @code, "if (block === '$block') {\n";
 		push @code, map "\t$_", @block_code;
 		push @code, "}\n";
 	}
 
 	push @code, "\n";
-	push @code, "return \$text;\n";
+	push @code, "return text;\n";
 
 	@code = map "\t$_", @code;
-	@code = ("public function render_block (\$block, array \$args) {\n", @code, "}\n", "\n");
+	@code = ("$class_name.prototype.render_block = function (block, args) {\n", @code, "};\n", "\n");
 
 	return @code
 }
@@ -184,11 +194,11 @@ sub compile_item {
 	if ($item->{type} eq 'html_tag') {
 		return $self->compile_html_tag($item)
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'block') {
-		return $self->flush_accumulator, "\$text .= \$this->render_block('$item->{argument}', \$args);\n"
+		return $self->flush_accumulator, "text += this.render_block('$item->{argument}', args);\n"
 
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'render') {
 		my $arguments = $self->compile_arguments($item->{arguments});
-		return $self->flush_accumulator, "\$text .= \$runtime->get_template('$item->{template}')->render($arguments);\n"
+		return $self->flush_accumulator, "text += PaleWhite.get_template('$item->{template}').render($arguments);\n"
 
 	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq '_csrf_token_input') {
 		# equivalent to 'input name="_csrf_token", type="hidden", value={_csrf_token}'
@@ -225,59 +235,59 @@ sub compile_item {
 			type => 'string_expression', string => '<!doctype html>',
 		}, 'html')
 
-	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
-		my @code;
-		push @code, $self->flush_accumulator;
-		push @code, "foreach (" . $self->compile_value_expression($item->{expression}) . " as " . (
-					exists $item->{key_identifier}
-						? "\$$item->{key_identifier} => \$$item->{value_identifier}"
-						: "\$$item->{value_identifier}"
-				) . ") {\n";
-		my $prev_scope = $self->{local_variable_scope};
-		$self->{local_variable_scope} = { %$prev_scope };
-		$self->{local_variable_scope}{$item->{value_identifier}} = 1;
-		$self->{local_variable_scope}{$item->{key_identifier}} = 1 if exists $item->{key_identifier};
-		push @code, map "\t$_", $self->compile_block($item->{block});
-		push @code, map "\t$_", $self->flush_accumulator;
-		$self->{local_variable_scope} = $prev_scope;
-		push @code, "}\n";
-		return @code
+	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'foreach') {
+	# 	my @code;
+	# 	push @code, $self->flush_accumulator;
+	# 	push @code, "foreach (" . $self->compile_value_expression($item->{expression}) . " as " . (
+	# 				exists $item->{key_identifier}
+	# 					? "\$$item->{key_identifier} => \$$item->{value_identifier}"
+	# 					: "\$$item->{value_identifier}"
+	# 			) . ") {\n";
+	# 	my $prev_scope = $self->{local_variable_scope};
+	# 	$self->{local_variable_scope} = { %$prev_scope };
+	# 	$self->{local_variable_scope}{$item->{value_identifier}} = 1;
+	# 	$self->{local_variable_scope}{$item->{key_identifier}} = 1 if exists $item->{key_identifier};
+	# 	push @code, map "\t$_", $self->compile_block($item->{block});
+	# 	push @code, map "\t$_", $self->flush_accumulator;
+	# 	$self->{local_variable_scope} = $prev_scope;
+	# 	push @code, "}\n";
+	# 	return @code
 
-	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'if') {
-		my @code;
-		push @code, $self->flush_accumulator;
-		push @code, "if (" . $self->compile_value_expression($item->{expression}) . ") {\n";
-		my $prev_scope = $self->{local_variable_scope};
-		$self->{local_variable_scope} = { %$prev_scope };
-		push @code, map "\t$_", $self->compile_block($item->{block});
-		push @code, map "\t$_", $self->flush_accumulator;
-		$self->{local_variable_scope} = $prev_scope;
-		push @code, "}\n";
-		return @code
+	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'if') {
+	# 	my @code;
+	# 	push @code, $self->flush_accumulator;
+	# 	push @code, "if (" . $self->compile_value_expression($item->{expression}) . ") {\n";
+	# 	my $prev_scope = $self->{local_variable_scope};
+	# 	$self->{local_variable_scope} = { %$prev_scope };
+	# 	push @code, map "\t$_", $self->compile_block($item->{block});
+	# 	push @code, map "\t$_", $self->flush_accumulator;
+	# 	$self->{local_variable_scope} = $prev_scope;
+	# 	push @code, "}\n";
+	# 	return @code
 
-	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'elseif') {
-		my @code;
-		push @code, $self->flush_accumulator;
-		push @code, "} elseif (" . $self->compile_value_expression($item->{expression}) . ") {\n";
-		my $prev_scope = $self->{local_variable_scope};
-		$self->{local_variable_scope} = { %$prev_scope };
-		push @code, map "\t$_", $self->compile_block($item->{block});
-		push @code, map "\t$_", $self->flush_accumulator;
-		$self->{local_variable_scope} = $prev_scope;
-		push @code, "}\n";
-		return @code
+	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'elseif') {
+	# 	my @code;
+	# 	push @code, $self->flush_accumulator;
+	# 	push @code, "} elseif (" . $self->compile_value_expression($item->{expression}) . ") {\n";
+	# 	my $prev_scope = $self->{local_variable_scope};
+	# 	$self->{local_variable_scope} = { %$prev_scope };
+	# 	push @code, map "\t$_", $self->compile_block($item->{block});
+	# 	push @code, map "\t$_", $self->flush_accumulator;
+	# 	$self->{local_variable_scope} = $prev_scope;
+	# 	push @code, "}\n";
+	# 	return @code
 
-	} elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'else') {
-		my @code;
-		push @code, $self->flush_accumulator;
-		push @code, "} else {\n";
-		my $prev_scope = $self->{local_variable_scope};
-		$self->{local_variable_scope} = { %$prev_scope };
-		push @code, map "\t$_", $self->compile_block($item->{block});
-		push @code, map "\t$_", $self->flush_accumulator;
-		$self->{local_variable_scope} = $prev_scope;
-		push @code, "}\n";
-		return @code
+	# } elsif ($item->{type} eq 'glass_helper' and $item->{identifier} eq 'else') {
+	# 	my @code;
+	# 	push @code, $self->flush_accumulator;
+	# 	push @code, "} else {\n";
+	# 	my $prev_scope = $self->{local_variable_scope};
+	# 	$self->{local_variable_scope} = { %$prev_scope };
+	# 	push @code, map "\t$_", $self->compile_block($item->{block});
+	# 	push @code, map "\t$_", $self->flush_accumulator;
+	# 	$self->{local_variable_scope} = $prev_scope;
+	# 	push @code, "}\n";
+	# 	return @code
 
 	} elsif ($item->{type} eq 'raw_html_expression_node') {
 		return $self->compile_argument_expression($item->{expression}, 'html')
@@ -342,9 +352,9 @@ sub compile_arguments {
 	my ($self, $arguments) = @_;
 	my @args;
 	foreach my $key (sort keys %$arguments) {
-		push @args, "'$key' => " . $self->compile_value_expression($arguments->{$key});
+		push @args, "'$key': " . $self->compile_value_expression($arguments->{$key});
 	}
-	return "array(" . join(', ', @args) . ")"
+	return "{" . join(', ', @args) . "}"
 }
 
 sub compile_argument_expression {
@@ -371,9 +381,10 @@ sub compile_argument_expression {
 			or $expression->{type} eq 'method_call_expression'
 			or $expression->{type} eq 'localized_string_expression') {
 		if ($context eq 'html_attribute' or $context eq 'text') {
-			return $self->flush_accumulator, "\$text .= htmlspecialchars(" . $self->compile_value_expression($expression) . ");\n";
+			return $self->flush_accumulator, "text += this.htmlspecialchars(" .
+				$self->compile_value_expression($expression) . ");\n";
 		} else {
-			return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
+			return $self->flush_accumulator, "text += " . $self->compile_value_expression($expression) . ";\n";
 		}
 
 	} elsif ($expression->{type} eq 'less_than_expression'
@@ -389,8 +400,6 @@ sub compile_argument_expression {
 
 	} elsif ($expression->{type} eq 'interpolation_expression') {
 		return map $self->compile_argument_expression($_, $context), @{$expression->{expressions}}
-		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		# return $self->flush_accumulator, "\$text .= " . $self->compile_value_expression($expression) . ";\n";
 
 	} else {
 		die "unknown expression: $expression->{type}";
@@ -411,17 +420,17 @@ sub compile_value_expression {
 	} elsif ($expression->{type} eq 'string_expression') {
 		return "\"$expression->{string}\""
 
-	} elsif ($expression->{type} eq 'localized_string_expression') {
-		return "\$runtime->get_localized_string(\'$expression->{namespace_identifier}\', \'$expression->{identifier}\')"
+	# } elsif ($expression->{type} eq 'localized_string_expression') {
+	# 	return "\$runtime->get_localized_string(\'$expression->{namespace_identifier}\', \'$expression->{identifier}\')"
 
 	} elsif ($expression->{type} eq 'interpolation_expression') {
-		return join ' . ', map $self->compile_value_expression($_), @{$expression->{expressions}}
+		return join ' + ', '""', map $self->compile_value_expression($_), @{$expression->{expressions}}
 		
 	} elsif ($expression->{type} eq '_site_base_expression') {
-		return "\$runtime->site_base";
+		return "PaleWhite.get_site_base()";
 		
 	} elsif ($expression->{type} eq '_csrf_token_expression') {
-		return "\$runtime->csrf_token";
+		return "PaleWhite.get_csrf_token()";
 
 	} elsif ($expression->{type} eq 'variable_expression') {
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
@@ -431,47 +440,47 @@ sub compile_value_expression {
 		# 	return "\$runtime->csrf_token";
 		# } els
 		if ($expression->{identifier} eq '_time') {
-			return "time()";
+			return "Math.floor(Date.now() / 1000)";
 		} elsif ($expression->{identifier} eq 'runtime') {
-			return "\$runtime";
+			return "PaleWhite";
 		} elsif (exists $self->{local_variable_scope}{$expression->{identifier}}) {
-			return "\$$expression->{identifier}";
+			return "$expression->{identifier}";
 		} else {
-			return "\$args[\"$expression->{identifier}\"]";
+			return "args.$expression->{identifier}";
 		}
 
 	} elsif ($expression->{type} eq 'access_expression') {
 		my $sub_expression = $self->compile_value_expression($expression->{expression});
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return "$sub_expression->$expression->{identifier}";
+		return "$sub_expression.$expression->{identifier}";
 
 	} elsif ($expression->{type} eq 'method_call_expression') {
 		if ($expression->{expression}{type} eq 'native_identifier_expression'
 				or $expression->{expression}{type} eq 'model_identifier_expression') {
 			my $sub_expression = $self->format_classname($expression->{expression}{identifier});
 			my $arguments_list = $self->compile_value_expression_list($expression->{arguments_list});
-			return "$sub_expression\::$expression->{identifier}($arguments_list)";
+			return "$sub_expression.$expression->{identifier}($arguments_list)";
 		} else {
 			my $sub_expression = $self->compile_value_expression($expression->{expression});
 			my $arguments_list = $self->compile_value_expression_list($expression->{arguments_list});
 			# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-			return "$sub_expression->$expression->{identifier}($arguments_list)";
+			return "$sub_expression.$expression->{identifier}($arguments_list)";
 		}
 
 	} elsif ($expression->{type} eq 'array_expression') {
 		my $expression_list = $self->compile_value_expression_list($expression->{expression_list});
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return "array($expression_list)";
+		return "[$expression_list]";
 
 	} elsif ($expression->{type} eq 'object_expression') {
 		my $object = $self->compile_arguments($expression->{object_fields});
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return "(object)$object";
+		return "$object";
 
 	} elsif ($expression->{type} eq 'length_expression') {
 		my $sub_expression = $self->compile_value_expression($expression->{expression});
 		# $self->{text_accumulator} .= "' . \$args[\"$expression->{identifier}\"] . '";
-		return "count($sub_expression)";
+		return "$sub_expression.length";
 
 	} elsif ($expression->{type} eq 'less_than_expression') {
 		my $left_expression = $self->compile_value_expression($expression->{left_expression});

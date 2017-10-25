@@ -680,7 +680,7 @@ object context glass_more_expression {
 		}
 		'>' => {
 			$_ = {
-				type => 'greather_than_expression'
+				type => 'greater_than_expression'
 				line_number => $0{line_number}
 				identifier => $1
 				left_expression => $_
@@ -698,7 +698,7 @@ object context glass_more_expression {
 		}
 		'>=' => {
 			$_ = {
-				type => 'greather_than_or_equal_expression'
+				type => 'greater_than_or_equal_expression'
 				line_number => $0{line_number}
 				identifier => $1
 				left_expression => $_

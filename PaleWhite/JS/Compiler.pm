@@ -39,7 +39,7 @@ sub compile_js {
 			# event hook on selector
 			my ($selector, $event) = ($1, $2);
 			my @block = $self->read_js_block(\@text);
-			push @code, "pale_white.register_hook('$selector', '$event', function (event) {\n";
+			push @code, "PaleWhite.register_hook('$selector', '$event', function (event) {\n";
 			push @code, @block;
 			push @code, "});\n\n";
 
