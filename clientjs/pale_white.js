@@ -238,136 +238,83 @@ PaleWhite = {
 		}
 		return children;
 	},
+	query: function (nodes, css_selector) {
+		if (css_selector === undefined) {
+			css_selector = nodes;
+			nodes = [document];
+		}
 
-	parse_pwa_command: function (command) {
-		var instruction_strings = command.split(/\s*;\s*/m);
-		var instructions = [];
-		for (var i = 0; i < instruction_strings.length; i++) {
-			var parts = instruction_strings[i].split(/\s*:\s*/m, 3);
-			if (parts.length == 3) {
-				instructions.push({
-					target: parts[0],
-					selector: parts[1],
-					actions: this.parse_pwa_actions(parts[2]),
-				});
-			} else if (parts.length == 2) {
-				instructions.push({
-					target: 'document',
-					selector: parts[0],
-					actions: this.parse_pwa_actions(parts[1]),
-				});
-			} else {
-				instructions.push({
-					target: 'this',
-					actions: this.parse_pwa_actions(parts[0]),
-				});
+		var new_nodes = [];
+		for (var i = 0; i < nodes.length; i++) {
+			var found = nodes[i].querySelectorAll(css_selector);
+			for (var k = 0; k < found.length; k++) {
+				new_nodes.push(found[k]);
 			}
 		}
 
-		return instructions;
+		return new_nodes;
 	},
-	parse_pwa_actions: function (command) {
-		var action_strings = command.split(/\s+/m);
-		var actions = [];
+
+	pwa_command: function (nodes, command) {
+		var instruction_strings = command.split(/\s*;\s*/m);
+		for (var i = 0; i < instruction_strings.length; i++) {
+			var parts = instruction_strings[i].split(/\s*:\s*/m, 3);
+			var targets;
+			var selector;
+			var action;
+			if (parts.length == 3) {
+				if (parts[0] === 'document') {
+					targets = [document];
+				} else if (parts[0] === 'this') {
+					targets = nodes;
+				} else if (parts[0] === 'parent') {
+					targets = [];
+					for (var k = 0; k < nodes.length; k++) {
+						targets.push(nodes[k].parentNode);
+					}
+				} else {
+					console.log("invalid target: ", parts[0]);
+					return;
+				}
+
+				selector = parts[1];
+				action = parts[2];
+			} else if (parts.length == 2) {
+				targets = [document];
+				selector = parts[0];
+				action = parts[1];
+			} else {
+				targets = nodes;
+				action = parts[0];
+			}
+
+			if (selector) {
+				targets = PaleWhite.query(targets, selector);
+			}
+
+			PaleWhite.pwa_action(targets, action);
+		}
+	},
+	pwa_action: function (nodes, action) {
+		var action_strings = action.split(/\s+/m);
 		for (var i = 0; i < action_strings.length; i++) {
 			if (action_strings[i].startsWith("+")) {
-				actions.push({
-					type: 'add_class',
-					class: action_strings[i].substring(1),
-				});
+				var class_name = action_strings[i].substring(1);
+				for (var k = 0; k < nodes.length; k++)
+					nodes[k].classList.add(class_name);
 			} else if (action_strings[i].startsWith("-")) {
-				actions.push({
-					type: 'remove_class',
-					class: action_strings[i].substring(1),
-				});
+				var class_name = action_strings[i].substring(1);
+				for (var k = 0; k < nodes.length; k++)
+					nodes[k].classList.remove(class_name);
 			} else if (action_strings[i].startsWith("~")) {
-				actions.push({
-					type: 'toggle_class',
-					class: action_strings[i].substring(1),
-				});
+				var class_name = action_strings[i].substring(1);
+				for (var k = 0; k < nodes.length; k++)
+					nodes[k].classList.toggle(class_name);
 			} else {
 				console.log("invalid pwa action: ", action_strings[i]);
 			}
 		}
-		return actions;
 	},
-	closure_pwa_instructions: function (context, instructions) {
-		var closured_instructions = [];
-		for (var i = 0; i < instructions.length; i++) {
-			var selector = instructions[i].selector;
-			// closure selector if it exists
-			if (selector) {
-				selector = selector.replace(/\$([a-zA-Z_][a-zA-Z_0-9]*)/, function (match, identifier) {
-					return context.dataset[identifier];
-				});
-			}
-			closured_instructions.push({
-				target: instructions[i].target,
-				selector: selector,
-				actions: this.closure_pwa_actions(context, instructions[i].actions),
-			});
-		}
-		return closured_instructions;
-	},
-	closure_pwa_actions: function (context, actions) {
-		var closured_actions = [];
-		for (var i = 0; i < actions.length; i++) {
-			var action_class = actions[i].class;
-			action_class = action_class.replace(/\$([a-zA-Z_][a-zA-Z_0-9]*)/, function (match, identifier) {
-				return context.dataset[identifier];
-			});
-
-			closured_actions.push({
-				type: actions[i].type,
-				class: action_class,
-			});
-		}
-		return closured_actions;
-	},
-	execute_pwa_command: function (target_node, command) {
-		var instructions = this.parse_pwa_command(command);
-		this.execute_pwa_instructions(target_node, instructions);
-	},
-	execute_pwa_instructions: function (target_node, instructions) {
-		instructions = this.closure_pwa_instructions(target_node, instructions);
-		for (var i = 0; i < instructions.length; i++) {
-			// determine starting point
-			var start_point;
-			if (instructions[i].target == 'this') {
-				start_point = target_node;
-			} else if (instructions[i].target == 'parent') {
-				start_point = target_node.parentNode;
-			} else {
-				start_point = document;
-			}
-
-			// expand if we have a selector
-			var node_list;
-			var selector = instructions[i].selector;
-			if (selector) {
-				node_list = start_point.querySelectorAll(selector);
-			} else {
-				node_list = [start_point];
-			}
-
-			// excute actions on each node
-			for (var k = 0; k < node_list.length; k++) {
-				this.execute_pwa_actions(node_list[k], instructions[i].actions);
-			}
-		}
-	},
-	execute_pwa_actions: function (target_node, actions) {
-		for (var i = 0; i < actions.length; i++) {
-			var action = actions[i];
-			if (action.type == 'add_class') {
-				target_node.classList.add(action.class);
-			} else if (action.type == 'remove_class') {
-				target_node.classList.remove(action.class);
-			} else if (action.type == 'toggle_class') {
-				target_node.classList.toggle(action.class);
-			}
-		}
-	}
 };
 
 
@@ -460,7 +407,8 @@ PaleWhite.register_hook('form.ajax_trigger', 'submit', function (event) {
 PaleWhite.register_hook('.pwa-clickable', 'click', function (event) {
 	event.preventDefault();
 	event.stopPropagation();
-	PaleWhite.execute_pwa_command(this, this.dataset.pwaCommand);
+	PaleWhite.pwa_command([this], this.dataset.pwaCommand);
+	// PaleWhite.execute_pwa_command(this, this.dataset.pwaCommand);
 });
 PaleWhite.register_hook('.pw-model-template', 'load', function () {
 	var data = JSON.parse(this.dataset.modelData);
