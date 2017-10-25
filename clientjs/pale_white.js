@@ -1,11 +1,27 @@
 
-pale_white = {
+PaleWhite = {
 	registered_hooks: [],
 	registered_scroll_hooks: [],
 
+	get_class: function (class_name) {
+		var class_parts = class_name.split('::');
+		var class_obj = window[class_parts[0]];
+		for (var i = 1; i < class_parts.length; i++) {
+			class_obj = class_obj[class_parts[i]];
+		}
+		return class_obj;
+	},
+	get_template: function (template_class) {
+		var class_obj = this.get_class(template_class);
+		if (!(class_obj.prototype instanceof PaleWhite.Glass.Template))
+			throw new PaleWhite.InvalidException("attempt to get non-template class");
+
+		return new class_obj(this);
+	},
+
 	onload: function () {
 		this.add_hooks(document.body);
-		window.addEventListener('scroll', function (event) { pale_white.onscroll(event); });
+		window.addEventListener('scroll', function (event) { PaleWhite.onscroll(event); });
 		this.onscroll(undefined);
 	},
 	onscroll: function (event) {
@@ -80,7 +96,7 @@ pale_white = {
 				} else {
 					response = JSON.parse(xhr.response);
 				}
-				pale_white.on_ajax_response(response);
+				PaleWhite.on_ajax_response(response);
 
 				if (callback)
 					callback(response);
@@ -89,12 +105,12 @@ pale_white = {
 		
 		if (args instanceof FormData) {
 			// xhr.setRequestHeader("Content-Type", "multipart/form-data");
-			args.append("_csrf_token", pale_white.get_csrf_token());
+			args.append("_csrf_token", PaleWhite.get_csrf_token());
 			xhr.send(args);
 
 		} else {
 			xhr.setRequestHeader("Content-Type", "application/json");
-			args._csrf_token = pale_white.get_csrf_token();
+			args._csrf_token = PaleWhite.get_csrf_token();
 			xhr.send(JSON.stringify(args));
 		}
 	},
@@ -103,7 +119,7 @@ pale_white = {
 
 		if (data.status === 'success') {
 			if (data.dom_content !== undefined) {
-				pale_white.substitute_dom_content(data.dom_content);
+				PaleWhite.substitute_dom_content(data.dom_content);
 			}
 			if (data.action === 'redirect' && data.redirect !== undefined) {
 				window.location = data.redirect;
@@ -134,7 +150,7 @@ pale_white = {
 				// create the new dom and add javascript hooks
 				var newdom = document.createElement('div');
 				newdom.innerHTML = dom_content[selector];
-				pale_white.add_hooks(newdom);
+				PaleWhite.add_hooks(newdom);
 				newdom = newdom.firstChild;
 
 				node.appendChild(newdom);
@@ -202,19 +218,19 @@ pale_white = {
 		
 		if (args instanceof FormData) {
 			// xhr.setRequestHeader("Content-Type", "multipart/form-data");
-			args.append("_csrf_token", pale_white.get_csrf_token());
+			args.append("_csrf_token", PaleWhite.get_csrf_token());
 			xhr.send(args);
 
 		} else {
 			xhr.setRequestHeader("Content-Type", "application/json");
-			args._csrf_token = pale_white.get_csrf_token();
+			args._csrf_token = PaleWhite.get_csrf_token();
 			xhr.send(JSON.stringify(args));
 		}
 	},
 	html_nodes: function (html_text) {
 		var newdom = document.createElement('div');
 		newdom.innerHTML = html_text;
-		pale_white.add_hooks(newdom);
+		PaleWhite.add_hooks(newdom);
 
 		var children = [];
 		for (var i = 0; i < newdom.children.length; i++) {
@@ -222,6 +238,7 @@ pale_white = {
 		}
 		return children;
 	},
+
 	parse_pwa_command: function (command) {
 		var instruction_strings = command.split(/\s*;\s*/m);
 		var instructions = [];
@@ -353,12 +370,49 @@ pale_white = {
 	}
 };
 
-window.addEventListener('load', function () { pale_white.onload(); });
-pale_white.register_hook('form.ajax_trigger', 'submit', function (event) {
+
+// exceptions:
+PaleWhite.PaleWhiteException = function (message) {
+	this.message = "[PaleWhite]: " + message;
+	this.stack = (new Error()).stack;
+}
+PaleWhite.PaleWhiteException.prototype = Object.create(Error, {});
+
+PaleWhite.InvalidException = function (message) {
+	this.message = message;
+	this.stack = (new Error()).stack;
+}
+PaleWhite.InvalidException.prototype = Object.create(Error, {});
+
+PaleWhite.ValidationException = function (message) {
+	this.message = message;
+	this.stack = (new Error()).stack;
+}
+PaleWhite.ValidationException.prototype = Object.create(Error, {});
+
+// base template:
+PaleWhite.Glass = {};
+
+PaleWhite.Glass.Template = function () {};
+PaleWhite.Glass.Template.prototype = {
+	render: function (args) {
+		return '';
+	},
+	render_block: function (block, args) {
+		return '';
+	},
+	htmlspecialchars: function (text) {
+		var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+		return text.replace(/[&<>"'"]/g, function(m) { return map[m]; });
+	},
+};
+
+window.addEventListener('load', function () { PaleWhite.onload(); });
+PaleWhite.register_hook('form.ajax_trigger', 'submit', function (event) {
 	event.preventDefault();
 	event.stopPropagation();
 	var form = this;
-	pale_white.ajax(this.dataset.triggerAction, pale_white.parse_form_input(this), function (data) {
+	PaleWhite.ajax(this.dataset.triggerAction, PaleWhite.parse_form_input(this), function (data) {
 		// if the response is an error, and the form has an on_error attribute
 		if (data.status === 'error') {
 			if (form.dataset.onTriggerError) {
@@ -369,9 +423,9 @@ pale_white.register_hook('form.ajax_trigger', 'submit', function (event) {
 		}
 	});
 });
-pale_white.register_hook('.pwa-clickable', 'click', function (event) {
+PaleWhite.register_hook('.pwa-clickable', 'click', function (event) {
 	event.preventDefault();
 	event.stopPropagation();
-	pale_white.execute_pwa_command(this, this.dataset.pwaCommand);
+	PaleWhite.execute_pwa_command(this, this.dataset.pwaCommand);
 });
 

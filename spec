@@ -587,7 +587,7 @@ glass templates in javascript
 			get_class: function (class_name) {
 				var class_parts = class_name.split('::');
 				var class_obj = window[class_parts[0]];
-				for (int i = 1; i < class_parts.length; i++) {
+				for (var i = 1; i < class_parts.length; i++) {
 					class_obj = class_obj[class_parts[i]];
 				}
 				return class_obj;
@@ -635,18 +635,58 @@ glass templates in javascript
 			},
 		};
 
+		.pw-model-template => on load
+			var data = JSON.parse(this.dataset.modelData);
+			var model_template = this.dataset.modelTemplate;
+			this._pw_model = new PaleWhite.Glass.ModelTemplateData(this, model_template.fields, data);
+
+			Object.defineProperty(this, 'pw_model', {
+				get: (function () { return this._pw_model; }).bind(this),
+				set: (function (value) { this._pw_model._data = value; this._pw_model._rerender(); }).bind(this),
+			});
+
+		PaleWhite.Glass.ModelTemplateData = function (node, fields, data) {
+			this._node = node;
+			this._data = data;
+			this._fields = fields;
+
+			var getter = function (field) {
+				return this._data[field];
+			};
+			var setter = function (field, value) {
+				this._data[field] = value;
+				this._rerender();
+			};
+
+			var properties = {};
+			for (var i = 0; i < fields.length; i++) {
+				properties[fields[i]] = {
+					get: getter.bind(this, fields[i]),
+					set: setter.bind(this, fields[i]),
+				};
+			}
+
+			Object.defineProperties(this, properties);
+		};
+		PaleWhite.Glass.ModelTemplateData.prototype._rerender = function () {
+			var template_class = PaleWhite.get_template(this.node.dataset.modelTemplate);
+			var new_node = template_class.render({ model: this._data });
+			PaleWhite.add_hooks(new_node);
+
+			this._node.parentNode.replaceChild(this._node, new_node);
+		};
+
 	// reference
 		!template AsdfTemplate
 			div "test"
 	// compiles to:
 		function AsdfTemplate() {}
-		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template, {
-			render: function (args) {
-				var text = PaleWhite.Glass.Template.render.call(this, args);
-				text += "<div>test</div>";
-				return text;
-			},
-		});
+		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template.prototype);
+		AsdfTemplate.prototype.render = function (args) {
+			var text = PaleWhite.Glass.Template.prototype.render.call(this, args);
+			text += "<div>test</div>";
+			return text;
+		};
 
 	// reference 2
 		!template AsdfTemplate
@@ -654,15 +694,14 @@ glass templates in javascript
 				!block content
 	// compiles to:
 		function AsdfTemplate() {}
-		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template, {
-			render: function (args) {
-				var text = PaleWhite.Glass.Template.render.call(this, args);
-				text += "<div class='content'>";
-				text += this.render_block('content', args);
-				text += "</div>";
-				return text;
-			},
-		});
+		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template.prototype);
+		AsdfTemplate.prototype.render = function (args) {
+			var text = PaleWhite.Glass.Template.prototype.render.call(this, args);
+			text += "<div class='content'>";
+			text += this.render_block('content', args);
+			text += "</div>";
+			return text;
+		};
 
 	// reference 3
 		!template AsdfTemplate extends BaseTemplate
@@ -670,15 +709,14 @@ glass templates in javascript
 				p "hello!"
 	// compiles to:
 		function AsdfTemplate() {}
-		AsdfTemplate.prototype = Object.create(BaseTemplate, {
-			render_block: function (block, args) {
-				var text = BaseTemplate.render_block.call(this, block, args);
-				if (block === 'content') {
-					text += "<p>hello!</p>";
-				}
-				return text;
-			},
-		});
+		AsdfTemplate.prototype = Object.create(BaseTemplate.prototype);
+		AsdfTemplate.prototype.render_block = function (block, args) {
+			var text = BaseTemplate.prototype.render_block.call(this, block, args);
+			if (block === 'content') {
+				text += "<p>hello!</p>";
+			}
+			return text;
+		};
 
 	// reference 4
 		!template AsdfTemplate
@@ -687,19 +725,18 @@ glass templates in javascript
 					p {value}
 	// compiles to:
 		function AsdfTemplate() {}
-		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template, {
-			render: function (args) {
-				var text = PaleWhite.Glass.Template.render.call(this, args);
-				text += "<div class='content'>";
-				if (args.value) {
-					text += "<p>";
-					text += this.htmlspecialchars(args.value);
-					text += "</p>";
-				}
-				text += "</div>";
-				return text;
-			},
-		});
+		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template.prototype);
+		AsdfTemplate.prototype.render = function (args) {
+			var text = PaleWhite.Glass.Template.prototype.render.call(this, args);
+			text += "<div class='content'>";
+			if (args.value) {
+				text += "<p>";
+				text += this.htmlspecialchars(args.value);
+				text += "</p>";
+			}
+			text += "</div>";
+			return text;
+		};
 
 	// reference 5
 		!template AsdfTemplate
@@ -708,22 +745,21 @@ glass templates in javascript
 					p "{{key}} = {{value}}"
 	// compiles to:
 		function AsdfTemplate() {}
-		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template, {
-			render: function (args) {
-				var text = PaleWhite.Glass.Template.render.call(this, args);
-				text += "<div class='content'>";
-				Object.keys(values_list).forEach(function(key) {
-					value = values_list[key];
-					text += "<p>";
-					text += this.htmlspecialchars(key);
-					text += " = ";
-					text += this.htmlspecialchars(value);
-					text += "</p>";
-				});
-				text += "</div>";
-				return text;
-			},
-		});
+		AsdfTemplate.prototype = Object.create(PaleWhite.Glass.Template.prototype);
+		AsdfTemplate.prototype.render = function (args) {
+			var text = PaleWhite.Glass.Template.prototype.render.call(this, args);
+			text += "<div class='content'>";
+			Object.keys(args.values_list).forEach(function(key) {
+				value = args.values_list[key];
+				text += "<p>";
+				text += this.htmlspecialchars(key);
+				text += " = ";
+				text += this.htmlspecialchars(value);
+				text += "</p>";
+			});
+			text += "</div>";
+			return text;
+		};
 
 model views for animation by javascript
 	// call model views in glass templates
@@ -772,7 +808,8 @@ model views for animation by javascript
 		my_list.pw_model_list.pop_model();
 		my_list.pw_model_list.clear_models();
 		// iterating models list:
-		for (int i = 0; i < my_list.children; i++) {
+		for (var i = 0; i < my_list.children; i++) {
 			console.log("model at " + i + ": ", my_list.children[i].pw_model);
 		}
+
 
