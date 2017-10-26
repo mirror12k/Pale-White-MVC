@@ -812,4 +812,44 @@ model views for animation by javascript
 			console.log("model at " + i + ": ", my_list.children[i].pw_model);
 		}
 
+		PaleWhite.Glass.ModelTemplateList = function (node) {
+			this.node = node;
+		};
+		PaleWhite.Glass.ModelTemplateList.prototype.insert_model = function (index, data) {
+			var template_class = PaleWhite.get_template(this.node.dataset.modelTemplate);
+			var rendered_html = template_class.render({ model: data });
+			var new_node = PaleWhite.html_nodes(rendered_html)[0];
+			PaleWhite.add_hooks(new_node);
+			this.node.insertBefore(new_node, this.node.children[index]);
+		};
+		PaleWhite.Glass.ModelTemplateList.prototype.prepend_model = function (data) {
+			this.insert_model(0, data);
+		};
+		PaleWhite.Glass.ModelTemplateList.prototype.append_model = function (data) {
+			this.insert_model(this.node.children.length, data);
+		};
+		PaleWhite.Glass.ModelTemplateList.prototype.remove_model = function (index) {
+			var data = this.node.children[index].pw_model._data;
+			this.node.removeChild(this.node.children[index]);
+			return data;
+		};
+		PaleWhite.Glass.ModelTemplateList.prototype.pop_model = function () {
+			return this.remove_model(this.node.children.length - 1);
+		};
+		PaleWhite.Glass.ModelTemplateList.prototype.clear_models = function () {
+			while(this.node.firstChild)
+				this.node.removeChild(this.node.firstChild);
+		};
+
+		.pw-model-template-list => on load
+			this._pw_model_list = new PaleWhite.Glass.ModelTemplateList(this);
+
+			Object.defineProperty(this, 'pw_model_list', {
+				get: (function () { return this._pw_model_list; }).bind(this),
+				set: (function (data_list) {
+					this._pw_model_list.clear_models();
+					for (var i = 0; i < data_list.length; i++)
+						this._pw_model_list.append_model(data_list[i]);
+				}).bind(this),
+			});
 
