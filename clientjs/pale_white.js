@@ -424,6 +424,23 @@ PaleWhite.Glass.ModelTemplateList.prototype.clear_models = function () {
 	while(this.node.firstChild)
 		this.node.removeChild(this.node.firstChild);
 };
+PaleWhite.Glass.ModelTemplateList.prototype.find = function (data) {
+	var data_keys = Object.keys(data);
+	
+	var nodes = [];
+	for (var i = 0; i < this.node.children.length; i++) {
+		var node_data = this.node.children[i].pw_model._data;
+		var matches = true;
+		for (var k = 0; k < data_keys.length; k++) {
+			if (node_data[data_keys[k]] !== data[data_keys[k]])
+				matches = false;
+		}
+
+		if (matches)
+			nodes.push(this.node.children[i]);
+	}
+	return nodes;
+};
 
 
 window.addEventListener('load', function () { PaleWhite.onload(); });

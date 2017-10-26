@@ -431,6 +431,7 @@ sub compile_argument_expression {
 			or $expression->{type} eq 'less_than_or_equal_expression'
 			or $expression->{type} eq 'greater_than_or_equal_expression'
 			or $expression->{type} eq 'equals_expression'
+			or $expression->{type} eq 'not_equals_expression'
 			or $expression->{type} eq 'array_expression'
 			or $expression->{type} eq 'object_expression'
 			or $expression->{type} eq 'native_identifier_expression'
@@ -541,6 +542,11 @@ sub compile_value_expression {
 		my $left_expression = $self->compile_value_expression($expression->{left_expression});
 		my $right_expression = $self->compile_value_expression($expression->{right_expression});
 		return "( $left_expression === $right_expression )";
+
+	} elsif ($expression->{type} eq 'not_equals_expression') {
+		my $left_expression = $self->compile_value_expression($expression->{left_expression});
+		my $right_expression = $self->compile_value_expression($expression->{right_expression});
+		return "( $left_expression !== $right_expression )";
 
 	} else {
 		die "unknown expression: $expression->{type}";

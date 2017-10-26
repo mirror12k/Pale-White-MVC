@@ -24,7 +24,7 @@ our $var_string_interpolation_middle_regex = qr/\}\}([^\\"]|\\[\\"])*?\{\{/s;
 our $var_string_interpolation_end_regex = qr/\}\}([^\\"]|\\[\\"])*?"/s;
 our $var_integer_regex = qr/-?\d++/;
 our $var_string_regex = qr/"([^\\"]|\\[\\"])*?"/s;
-our $var_symbol_regex = qr/!|\.|\#|=>|<|>|<=|>=|==|=|,|\{|\}|\(|\)|\[|\]|-|\@|\//;
+our $var_symbol_regex = qr/=>|<=|>=|==|!=|<|>|=|!|\.|\#|,|\{|\}|\(|\)|\[|\]|-|\@|\//;
 our $var_indent_regex = qr/\t++/;
 our $var_whitespace_regex = qr/[\t \r]++/;
 our $var_newline_regex = qr/\s*(\#[^\n]*+\s*)*\n/s;
@@ -916,31 +916,37 @@ sub context_glass_more_expression {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'less_than_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
+			$context_object = { type => 'less_than_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '>') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'greater_than_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
+			$context_object = { type => 'greater_than_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '<=') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'less_than_or_equal_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
+			$context_object = { type => 'less_than_or_equal_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '>=') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'greater_than_or_equal_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
+			$context_object = { type => 'greater_than_or_equal_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
 			}
 			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '==') {
 			my @tokens_freeze = @tokens;
 			my @tokens = @tokens_freeze;
 			@tokens = (@tokens, $self->step_tokens(1));
-			$context_object = { type => 'equals_expression', line_number => $tokens[0][2], identifier => $tokens[1][1], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
+			$context_object = { type => 'equals_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
+			}
+			elsif ($self->more_tokens and $self->{tokens}[$self->{tokens_index} + 0][1] eq '!=') {
+			my @tokens_freeze = @tokens;
+			my @tokens = @tokens_freeze;
+			@tokens = (@tokens, $self->step_tokens(1));
+			$context_object = { type => 'not_equals_expression', line_number => $tokens[0][2], left_expression => $context_object, right_expression => $self->context_glass_argument_expression, };
 			}
 			else {
 			return $context_object;

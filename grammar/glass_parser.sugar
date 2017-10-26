@@ -13,7 +13,7 @@ string_interpolation_end_regex = /\}\}([^\\"]|\\[\\"])*?"/s
 integer_regex = /-?\d++/
 string_regex = /"([^\\"]|\\[\\"])*?"/s
 
-symbol_regex = /!|\.|\#|=>|<|>|<=|>=|==|=|,|\{|\}|\(|\)|\[|\]|-|\@|\//
+symbol_regex = /=>|<=|>=|==|!=|<|>|=|!|\.|\#|,|\{|\}|\(|\)|\[|\]|-|\@|\//
 
 # comment_regex = /\s*+\#[^\n]*+\n/s
 indent_regex = /\t++/
@@ -714,7 +714,6 @@ object context glass_more_expression {
 			$_ = {
 				type => 'less_than_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !glass_argument_expression
 			}
@@ -723,7 +722,6 @@ object context glass_more_expression {
 			$_ = {
 				type => 'greater_than_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !glass_argument_expression
 			}
@@ -732,7 +730,6 @@ object context glass_more_expression {
 			$_ = {
 				type => 'less_than_or_equal_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !glass_argument_expression
 			}
@@ -741,7 +738,6 @@ object context glass_more_expression {
 			$_ = {
 				type => 'greater_than_or_equal_expression'
 				line_number => $0{line_number}
-				identifier => $1
 				left_expression => $_
 				right_expression => !glass_argument_expression
 			}
@@ -750,7 +746,14 @@ object context glass_more_expression {
 			$_ = {
 				type => 'equals_expression'
 				line_number => $0{line_number}
-				identifier => $1
+				left_expression => $_
+				right_expression => !glass_argument_expression
+			}
+		}
+		'!=' => {
+			$_ = {
+				type => 'not_equals_expression'
+				line_number => $0{line_number}
 				left_expression => $_
 				right_expression => !glass_argument_expression
 			}
