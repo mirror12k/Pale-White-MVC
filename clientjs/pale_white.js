@@ -391,7 +391,6 @@ PaleWhite.Glass.ModelTemplateData.prototype._rerender = function () {
 	var template_class = PaleWhite.get_template(this._node.dataset.modelTemplate);
 	var rendered_html = template_class.render({ model: this._data });
 	var new_node = PaleWhite.html_nodes(rendered_html)[0];
-	PaleWhite.add_hooks(new_node);
 
 	this._node.parentNode.replaceChild(new_node, this._node);
 };
@@ -403,7 +402,6 @@ PaleWhite.Glass.ModelTemplateList.prototype.insert_model = function (index, data
 	var template_class = PaleWhite.get_template(this.node.dataset.modelTemplate);
 	var rendered_html = template_class.render({ model: data });
 	var new_node = PaleWhite.html_nodes(rendered_html)[0];
-	PaleWhite.add_hooks(new_node);
 	this.node.insertBefore(new_node, this.node.children[index]);
 };
 PaleWhite.Glass.ModelTemplateList.prototype.prepend_model = function (data) {

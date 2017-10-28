@@ -12,7 +12,7 @@ also requires perl Make::SSH library to compile the example project.make's.
 
 ## Why?
 Standard php-mysql backend development tends to get bogged down quickly with security and conformity.
-Implementing template views, secure logins, file uploads, localization, and plugin apis,
+Implementing template views, client-side templates, secure logins, file uploads, localization, and plugin apis,
 are always necessary when a project grows large enough.
 Pale-White provides tools to simplify these jobs and prevent reinventing the wheel.
 
