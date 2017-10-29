@@ -90,4 +90,51 @@ $('#my-list')[0].pw_model_list = [
 ];
 ```
 
+## Secure Password Hashes
+Securely storing and verifying passwords is easier than ever.
 
+We start by declaring a user model with a salted_sha256 password:
+**models.white**
+```
+model UserModel {
+	string[255] username unique;
+	salted_sha256 password;
+}
+```
+
+Next we can assign the password property as any other string property,
+and it will be securely salted and hashed before being saved in the database.
+**controllers.white**
+```
+...
+	action create_user (string[1:255] username, string[1:255] password) {
+		# password is passed in plaintext
+		user_model = create UserModel username=username, password=password;
+		# password is automatically hashed on storage
+		return user_model;
+	}
+...
+```
+
+Now we need to be able to compare this password value:
+**controllers.white**
+```
+...
+	action validate_login (string[1:255] username, string[1:255] password) {
+		user_model = model? UserModel username=username;
+		# ensure there is a user model with this username
+		if (!user_model) {
+			# if the user is not found, return null
+			return;
+		}
+
+		# check that the password hash matches
+		if (!user_model.matches_hashed_field("password", password)) {
+			# if the password hash doesnt match, return null
+			return;
+		}
+
+		# if every check passed, return the user model
+		return user_model;
+	}
+```
