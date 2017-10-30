@@ -26,6 +26,82 @@ Now we can refer to these strings in a template:
 
 *Notice*: the localization setting must be set either in the config file or in a controller with `set_localization "en";`.
 
+## Secure File Uploads
+Controllers provide the ability to securely recieve file uploads and models can store these files in an easy to use manner.
+First we declare a file directory to store the files:
+
+**controllers.white**
+```
+file_directory DataFilesDirectory "./my_files" {
+	suffix_timestamp;
+}
+```
+
+Next we create a controller endpoint to recieve the a file upload and store it in our directory:
+
+**controllers.white**
+```
+...
+	ajax "/my_endpoint" (_file_upload new_file) {
+		# verify file size
+		if (new_file.file_size < 1024) {
+			render_json status="error", error="file too small";
+			return;
+		}
+		if (new_file.file_size > 4096) {
+			render_json status="error", error="file too large";
+			return;
+		}
+
+		# verify file mime-type
+		if (new_file.mime_type != 'image/jpeg') {
+			render_json status="error", error="expected jpg file";
+			return;
+		}
+
+		# accept the file upload to the DataFilesDirectory directory
+		my_file = file DataFilesDirectory accept_upload=new_file;
+
+		...
+	}
+...
+```
+
+We can create a model with a file pointer property:
+**models.white**
+```
+model MyModel {
+	file::DataFilesDirectory my_file;
+}
+```
+
+And now we can store the file reference in endpoint code:
+**controllers.white**
+```
+		...
+		# accept the file upload to the DataFilesDirectory directory
+		my_file = file DataFilesDirectory accept_upload=new_file;
+
+		my_model = create MyModel my_file=my_file;
+
+		render_json status="success";
+	}
+```
+
+Finally, we can load the file and send it to the user from a path:
+**controllers.white**
+```
+...
+	path "/my_model/{{id}}" {
+		# load the model
+		my_model = model MyModel id=id;
+
+		# send the file as a response
+		render_file my_model.my_file;
+	}
+...
+```
+
 ## Dynamic Model Templates
 Templates can be declared as Model Templates which keep their arguments with them and can easily be rerendered from javascript
 
@@ -43,7 +119,7 @@ Templates can be declared as Model Templates which keep their arguments with the
 		!render PostModelTemplate model={author="admin", text="test"} id="my-model"
 ```
 
-This template file will need to be specially compiled to javascript with the ```PaleWhite/Glass/JSCompiler.pm``` and loaded on the page as javascript.
+This template file will need to be specially compiled to javascript with the `PaleWhite/Glass/JSCompiler.pm` and loaded on the page as javascript.
 
 **app.js**
 ```javascript
