@@ -356,6 +356,7 @@ sub compile_html_tag {
 			if (
 					(
 						($identifier eq 'a' and $key eq 'href')
+						or ($identifier eq 'img' and $key eq 'src')
 						or ($identifier eq 'link' and $key eq 'href')
 						or ($identifier eq 'script' and $key eq 'src')
 						or ($identifier eq 'form' and $key eq 'action')
