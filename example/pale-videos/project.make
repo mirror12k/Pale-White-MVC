@@ -17,6 +17,7 @@ build:
 		cd ../..
 		./PaleWhite/ProjectCompiler.pm example/$(PROJECT_DIRECTORY)/src example/$(PROJECT_DIRECTORY)/bin
 		cp -r phplib example/$(PROJECT_DIRECTORY)/bin
+		-mkdir example/$(PROJECT_DIRECTORY)/bin/uploads
 
 
 

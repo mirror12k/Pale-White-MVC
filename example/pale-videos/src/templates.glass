@@ -60,7 +60,7 @@
 				div.title
 					h1 "{{video_model.video_name}}"
 				div.video_block
-					!template VideoWidgetTemplate video_model=video_model
+					!render VideoWidgetTemplate video_model=video_model
 					# video controls=""
 					# 	source src={video_model.video_file.url} type={video_model.video_file.mime_type}
 				div.delete_button

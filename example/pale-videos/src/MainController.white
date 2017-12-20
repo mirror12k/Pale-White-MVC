@@ -14,10 +14,6 @@ model VideoFileModel {
 			this.video_file.delete();
 		}
 	}
-	# on delete {{
-	# 	if ($this->video_file !== null)
-	# 		$this->video_file->delete();
-	# }}
 }
 
 controller MainController {
@@ -31,7 +27,7 @@ controller MainController {
 		render UploadPageTemplate;
 	}
 
-	path "/post_video" [ !_csrf_token, string[1:255] video_name, _file_upload video_file ] {
+	path "/post_video" ( !_csrf_token, string[1:255] video_name, _file_upload video_file ) {
 		my_file = file VideoUploadsDirectory accept_upload=video_file;
 		video_model = create VideoFileModel video_name=video_name, video_file=my_file, views=0;
 
@@ -44,7 +40,7 @@ controller MainController {
 		}
 	}
 
-	path "/delete_video" [ !_csrf_token, int video_id ] {
+	path "/delete_video" ( !_csrf_token, int video_id ) {
 		video_model = model? VideoFileModel id=video_id;
 
 		if (video_model) {
@@ -75,16 +71,23 @@ controller MainController {
 		}
 	}
 
+	api "/say_hello" {
+		render_json status="success", data="hello";
+	}
+
 	path default {
 		status "404 Not Found";
 		render ErrorTemplate error="Not Found";
 	}
 
-	action delete_video [ model::VideoFileModel video ] {
+	action delete_video ( model::VideoFileModel video ) {
+		if (runtime.plugins.test_plugin) {
+			action plugins.test_plugin.test_action;
+		}
 		video.delete();
 	}
 
-	action view_video_url [ model::VideoFileModel video ] {
+	action view_video_url ( model::VideoFileModel video ) {
 		return "view/{{video.id}}";
 	}
 }
