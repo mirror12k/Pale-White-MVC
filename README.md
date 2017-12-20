@@ -1,6 +1,6 @@
 # Pale-White MVC Framework
 Pale-White is a model-view-controller framework designed to simplify design by abstracting away from php/sql/html.
-PaleWhite models and controllers are compiled to standard php classes to provide easy of support and debugging.
+PaleWhite models and controllers are compiled to standard php classes to provide ease of support and debugging.
 A database abstraction layer allows full use of database-backed models without writing any database queries,
 and provides security against injection attacks like SQLi.
 A templating language based on Jade provides fast and extensible front-end development.
@@ -34,7 +34,7 @@ Additionally a database-api layer is provided so that extensions and plugins can
 ## Extensibility Built-In
 Seeing how critical extensible plugins are to the Wordpress, phpBB, and other communities,
 it is crucial that every pale-white application come ready with a plugin api.
-The framework provides seemless support for plugins to come in and interface with your logic,
+The framework provides seamless support for plugins to come in and interface with your logic,
 as well as serving the role of drag-and-drop logic components.
 
 ## Examples/Tutorials

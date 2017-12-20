@@ -27,7 +27,7 @@ Now we can refer to these strings in a template:
 *Notice*: the localization setting must be set either in the config file or in a controller with `set_localization "en";`.
 
 ## Secure File Uploads
-Controllers provide the ability to securely recieve file uploads and models can store these files in an easy to use manner.
+Controllers provide the ability to securely receive file uploads and models can store these files in an easy to use manner.
 First we declare a file directory to store the files:
 
 **controllers.white**
@@ -37,7 +37,7 @@ file_directory DataFilesDirectory "./my_files" {
 }
 ```
 
-Next we create a controller endpoint to recieve the a file upload and store it in our directory:
+Next we create a controller endpoint to receive the a file upload and store it in our directory:
 
 **controllers.white**
 ```
@@ -135,7 +135,7 @@ $('#my-model')[0].pw_model = { author: "anon", text: "hijack" };
 ```
 
 ## Model Template Lists
-Extendng the Model Templates mentioned above, you can create a list node for easily adding/removing new model template entries to the dom:
+Extending the Model Templates mentioned above, you can create a list node for easily adding/removing new model template entries to the dom:
 **templates.glass**
 ```
 !template MainPageTemplate extends BaseTemplate

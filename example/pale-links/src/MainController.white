@@ -47,17 +47,16 @@ controller MainController {
 		render ErrorTemplate message="Not Found";
 	}
 
-	action create_link [string location] {{
-		$link = LinkModel::create(array('location' => $location, 'hit_count' => 0));
-		return $link;
-	}}
+	action create_link (string location) {
+		link = create LinkModel location=location, hit_count=0;
+		return link;
+	}
 
-	action view_link_url [link] {{
-		return "view_link/" . $link->id;
-	}}
+	action view_link_url (model::LinkModel link) {
+		return "view_link/{{link.id}}";
+	}
 
-	action increment_link_hit_count [link] {{
-		$link->hit_count = $link->hit_count + 1;
-	}}
-
+	action increment_link_hit_count (model::LinkModel link) {
+		link.increment("hit_count", 1);
+	}
 }
